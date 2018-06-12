@@ -475,6 +475,22 @@ static long WINAPI MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lP
     return DefWindowProc(hwnd, message, wParam, lParam);
 }
 
+#ifdef LTJS_WIP_OGL
+LRESULT CALLBACK ogl_window_proc(
+	HWND hwnd,
+	UINT uMsg,
+	WPARAM wParam,
+	LPARAM lParam)
+{
+	if (uMsg == WM_SYSKEYDOWN && wParam == VK_F4)
+	{
+		return TRUE;
+	}
+
+	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+}
+#endif // LTJS_WIP_OGL
+
 
 int LTAllocHook(int allocType, void *userData, size_t size, int blockType, 
    long requestNumber, const unsigned char *filename, int lineNumber)
@@ -589,6 +605,46 @@ int RunClientApp(HINSTANCE hInstance) {
                 pGlob->m_hInstance,										// program instance handle
                 LTNULL);												// creation parameters
 
+#ifdef LTJS_WIP_OGL
+	const auto const ogl_class_name = L"ltjs_wip_ogl";
+	constexpr auto ogl_window_width = 800;
+	constexpr auto ogl_window_height = 600;
+
+	WNDCLASSW ogl_window_class;
+	ZeroMemory(&ogl_window_class, sizeof(WNDCLASSW));
+	ogl_window_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+	ogl_window_class.lpfnWndProc = ogl_window_proc;
+	ogl_window_class.cbClsExtra = 0;
+	ogl_window_class.cbWndExtra = 0;
+	ogl_window_class.hInstance = pGlob->m_hInstance;
+	ogl_window_class.hIcon = ::LoadIconW(nullptr, reinterpret_cast<LPCWSTR>(IDI_APPLICATION));
+	ogl_window_class.hCursor = ::LoadCursorW(nullptr, reinterpret_cast<LPCWSTR>(IDC_ARROW));
+	ogl_window_class.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH));
+	ogl_window_class.lpszMenuName = nullptr;
+	ogl_window_class.lpszClassName = ogl_class_name;
+
+	static_cast<void>(::RegisterClassW(&ogl_window_class));
+
+	pGlob->ogl_window_ = CreateWindowW(
+		ogl_class_name, // window class name
+		L"OpenGL (work in progress)", // window caption
+		WS_CAPTION, // window style
+		(screenRect.right - screenRect.left) - ogl_window_width, // initial x position
+		((screenRect.bottom - screenRect.top) - ogl_window_height) / 2, // initial y position
+		ogl_window_width, // initial x size
+		ogl_window_height, // initial y size
+		nullptr, // parent window handle
+		nullptr, // window menu handle
+		pGlob->m_hInstance, // program instance handle
+		nullptr // creation parameters
+	);
+
+	::EnableMenuItem(::GetSystemMenu(pGlob->ogl_window_, FALSE), SC_CLOSE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+	::SetWindowLongW(pGlob->ogl_window_, GWL_STYLE, ::GetWindowLongW(pGlob->ogl_window_, GWL_STYLE) & ~WS_MINIMIZEBOX);
+	::SetWindowLongW(pGlob->ogl_window_, GWL_STYLE, ::GetWindowLongW(pGlob->ogl_window_, GWL_STYLE) & ~WS_MAXIMIZEBOX);
+
+	static_cast<void>(::ShowWindow(pGlob->ogl_window_, SW_SHOWNORMAL));
+#endif // LTJS_WIP_OGL
 
     bPrevHighPriority = LTFALSE;
     if (StartClient(pGlob)) 
@@ -653,6 +709,11 @@ END_MAINLOOP:;
     g_pClientMgr = LTNULL;
 
     DestroyWindow(pGlob->m_hMainWnd);
+
+#ifdef LTJS_WIP_OGL
+	::DestroyWindow(pGlob->ogl_window_);
+	pGlob->ogl_window_ = nullptr;
+#endif // LTJS_WIP_OGL
 
     dsi_Term();
 

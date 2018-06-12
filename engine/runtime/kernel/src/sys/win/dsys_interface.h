@@ -46,7 +46,11 @@
         BOOL            m_bProcessWindowMessages;
         jmp_buf         m_MemoryJmp;
         HWND            m_hMainWnd;
-        
+
+#ifdef LTJS_WIP_OGL
+		HWND ogl_window_;
+#endif // LTJS_WIP_OGL
+
         HINSTANCE       m_hInstance;
         
         char            *m_WndClassName;
