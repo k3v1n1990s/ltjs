@@ -49,6 +49,10 @@ extern int32	g_CV_CursorCenter;
 
 RMode g_RMode;
 
+#ifdef LTJS_WIP_OGL
+extern HWND gl_window_;
+#endif // LTJS_WIP_OGL
+
 
 // ------------------------------------------------------------ //
 // Internal functions.

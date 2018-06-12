@@ -71,6 +71,9 @@ typedef int (*GetLithtechCommandLineFn)(int32 argc, char **argv,
 ClientGlob g_ClientGlob;
 uint32 g_EngineStartMS;
 
+#ifdef LTJS_WIP_OGL
+HWND ogl_window_ = nullptr;
+#endif // LTJS_WIP_OGL
 
 ///////////////////////////////////////////////////
 //  Functions.
@@ -614,18 +617,16 @@ int RunClientApp(HINSTANCE hInstance) {
 	ZeroMemory(&ogl_window_class, sizeof(WNDCLASSW));
 	ogl_window_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
 	ogl_window_class.lpfnWndProc = ogl_window_proc;
-	ogl_window_class.cbClsExtra = 0;
-	ogl_window_class.cbWndExtra = 0;
 	ogl_window_class.hInstance = pGlob->m_hInstance;
 	ogl_window_class.hIcon = ::LoadIconW(nullptr, reinterpret_cast<LPCWSTR>(IDI_APPLICATION));
 	ogl_window_class.hCursor = ::LoadCursorW(nullptr, reinterpret_cast<LPCWSTR>(IDC_ARROW));
 	ogl_window_class.hbrBackground = reinterpret_cast<HBRUSH>(::GetStockObject(BLACK_BRUSH));
-	ogl_window_class.lpszMenuName = nullptr;
 	ogl_window_class.lpszClassName = ogl_class_name;
 
 	static_cast<void>(::RegisterClassW(&ogl_window_class));
 
-	pGlob->ogl_window_ = CreateWindowW(
+	ogl_window_ = CreateWindowExW(
+		0, // extra styles
 		ogl_class_name, // window class name
 		L"OpenGL (work in progress)", // window caption
 		WS_CAPTION, // window style
@@ -639,11 +640,11 @@ int RunClientApp(HINSTANCE hInstance) {
 		nullptr // creation parameters
 	);
 
-	::EnableMenuItem(::GetSystemMenu(pGlob->ogl_window_, FALSE), SC_CLOSE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
-	::SetWindowLongW(pGlob->ogl_window_, GWL_STYLE, ::GetWindowLongW(pGlob->ogl_window_, GWL_STYLE) & ~WS_MINIMIZEBOX);
-	::SetWindowLongW(pGlob->ogl_window_, GWL_STYLE, ::GetWindowLongW(pGlob->ogl_window_, GWL_STYLE) & ~WS_MAXIMIZEBOX);
+	::EnableMenuItem(::GetSystemMenu(ogl_window_, FALSE), SC_CLOSE, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+	::SetWindowLongW(ogl_window_, GWL_STYLE, ::GetWindowLongW(ogl_window_, GWL_STYLE) & ~WS_MINIMIZEBOX);
+	::SetWindowLongW(ogl_window_, GWL_STYLE, ::GetWindowLongW(ogl_window_, GWL_STYLE) & ~WS_MAXIMIZEBOX);
 
-	static_cast<void>(::ShowWindow(pGlob->ogl_window_, SW_SHOWNORMAL));
+	static_cast<void>(::ShowWindow(ogl_window_, SW_SHOWNORMAL));
 #endif // LTJS_WIP_OGL
 
     bPrevHighPriority = LTFALSE;
@@ -711,8 +712,8 @@ END_MAINLOOP:;
     DestroyWindow(pGlob->m_hMainWnd);
 
 #ifdef LTJS_WIP_OGL
-	::DestroyWindow(pGlob->ogl_window_);
-	pGlob->ogl_window_ = nullptr;
+	::DestroyWindow(ogl_window_);
+	ogl_window_ = nullptr;
 #endif // LTJS_WIP_OGL
 
     dsi_Term();

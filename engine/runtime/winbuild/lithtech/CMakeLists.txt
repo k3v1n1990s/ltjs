@@ -644,6 +644,7 @@ if (MSVC)
 			${path_to_dx_libs}/dxguid.lib
 			${path_to_dx_libs}/dinput8.lib
 			${path_to_dx_libs}/dplayx.lib
+			opengl32
 			winmm
 		)
 
@@ -661,6 +662,7 @@ if (MSVC)
 			d3d9
 			dxguid
 			dinput8
+			opengl32
 			winmm
 			ws2_32
 		)
@@ -682,6 +684,7 @@ if (NOT MSVC)
         d3d9
         dxguid
         dinput8
+		opengl32
         winmm
         ws2_32
     )

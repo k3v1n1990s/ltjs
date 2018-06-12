@@ -69,6 +69,147 @@ LTRESULT d3d_GetOccluderEnabled(uint32 nID, bool *pEnabled);
 uint32 d3d_GetTextureEffectVarID(const char* pszName, uint32 nStage);
 bool   d3d_SetTextureEffectVar(uint32 nVarID, uint32 nVar, float fVar);
 
+
+#ifdef LTJS_WIP_OGL
+namespace
+{
+
+
+using WglChoosePixelFormatArbFunc = BOOL (*)(
+	HDC hdc,
+	const int* piAttribIList,
+	const FLOAT* pfAttribFList,
+	UINT nMaxFormats,
+	int* piFormats,
+	UINT* nNumFormats);
+
+using WglCreateContextAttribsArbFunc = HGLRC (*)(
+	HDC hDC,
+	HGLRC hshareContext,
+	const int* attribList);
+
+constexpr auto ogl_color_bit_depth = 32;
+constexpr auto ogd_depth_buffer_bit_depth = 24;
+constexpr auto ogd_stencil_buffer_bit_depth = 8;
+constexpr auto ogd_aux_buffer_count = 0;
+
+
+WglChoosePixelFormatArbFunc wglChoosePixelFormatARB;
+WglCreateContextAttribsArbFunc wglCreateContextAttribsARB;
+
+
+void ogl_uninitialize()
+{
+	auto ogl_context = ::wglGetCurrentContext();
+	auto ogl_dc = ::wglGetCurrentDC();
+
+	if (ogl_dc)
+	{
+		static_cast<void>(::wglMakeCurrent(ogl_dc, nullptr));
+	}
+
+	if (ogl_context)
+	{
+		static_cast<void>(::wglDeleteContext(ogl_context));
+	}
+}
+
+bool ogl_detect_wgl_extensions()
+{
+	const auto dummy_class_name = L"ltjs_dummy";
+	constexpr auto dummy_window_width = 64;
+	constexpr auto dummy_window_height = 64;
+
+	auto instance = ::GetModuleHandleW(nullptr);
+
+	if (instance)
+	{
+		WNDCLASSW dummy_window_class;
+		ZeroMemory(&dummy_window_class, sizeof(WNDCLASSW));
+		dummy_window_class.style = CS_OWNDC;
+		dummy_window_class.lpfnWndProc = DefWindowProcW;
+		dummy_window_class.hInstance = instance;
+		dummy_window_class.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BACKGROUND);
+		dummy_window_class.lpszClassName = dummy_class_name;
+
+		const auto window_class_atom = ::RegisterClassW(&dummy_window_class);
+
+		if (window_class_atom > 0)
+		{
+			auto dummy_window = CreateWindowExW(
+				0, // extra style
+				dummy_class_name, // window class name
+				L"dummy", // window caption
+				WS_CAPTION, // window style
+				0, // initial x position
+				0, // initial y position
+				dummy_window_width, // initial x size
+				dummy_window_height, // initial y size
+				nullptr, // parent window handle
+				nullptr, // window menu handle
+				instance, // program instance handle
+				nullptr // creation parameters
+			);
+
+			PIXELFORMATDESCRIPTOR pfd;
+			ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+			pfd.nSize = static_cast<WORD>(sizeof(PIXELFORMATDESCRIPTOR));
+			pfd.nVersion = 1;
+			pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+			pfd.iPixelType = PFD_TYPE_RGBA;
+			pfd.cColorBits = ogl_color_bit_depth;
+			pfd.cDepthBits = ogd_depth_buffer_bit_depth;
+			pfd.cStencilBits = ogd_stencil_buffer_bit_depth;
+			pfd.cAuxBuffers = ogd_aux_buffer_count;
+
+			const auto dc = ::GetDC(dummy_window);
+			const auto format_index = ::ChoosePixelFormat(dc, &pfd);
+
+			if (format_index > 0)
+			{
+				if (::SetPixelFormat(dc, format_index, &pfd))
+				{
+					const auto glrc = ::wglCreateContext(dc);
+
+					if (::wglMakeCurrent(dc, glrc))
+					{
+						wglChoosePixelFormatARB = reinterpret_cast<WglChoosePixelFormatArbFunc>(
+							::wglGetProcAddress("wglChoosePixelFormatARB"));
+
+						wglCreateContextAttribsARB = reinterpret_cast<WglCreateContextAttribsArbFunc>(
+							::wglGetProcAddress("wglCreateContextAttribsARB"));
+
+						static_cast<void>(::wglMakeCurrent(dc, nullptr));
+					}
+
+					static_cast<void>(::wglDeleteContext(glrc));
+				}
+			}
+
+			static_cast<void>(::DestroyWindow(dummy_window));
+
+			static_cast<void>(::UnregisterClassW(
+				reinterpret_cast<LPCWSTR>(static_cast<std::size_t>(window_class_atom)),
+				instance));
+		}
+	}
+
+	return wglChoosePixelFormatARB && wglCreateContextAttribsARB;
+}
+
+void ogl_initialize()
+{
+	if (!ogl_detect_wgl_extensions())
+	{
+		ogl_uninitialize();
+	}
+}
+
+
+} // namespace
+#endif // LTJS_WIP_OGL
+
+
 static bool d3d_IsNullRenderOn()
 {
 	return !!g_pStruct->GetParameterValueFloat(g_pStruct->GetParameter("nullrender"));
@@ -103,6 +244,9 @@ void d3d_Term(bool bFullTerm)						// We don't do a FullTerm on Alt-Tab (will be
 		g_bInStandby = g_Device.Standby();
 	}
 
+#ifdef LTJS_WIP_OGL
+	ogl_uninitialize();
+#endif // LTJS_WIP_OGL
 
 	ShowCursor(true);							// Show the cursor
 }
@@ -270,6 +414,10 @@ int d3d_Init(RenderStructInit *pInit)
  
 		return RENDER_ERROR; 
 	} 
+
+#ifdef LTJS_WIP_OGL
+	ogl_initialize();
+#endif // LTJS_WIP_OGL
 
 	LT_MEM_TRACK_ALLOC(new D3DShadowTextureFactory(),LT_MEM_TYPE_RENDERER); // Shadow texture map related initialization stuff added here
 
