@@ -3,6 +3,7 @@ project(ltjs_lib_d3d_render VERSION 0.0.1 LANGUAGES CXX)
 
 option(LTJS_USE_DIRECT_MUSIC8 "Use DirectMusic8 for music." OFF)
 option(LTJS_USE_D3DX9 "Use Direct3D 9 extensions." OFF)
+option(LTJS_WIP_OGL "OpenGL renderer (work in progress)." ON)
 
 if (LTJS_USE_DIRECT_MUSIC8 OR LTJS_USE_D3DX9)
 	set(LTJS_USE_BUNDLED_DIRECTX ON)
@@ -314,5 +315,12 @@ if (LTJS_USE_BUNDLED_DIRECTX)
 	target_compile_definitions(
 		ltjs_lib_d3d_render
 		PRIVATE LTJS_USE_BUNDLED_DIRECTX
+	)
+endif ()
+
+if (LTJS_WIP_OGL)
+	target_compile_definitions(
+		ltjs_lib_d3d_render
+		PRIVATE LTJS_WIP_OGL
 	)
 endif ()
