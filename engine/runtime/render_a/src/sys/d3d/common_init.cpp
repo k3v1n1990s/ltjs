@@ -247,6 +247,11 @@ int d3d_Init(RenderStructInit *pInit)
 			wndRect.top		 = 0; 
 		}
 
+#ifdef LTJS_WIP_OGL
+		wndRect.right -= wndRect.left;
+		wndRect.left = 0;
+#endif // LTJS_WIP_OGL
+
 		SetWindowPos(g_hWnd, 0, wndRect.left, wndRect.top, wndRect.right-wndRect.left,
 			wndRect.bottom-wndRect.top, SWP_NOREPOSITION); 
 	}
