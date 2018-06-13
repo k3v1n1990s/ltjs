@@ -682,7 +682,6 @@ void ogl_set_defaults()
 
 	::glEnableVertexAttribArray(0);
 	::glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(0));
-	::glDisableVertexAttribArray(0);
 
 	::glBindVertexArray(0);
 
@@ -748,7 +747,9 @@ void ogl_swap_buffers()
 		return;
 	}
 
-	::SwapBuffers(ogl_window_dc_);
+	assert(ogl_is_succeed());
+
+	static_cast<void>(::SwapBuffers(ogl_window_dc_));
 }
 
 void ogl_test_draw()
@@ -758,8 +759,6 @@ void ogl_test_draw()
 	::glBindVertexArray(ogl_test_vao_);
 	::glDrawArrays(GL_TRIANGLES, 0, 3);
 	::glBindVertexArray(0);
-
-	assert(ogl_is_succeed());
 }
 #endif // LTJS_WIP_OGL
 
