@@ -1,5 +1,14 @@
 
 #include "precompile.h"
+
+#ifdef LTJS_WIP_OGL
+#include <algorithm>
+#include <iterator>
+#include <sstream>
+#include <string>
+#include <unordered_set>
+#endif // LTJS_WIP_OGL
+
 #include "3d_ops.h"
 #include "common_init.h"
 #include "tagnodes.h"
@@ -71,11 +80,89 @@ bool   d3d_SetTextureEffectVar(uint32 nVarID, uint32 nVar, float fVar);
 
 
 #ifdef LTJS_WIP_OGL
+extern HWND ogl_window_;
+
+
 namespace
 {
 
 
-using WglChoosePixelFormatArbFunc = BOOL (*)(
+// WGL_ARB_pixel_format
+//
+constexpr int WGL_ACCELERATION_ARB = 0x2003;
+constexpr int WGL_ACCUM_ALPHA_BITS_ARB = 0x2021;
+constexpr int WGL_ACCUM_BITS_ARB = 0x201D;
+constexpr int WGL_ACCUM_BLUE_BITS_ARB = 0x2020;
+constexpr int WGL_ACCUM_GREEN_BITS_ARB = 0x201F;
+constexpr int WGL_ACCUM_RED_BITS_ARB = 0x201E;
+constexpr int WGL_ALPHA_BITS_ARB = 0x201B;
+constexpr int WGL_ALPHA_SHIFT_ARB = 0x201C;
+constexpr int WGL_AUX_BUFFERS_ARB = 0x2024;
+constexpr int WGL_BLUE_BITS_ARB = 0x2019;
+constexpr int WGL_BLUE_SHIFT_ARB = 0x201A;
+constexpr int WGL_COLOR_BITS_ARB = 0x2014;
+constexpr int WGL_DEPTH_BITS_ARB = 0x2022;
+constexpr int WGL_DOUBLE_BUFFER_ARB = 0x2011;
+constexpr int WGL_DRAW_TO_BITMAP_ARB = 0x2002;
+constexpr int WGL_DRAW_TO_WINDOW_ARB = 0x2001;
+constexpr int WGL_FULL_ACCELERATION_ARB = 0x2027;
+constexpr int WGL_GENERIC_ACCELERATION_ARB = 0x2026;
+constexpr int WGL_GREEN_BITS_ARB = 0x2017;
+constexpr int WGL_GREEN_SHIFT_ARB = 0x2018;
+constexpr int WGL_NEED_PALETTE_ARB = 0x2004;
+constexpr int WGL_NEED_SYSTEM_PALETTE_ARB = 0x2005;
+constexpr int WGL_NO_ACCELERATION_ARB = 0x2025;
+constexpr int WGL_NUMBER_OVERLAYS_ARB = 0x2008;
+constexpr int WGL_NUMBER_PIXEL_FORMATS_ARB = 0x2000;
+constexpr int WGL_NUMBER_UNDERLAYS_ARB = 0x2009;
+constexpr int WGL_PIXEL_TYPE_ARB = 0x2013;
+constexpr int WGL_RED_BITS_ARB = 0x2015;
+constexpr int WGL_RED_SHIFT_ARB = 0x2016;
+constexpr int WGL_SHARE_ACCUM_ARB = 0x200E;
+constexpr int WGL_SHARE_DEPTH_ARB = 0x200C;
+constexpr int WGL_SHARE_STENCIL_ARB = 0x200D;
+constexpr int WGL_STENCIL_BITS_ARB = 0x2023;
+constexpr int WGL_STEREO_ARB = 0x2012;
+constexpr int WGL_SUPPORT_GDI_ARB = 0x200F;
+constexpr int WGL_SUPPORT_OPENGL_ARB = 0x2010;
+constexpr int WGL_SWAP_COPY_ARB = 0x2029;
+constexpr int WGL_SWAP_EXCHANGE_ARB = 0x2028;
+constexpr int WGL_SWAP_LAYER_BUFFERS_ARB = 0x2006;
+constexpr int WGL_SWAP_METHOD_ARB = 0x2007;
+constexpr int WGL_SWAP_UNDEFINED_ARB = 0x202A;
+constexpr int WGL_TRANSPARENT_ALPHA_VALUE_ARB = 0x203A;
+constexpr int WGL_TRANSPARENT_ARB = 0x200A;
+constexpr int WGL_TRANSPARENT_BLUE_VALUE_ARB = 0x2039;
+constexpr int WGL_TRANSPARENT_GREEN_VALUE_ARB = 0x2038;
+constexpr int WGL_TRANSPARENT_INDEX_VALUE_ARB = 0x203B;
+constexpr int WGL_TRANSPARENT_RED_VALUE_ARB = 0x2037;
+constexpr int WGL_TYPE_COLORINDEX_ARB = 0x202C;
+constexpr int WGL_TYPE_RGBA_ARB = 0x202B;
+
+// WGL_ARB_create_context, WGL_ARB_create_context_profile
+//
+constexpr int WGL_CONTEXT_DEBUG_BIT_ARB = 0x0001;
+constexpr int WGL_CONTEXT_FLAGS_ARB = 0x2094;
+constexpr int WGL_CONTEXT_LAYER_PLANE_ARB = 0x2093;
+constexpr int WGL_CONTEXT_MAJOR_VERSION_ARB = 0x2091;
+constexpr int WGL_CONTEXT_MINOR_VERSION_ARB = 0x2092;
+constexpr int WGL_CONTEXT_PROFILE_MASK_ARB = 0x9126;
+
+constexpr int WGL_CONTEXT_CORE_PROFILE_BIT_ARB = 0x00000001;
+constexpr int WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB = 0x00000002;
+constexpr int WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB = 0x0002;
+
+constexpr DWORD ERROR_INVALID_PROFILE_ARB = 0x2096;
+constexpr DWORD ERROR_INVALID_VERSION_ARB = 0x2095;
+
+
+using ExtensionSet = std::unordered_set<std::string>;
+
+
+using WglGetExtensionsStringArbFunc = const char* (WINAPI *)(
+	HDC hdc);
+
+using WglChoosePixelFormatArbFunc = BOOL (WINAPI *)(
 	HDC hdc,
 	const int* piAttribIList,
 	const FLOAT* pfAttribFList,
@@ -83,17 +170,22 @@ using WglChoosePixelFormatArbFunc = BOOL (*)(
 	int* piFormats,
 	UINT* nNumFormats);
 
-using WglCreateContextAttribsArbFunc = HGLRC (*)(
+using WglCreateContextAttribsArbFunc = HGLRC (WINAPI *)(
 	HDC hDC,
 	HGLRC hshareContext,
 	const int* attribList);
 
+
 constexpr auto ogl_color_bit_depth = 32;
-constexpr auto ogd_depth_buffer_bit_depth = 24;
-constexpr auto ogd_stencil_buffer_bit_depth = 8;
-constexpr auto ogd_aux_buffer_count = 0;
+constexpr auto ogl_depth_buffer_bit_depth = 24;
+constexpr auto ogl_stencil_buffer_bit_depth = 8;
+constexpr auto ogl_aux_buffer_count = 0;
+constexpr auto ogl_core_major = 3;
+constexpr auto ogl_core_minor = 3;
 
 
+int ogl_pixel_format_index_ = 0;
+ExtensionSet ogl_wgl_extensions_;
 WglChoosePixelFormatArbFunc wglChoosePixelFormatARB;
 WglCreateContextAttribsArbFunc wglCreateContextAttribsARB;
 
@@ -112,9 +204,80 @@ void ogl_uninitialize()
 	{
 		static_cast<void>(::wglDeleteContext(ogl_context));
 	}
+
+	ogl_pixel_format_index_ = 0;
+	ogl_wgl_extensions_.clear();
+	wglChoosePixelFormatARB = nullptr;
+	wglCreateContextAttribsARB = nullptr;
 }
 
-bool ogl_detect_wgl_extensions()
+void ogl_parse_wgl_extensions_string(
+	const char* const wgl_extensions_string)
+{
+	ogl_wgl_extensions_.clear();
+
+	if (!wgl_extensions_string)
+	{
+		return;
+	}
+
+	auto iss = std::istringstream{wgl_extensions_string};
+
+	ogl_wgl_extensions_ = ExtensionSet{
+		std::istream_iterator<std::string>{iss},
+		std::istream_iterator<std::string>{}
+	};
+}
+
+bool ogl_has_wgl_extension(
+	const char* const extension_name)
+{
+	if (!extension_name)
+	{
+		return false;
+	}
+
+	return ogl_wgl_extensions_.find(extension_name) != ogl_wgl_extensions_.cend();
+}
+
+int ogl_choose_pixel_format_arb(
+	HDC dc)
+{
+	static const int attributes[] =
+	{
+		WGL_DRAW_TO_WINDOW_ARB, 1,
+		WGL_ACCELERATION_ARB, WGL_FULL_ACCELERATION_ARB,
+		WGL_SUPPORT_OPENGL_ARB, 1,
+		WGL_DOUBLE_BUFFER_ARB, 1,
+		WGL_PIXEL_TYPE_ARB, WGL_TYPE_RGBA_ARB,
+		WGL_COLOR_BITS_ARB, ogl_color_bit_depth,
+		WGL_DEPTH_BITS_ARB, ogl_depth_buffer_bit_depth,
+		WGL_STENCIL_BITS_ARB, ogl_stencil_buffer_bit_depth,
+		WGL_AUX_BUFFERS_ARB, ogl_aux_buffer_count,
+		0, 0,
+	}; // attributes
+
+
+	auto pixel_format = 0;
+	auto pixel_format_count = UINT{};
+
+	const auto wgl_result = wglChoosePixelFormatARB(
+		dc,
+		attributes,
+		nullptr,
+		1,
+		&pixel_format,
+		&pixel_format_count);
+
+	if (!wgl_result || pixel_format_count == 0)
+	{
+		return 0;
+	}
+
+	return pixel_format;
+}
+
+void ogl_detect_wgl_extensions()
 {
 	const auto dummy_class_name = L"ltjs_dummy";
 	constexpr auto dummy_window_width = 64;
@@ -158,26 +321,45 @@ bool ogl_detect_wgl_extensions()
 			pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
 			pfd.iPixelType = PFD_TYPE_RGBA;
 			pfd.cColorBits = ogl_color_bit_depth;
-			pfd.cDepthBits = ogd_depth_buffer_bit_depth;
-			pfd.cStencilBits = ogd_stencil_buffer_bit_depth;
-			pfd.cAuxBuffers = ogd_aux_buffer_count;
+			pfd.cDepthBits = ogl_depth_buffer_bit_depth;
+			pfd.cStencilBits = ogl_stencil_buffer_bit_depth;
+			pfd.cAuxBuffers = ogl_aux_buffer_count;
 
 			const auto dc = ::GetDC(dummy_window);
-			const auto format_index = ::ChoosePixelFormat(dc, &pfd);
+			const auto legacy_pixel_format_index = ::ChoosePixelFormat(dc, &pfd);
 
-			if (format_index > 0)
+			if (legacy_pixel_format_index > 0)
 			{
-				if (::SetPixelFormat(dc, format_index, &pfd))
+				if (::SetPixelFormat(dc, legacy_pixel_format_index, &pfd))
 				{
+					ogl_pixel_format_index_ = legacy_pixel_format_index;
+
 					const auto glrc = ::wglCreateContext(dc);
 
 					if (::wglMakeCurrent(dc, glrc))
 					{
-						wglChoosePixelFormatARB = reinterpret_cast<WglChoosePixelFormatArbFunc>(
-							::wglGetProcAddress("wglChoosePixelFormatARB"));
+						auto wglGetExtensionsStringARB = reinterpret_cast<WglGetExtensionsStringArbFunc>(
+							::wglGetProcAddress("wglGetExtensionsStringARB"));
 
-						wglCreateContextAttribsARB = reinterpret_cast<WglCreateContextAttribsArbFunc>(
-							::wglGetProcAddress("wglCreateContextAttribsARB"));
+						if (wglGetExtensionsStringARB)
+						{
+							const auto extensions_string = wglGetExtensionsStringARB(dc);
+
+							ogl_parse_wgl_extensions_string(extensions_string);
+
+							if (ogl_has_wgl_extension("WGL_ARB_pixel_format"))
+							{
+								wglChoosePixelFormatARB = reinterpret_cast<WglChoosePixelFormatArbFunc>(
+									::wglGetProcAddress("wglChoosePixelFormatARB"));
+							}
+
+							if (ogl_has_wgl_extension("WGL_ARB_create_context") &&
+								ogl_has_wgl_extension("WGL_ARB_create_context_profile"))
+							{
+								wglCreateContextAttribsARB = reinterpret_cast<WglCreateContextAttribsArbFunc>(
+									::wglGetProcAddress("wglCreateContextAttribsARB"));
+							}
+						}
 
 						static_cast<void>(::wglMakeCurrent(dc, nullptr));
 					}
@@ -193,13 +375,97 @@ bool ogl_detect_wgl_extensions()
 				instance));
 		}
 	}
+}
 
-	return wglChoosePixelFormatARB && wglCreateContextAttribsARB;
+bool ogl_set_pixel_format()
+{
+	auto dc = ::GetDC(ogl_window_);
+
+	if (!dc)
+	{
+		return false;
+	}
+
+	int pixel_format_index = 0;
+
+	if (wglChoosePixelFormatARB)
+	{
+		pixel_format_index = ogl_choose_pixel_format_arb(dc);
+	}
+
+	if (pixel_format_index <= 0)
+	{
+		pixel_format_index = ogl_pixel_format_index_;
+	}
+
+	if (pixel_format_index <= 0)
+	{
+		return false;
+	}
+
+	PIXELFORMATDESCRIPTOR pfd;
+	ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
+
+	if (!::DescribePixelFormat(dc, pixel_format_index, static_cast<UINT>(sizeof(PIXELFORMATDESCRIPTOR)), &pfd))
+	{
+		return false;
+	}
+
+	if (!::SetPixelFormat(dc, pixel_format_index, &pfd))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool ogl_create_context_and_make_current()
+{
+	if (!wglCreateContextAttribsARB)
+	{
+		return false;
+	}
+
+	static const int attributes[] =
+	{
+		WGL_CONTEXT_MAJOR_VERSION_ARB, ogl_core_major,
+		WGL_CONTEXT_MINOR_VERSION_ARB, ogl_core_minor,
+		WGL_CONTEXT_FLAGS_ARB, 0,
+		WGL_CONTEXT_PROFILE_MASK_ARB, WGL_CONTEXT_CORE_PROFILE_BIT_ARB,
+		0, 0,
+	}; // attributes
+
+	auto dc = ::GetDC(ogl_window_);
+	auto glrc = wglCreateContextAttribsARB(dc, nullptr, attributes);
+
+	if (!::wglMakeCurrent(dc, glrc))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+bool ogl_initialize_internal()
+{
+	ogl_detect_wgl_extensions();
+
+	if (!ogl_set_pixel_format())
+	{
+		return false;
+	}
+
+	if (!ogl_create_context_and_make_current())
+	{
+		return false;
+	}
+
+	return true;
 }
 
 void ogl_initialize()
 {
-	if (!ogl_detect_wgl_extensions())
+	if (!ogl_initialize_internal())
 	{
 		ogl_uninitialize();
 	}
@@ -238,15 +504,14 @@ void d3d_Term(bool bFullTerm)						// We don't do a FullTerm on Alt-Tab (will be
 
 		g_bInStandby = false;
 
+#ifdef LTJS_WIP_OGL
+		ogl_uninitialize();
+#endif // LTJS_WIP_OGL
 	}
 	else
 	{
 		g_bInStandby = g_Device.Standby();
 	}
-
-#ifdef LTJS_WIP_OGL
-	ogl_uninitialize();
-#endif // LTJS_WIP_OGL
 
 	ShowCursor(true);							// Show the cursor
 }
