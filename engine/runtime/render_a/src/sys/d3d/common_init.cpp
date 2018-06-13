@@ -7,6 +7,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_set>
+#include "glad.h"
 #endif // LTJS_WIP_OGL
 
 #include "3d_ops.h"
@@ -456,6 +457,11 @@ bool ogl_initialize_internal()
 	}
 
 	if (!ogl_create_context_and_make_current())
+	{
+		return false;
+	}
+
+	if (!::gladLoadGL())
 	{
 		return false;
 	}

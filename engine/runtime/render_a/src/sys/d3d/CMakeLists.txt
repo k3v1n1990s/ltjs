@@ -14,6 +14,7 @@ include(ltjs_common)
 include_directories(
     .
 	../../../../../../libs/DirectXMath/Inc
+	../../../../../../libs/glad
     ../../../../../../libs/stdlith
     ../../../../../sdk/inc
     ../../../../../sdk/inc/physics
@@ -38,6 +39,7 @@ endif ()
 
 set(
     headers
+	../../../../../../libs/glad/glad.h
     ../../../../../sdk/inc/iclientshell.h
     ../../../../../sdk/inc/iltbenchmark.h
     ../../../../../sdk/inc/iltclient.h
@@ -194,6 +196,7 @@ set(
 
 set(
     sources
+	../../../../../../libs/glad/glad.cpp
     ../shadows/d3dshadowtexture.cpp
     3d_ops.cpp
     aabb.cpp
@@ -279,6 +282,13 @@ if (MSVC)
             # Precompiled Header (Create)
             COMPILE_FLAGS -Yc
     )
+
+	set_source_files_properties(
+		../../../../../../libs/glad/glad.cpp
+		PROPERTIES
+			# Precompiled Header (None)
+			COMPILE_FLAGS -Y-
+	)
 endif ()
 
 add_library(

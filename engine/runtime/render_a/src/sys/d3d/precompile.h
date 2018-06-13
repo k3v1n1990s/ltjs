@@ -41,7 +41,11 @@
 #include "d3d_defs.h"
 #endif
 
- 
+#ifdef LTJS_WIP_OGL
+#include "glad.h"
+#endif // LTJS_WIP_OGL
+
+
 #define FASTCALL __fastcall
 
  

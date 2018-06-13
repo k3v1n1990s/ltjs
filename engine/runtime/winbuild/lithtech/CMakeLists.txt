@@ -19,6 +19,7 @@ include_directories(
     .
 	../../../../libs/DirectXMath/Inc
     ../../../../libs/bibendovsky_spul_lib/include
+	../../../../libs/glad
     ../../../../libs/lith
     ../../../../libs/mfcstub
     ../../../../libs/stdlith
@@ -61,6 +62,7 @@ endif ()
 
 set(
     headers
+	../../../../libs/glad/glad.h
     ../../../libs/rezmgr/rezfile.h
     ../../../libs/rezmgr/rezhash.h
     ../../../libs/rezmgr/rezmgr.h
@@ -340,6 +342,7 @@ set(
 
 set(
     sources
+	../../../../libs/glad/glad.cpp
     ../../../sdk/inc/lterror.cpp
     ../../../sdk/inc/ltmodule.cpp
     ../../../sdk/inc/ltobjref.cpp
@@ -530,6 +533,7 @@ endif ()
 
 if (MSVC)
     set_source_files_properties(
+		../../../../libs/glad/glad.cpp
         ../../../sdk/inc/lterror.cpp
         ../../../sdk/inc/ltmodule.cpp
         ../../../sdk/inc/ltobjref.cpp
