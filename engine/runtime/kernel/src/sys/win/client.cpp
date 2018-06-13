@@ -609,7 +609,7 @@ int RunClientApp(HINSTANCE hInstance) {
                 LTNULL);												// creation parameters
 
 #ifdef LTJS_WIP_OGL
-	const auto const ogl_class_name = L"ltjs_wip_ogl";
+	const auto ogl_class_name = L"ltjs_wip_ogl";
 	constexpr auto ogl_window_width = 800;
 	constexpr auto ogl_window_height = 600;
 

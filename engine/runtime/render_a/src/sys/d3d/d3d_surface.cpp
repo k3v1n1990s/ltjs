@@ -24,6 +24,12 @@ bool g_bScreenLocked=false;
 static IClientFormatMgr *s_pFormatMgr;
 define_holder(IClientFormatMgr, s_pFormatMgr);
 
+
+#ifdef LTJS_WIP_OGL
+extern void ogl_swap_buffers();
+extern void ogl_test_draw();
+#endif // LTJS_WIP_OGL
+
 // ---------------------------------------------------------------- //
 // Externs.
 // ---------------------------------------------------------------- //
@@ -655,6 +661,11 @@ void d3d_SwapBuffers(uint flags)
 	g_Device.PreventFrameBuffering();
 
 	ClearDirtyRects();
+
+#ifdef LTJS_WIP_OGL
+	ogl_test_draw();
+	ogl_swap_buffers();
+#endif // LTJS_WIP_OGL
 }
 
 

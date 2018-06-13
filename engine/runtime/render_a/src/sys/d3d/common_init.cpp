@@ -2,6 +2,7 @@
 #include "precompile.h"
 
 #ifdef LTJS_WIP_OGL
+#include <cassert>
 #include <algorithm>
 #include <iterator>
 #include <sstream>
@@ -86,6 +87,38 @@ extern HWND ogl_window_;
 
 namespace
 {
+
+
+const auto ogl_default_vertex_shader_source = std::string{
+R"LTJ_VERTEX(
+
+#version 330 core
+
+layout(location = 0) in vec4 a_position;
+
+void main()
+{
+	gl_Position = a_position;
+	gl_Position.z = -gl_Position.z;
+}
+
+)LTJ_VERTEX"
+}; // ogl_default_vertex_shader
+
+const auto ogl_default_fragment_shader_source = std::string{
+R"LTJ_FRAGMENT(
+
+#version 330 core
+
+out vec4 o_fragment;
+
+void main()
+{
+	o_fragment = vec4(0, 1, 0, 1);
+}
+
+)LTJ_FRAGMENT"
+}; // ogl_default_fragment_shader
 
 
 // WGL_ARB_pixel_format
@@ -185,14 +218,201 @@ constexpr auto ogl_core_major = 3;
 constexpr auto ogl_core_minor = 3;
 
 
+enum class ShaderType
+{
+	vertex,
+	fragment,
+}; // ShaderType
+
+
+bool ogl_is_initialized_ = false;
+
+HDC ogl_window_dc_ = nullptr;
+
 int ogl_pixel_format_index_ = 0;
 ExtensionSet ogl_wgl_extensions_;
-WglChoosePixelFormatArbFunc wglChoosePixelFormatARB;
-WglCreateContextAttribsArbFunc wglCreateContextAttribsARB;
+WglChoosePixelFormatArbFunc wglChoosePixelFormatARB = nullptr;
+WglCreateContextAttribsArbFunc wglCreateContextAttribsARB = nullptr;
 
+GLuint ogl_default_vertex_shader_ = 0;
+GLuint ogl_default_fragment_shader_ = 0;
+GLuint ogl_default_program_ = 0;
+
+GLuint ogl_test_vbo_ = 0;
+GLuint ogl_test_vao_ = 0;
+
+
+void ogl_get_build_status(
+	const GLenum object_status,
+	void (APIENTRYP ogl_get_parameter)(GLuint object, GLenum pname, GLint *params),
+	void (APIENTRYP ogl_get_log)(GLuint object, GLsizei bufSize, GLsizei *length, GLchar *infoLog),
+	const GLuint object,
+	bool& is_built,
+	std::string& log)
+{
+	is_built = false;
+	log.clear();
+
+	auto ogl_compile_status = GLint{};
+	auto ogl_log_length = GLint{};
+
+	ogl_get_parameter(object, object_status, &ogl_compile_status);
+	ogl_get_parameter(object, GL_INFO_LOG_LENGTH, &ogl_log_length);
+
+	is_built = (ogl_compile_status == GL_TRUE);
+
+	if (ogl_log_length > 0)
+	{
+		log.resize(ogl_log_length);
+		ogl_get_log(object, ogl_log_length, &ogl_log_length, &log[0]);
+	}
+}
+
+void ogl_get_shader_compile_status(
+	const GLuint shader,
+	bool& is_compiled,
+	std::string& log)
+{
+	ogl_get_build_status(GL_COMPILE_STATUS, ::glGetShaderiv, ::glGetShaderInfoLog, shader, is_compiled, log);
+}
+
+void ogl_get_program_link_status(
+	const GLuint program,
+	bool& is_linked,
+	std::string& log)
+{
+	ogl_get_build_status(GL_LINK_STATUS, ::glGetProgramiv, ::glGetProgramInfoLog, program, is_linked, log);
+}
+
+bool ogl_load_default_shader(
+	const ShaderType shader_type,
+	GLuint& shader)
+{
+	shader = GL_NONE;
+
+	const std::string* shader_source;
+	GLenum ogl_shader_type;
+
+	switch (shader_type)
+	{
+	case ShaderType::vertex:
+		ogl_shader_type = GL_VERTEX_SHADER;
+		shader_source = &ogl_default_vertex_shader_source;
+		break;
+
+	case ShaderType::fragment:
+		ogl_shader_type = GL_FRAGMENT_SHADER;
+		shader_source = &ogl_default_fragment_shader_source;
+		break;
+
+	default:
+		return GL_NONE;
+	}
+
+	shader = ::glCreateShader(ogl_shader_type);
+
+	const char* const source_lines[1] =
+	{
+		shader_source->c_str(),
+	}; // source_lines
+
+	const GLint source_lines_lengths[1] =
+	{
+		static_cast<GLint>(shader_source->length()),
+	}; // source_lines
+
+	::glShaderSource(shader, 1, source_lines, source_lines_lengths);
+	::glCompileShader(shader);
+
+	bool is_compiled;
+	std::string log;
+
+	ogl_get_shader_compile_status(shader, is_compiled, log);
+
+	return is_compiled;
+}
+
+bool ogl_load_default_program()
+{
+	if (!ogl_load_default_shader(ShaderType::vertex, ogl_default_vertex_shader_))
+	{
+		return false;
+	}
+
+	if (!ogl_load_default_shader(ShaderType::fragment, ogl_default_fragment_shader_))
+	{
+		return false;
+	}
+
+	ogl_default_program_ = ::glCreateProgram();
+
+	if (!ogl_default_program_)
+	{
+		return false;
+	}
+
+	::glAttachShader(ogl_default_program_, ogl_default_vertex_shader_);
+	::glAttachShader(ogl_default_program_, ogl_default_fragment_shader_);
+	::glLinkProgram(ogl_default_program_);
+
+	bool is_linked;
+	std::string log;
+
+	ogl_get_program_link_status(ogl_default_program_, is_linked, log);
+
+	return is_linked;
+}
+
+bool ogl_is_succeed()
+{
+	while (::glGetError() != GL_NO_ERROR)
+	{
+		return false;
+	}
+
+	return true;
+}
 
 void ogl_uninitialize()
 {
+	ogl_is_initialized_ = false;
+	ogl_window_dc_ = nullptr;
+
+	if (ogl_test_vao_)
+	{
+		::glDeleteVertexArrays(1, &ogl_test_vao_);
+		ogl_test_vao_ = 0;
+	}
+
+	if (ogl_test_vbo_)
+	{
+		::glDeleteBuffers(1, &ogl_test_vbo_);
+		ogl_test_vbo_ = 0;
+	}
+
+	::glUseProgram(0);
+
+	if (ogl_default_program_)
+	{
+		::glDetachShader(ogl_default_program_, ogl_default_vertex_shader_);
+		::glDetachShader(ogl_default_program_, ogl_default_fragment_shader_);
+		::glDeleteProgram(ogl_default_program_);
+
+		ogl_default_program_ = 0;
+	}
+
+	if (ogl_default_vertex_shader_)
+	{
+		::glDeleteShader(ogl_default_vertex_shader_);
+		ogl_default_vertex_shader_ = 0;
+	}
+
+	if (ogl_default_fragment_shader_)
+	{
+		::glDeleteShader(ogl_default_fragment_shader_);
+		ogl_default_fragment_shader_ = 0;
+	}
+
 	auto ogl_context = ::wglGetCurrentContext();
 	auto ogl_dc = ::wglGetCurrentDC();
 
@@ -380,18 +600,11 @@ void ogl_detect_wgl_extensions()
 
 bool ogl_set_pixel_format()
 {
-	auto dc = ::GetDC(ogl_window_);
-
-	if (!dc)
-	{
-		return false;
-	}
-
 	int pixel_format_index = 0;
 
 	if (wglChoosePixelFormatARB)
 	{
-		pixel_format_index = ogl_choose_pixel_format_arb(dc);
+		pixel_format_index = ogl_choose_pixel_format_arb(ogl_window_dc_);
 	}
 
 	if (pixel_format_index <= 0)
@@ -407,12 +620,12 @@ bool ogl_set_pixel_format()
 	PIXELFORMATDESCRIPTOR pfd;
 	ZeroMemory(&pfd, sizeof(PIXELFORMATDESCRIPTOR));
 
-	if (!::DescribePixelFormat(dc, pixel_format_index, static_cast<UINT>(sizeof(PIXELFORMATDESCRIPTOR)), &pfd))
+	if (!::DescribePixelFormat(ogl_window_dc_, pixel_format_index, static_cast<UINT>(sizeof(PIXELFORMATDESCRIPTOR)), &pfd))
 	{
 		return false;
 	}
 
-	if (!::SetPixelFormat(dc, pixel_format_index, &pfd))
+	if (!::SetPixelFormat(ogl_window_dc_, pixel_format_index, &pfd))
 	{
 		return false;
 	}
@@ -447,8 +660,39 @@ bool ogl_create_context_and_make_current()
 	return true;
 }
 
+void ogl_set_defaults()
+{
+	::glClearColor(0.0F, 0.0F, 0.0F, 1.0F);
+
+	::glGenBuffers(1, &ogl_test_vbo_);
+	::glGenVertexArrays(1, &ogl_test_vao_);
+
+
+	static const GLfloat test_data[] =
+	{
+	   -1.0f, -1.0f, 0.0f,
+	   1.0f, -1.0f, 0.0f,
+	   0.0f,  1.0f, 0.0f,
+	}; // test_data
+
+	::glBindVertexArray(ogl_test_vao_);
+
+	::glBindBuffer(GL_ARRAY_BUFFER, ogl_test_vbo_);
+	::glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(test_data)), test_data, GL_STATIC_DRAW);
+
+	::glEnableVertexAttribArray(0);
+	::glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(0));
+	::glDisableVertexAttribArray(0);
+
+	::glBindVertexArray(0);
+
+	::glUseProgram(ogl_default_program_);
+}
+
 bool ogl_initialize_internal()
 {
+	ogl_window_dc_ = ::GetDC(ogl_window_);
+
 	ogl_detect_wgl_extensions();
 
 	if (!ogl_set_pixel_format())
@@ -466,19 +710,57 @@ bool ogl_initialize_internal()
 		return false;
 	}
 
+	if (!ogl_load_default_program())
+	{
+		return false;
+	}
+
+	ogl_set_defaults();
+
+	assert(ogl_is_succeed());
+
 	return true;
 }
 
 void ogl_initialize()
 {
+	if (ogl_is_initialized_)
+	{
+		return;
+	}
+
 	if (!ogl_initialize_internal())
 	{
 		ogl_uninitialize();
 	}
+
+	ogl_is_initialized_ = true;
 }
 
 
 } // namespace
+
+
+void ogl_swap_buffers()
+{
+	if (!ogl_is_initialized_)
+	{
+		return;
+	}
+
+	::SwapBuffers(ogl_window_dc_);
+}
+
+void ogl_test_draw()
+{
+	::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+	::glBindVertexArray(ogl_test_vao_);
+	::glDrawArrays(GL_TRIANGLES, 0, 3);
+	::glBindVertexArray(0);
+
+	assert(ogl_is_succeed());
+}
 #endif // LTJS_WIP_OGL
 
 
