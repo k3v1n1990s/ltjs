@@ -43,6 +43,7 @@
 
 #ifdef LTJS_WIP_OGL
 #include "glad.h"
+#include "ltjs_iogl_render_state.h"
 #endif // LTJS_WIP_OGL
 
 

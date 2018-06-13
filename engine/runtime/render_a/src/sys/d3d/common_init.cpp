@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_set>
 #include "glad.h"
+#include "ltjs_iogl_render_state.h"
 #endif // LTJS_WIP_OGL
 
 #include "3d_ops.h"
@@ -244,8 +245,8 @@ GLuint ogl_test_vao_ = 0;
 
 void ogl_get_build_status(
 	const GLenum object_status,
-	void (APIENTRYP ogl_get_parameter)(GLuint object, GLenum pname, GLint *params),
-	void (APIENTRYP ogl_get_log)(GLuint object, GLsizei bufSize, GLsizei *length, GLchar *infoLog),
+	void (APIENTRYP ogl_get_parameter)(GLuint object, GLenum pname, GLint* params),
+	void (APIENTRYP ogl_get_log)(GLuint object, GLsizei bufSize, GLsizei* length, GLchar* infoLog),
 	const GLuint object,
 	bool& is_built,
 	std::string& log)
@@ -662,8 +663,6 @@ bool ogl_create_context_and_make_current()
 
 void ogl_set_defaults()
 {
-	::glClearColor(0.0F, 0.0F, 0.0F, 1.0F);
-
 	::glGenBuffers(1, &ogl_test_vbo_);
 	::glGenVertexArrays(1, &ogl_test_vao_);
 
@@ -688,7 +687,9 @@ void ogl_set_defaults()
 	::glUseProgram(ogl_default_program_);
 }
 
-bool ogl_initialize_internal()
+bool ogl_initialize_internal(
+	const int screen_width,
+	const int screen_height)
 {
 	ogl_window_dc_ = ::GetDC(ogl_window_);
 
@@ -709,6 +710,10 @@ bool ogl_initialize_internal()
 		return false;
 	}
 
+	if (!ltjs::IOglRenderState::get_instance()->initialize(screen_width, screen_height))
+	{
+	}
+
 	if (!ogl_load_default_program())
 	{
 		return false;
@@ -721,14 +726,16 @@ bool ogl_initialize_internal()
 	return true;
 }
 
-void ogl_initialize()
+void ogl_initialize(
+	const int screen_width,
+	const int screen_height)
 {
 	if (ogl_is_initialized_)
 	{
 		return;
 	}
 
-	if (!ogl_initialize_internal())
+	if (!ogl_initialize_internal(screen_width, screen_height))
 	{
 		ogl_uninitialize();
 	}
@@ -754,7 +761,7 @@ void ogl_swap_buffers()
 
 void ogl_test_draw()
 {
-	::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	//::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 	::glBindVertexArray(ogl_test_vao_);
 	::glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -968,7 +975,9 @@ int d3d_Init(RenderStructInit *pInit)
 	} 
 
 #ifdef LTJS_WIP_OGL
-	ogl_initialize();
+	ogl_initialize(
+		static_cast<int>(pInit->m_Mode.m_Width),
+		static_cast<int>(pInit->m_Mode.m_Height));
 #endif // LTJS_WIP_OGL
 
 	LT_MEM_TRACK_ALLOC(new D3DShadowTextureFactory(),LT_MEM_TYPE_RENDERER); // Shadow texture map related initialization stuff added here
