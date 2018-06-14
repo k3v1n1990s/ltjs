@@ -12,11 +12,19 @@ namespace ltjs
 class IOglRenderState
 {
 public:
-	enum class StackStateItemType
+	struct Viewport
 	{
-		none,
-		viewport,
-	}; // StackStateItemType
+		int x_;
+		int y_;
+		int width_;
+		int height_;
+
+		float depth_min_z_;
+		float depth_max_z_;
+
+
+		Viewport();
+	}; // Viewport
 
 
 	bool is_initialized() const;
@@ -38,21 +46,14 @@ public:
 	// Notes:
 	//    - Uses Direct3D coordinate system.
 	//
+	const Viewport& get_viewport() const;
+
+	//
+	// Notes:
+	//    - Uses Direct3D coordinate system.
+	//
 	void set_viewport(
-		const int x,
-		const int y,
-		const int width,
-		const int height,
-		const float min_z,
-		const float max_z);
-
-
-	void push_state_item(
-		const StackStateItemType state_item_type);
-
-	void pop_state_item();
-
-	void pop_state_items();
+		const Viewport& viewport);
 
 
 	void ogl_clear_error();
@@ -91,20 +92,10 @@ private:
 		const std::uint8_t b,
 		const std::uint8_t a) = 0;
 
+	virtual const Viewport& do_get_viewport() const = 0;
+
 	virtual void do_set_viewport(
-		const int x,
-		const int y,
-		const int width,
-		const int height,
-		const float min_z,
-		const float max_z) = 0;
-
-	virtual void do_push_state_item(
-		const StackStateItemType state_item_type) = 0;
-
-	virtual void do_pop_state_item() = 0;
-
-	virtual void do_pop_state_items() = 0;
+		const Viewport& viewport) = 0;
 }; // IOglRenderState
 
 

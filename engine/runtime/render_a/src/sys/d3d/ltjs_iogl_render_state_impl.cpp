@@ -23,14 +23,8 @@ public:
 		clear_color_g_{},
 		clear_color_b_{},
 		clear_color_a_{},
-		viewport_x_{},
-		viewport_y_{},
-		viewport_width_{},
-		viewport_height_{},
-		viewport_depth_min_z_{},
-		viewport_depth_max_z_{},
-		max_viewport_size_{},
-		state_stack_{}
+		viewport_{},
+		max_viewport_size_{}
 	{
 	}
 
@@ -41,39 +35,6 @@ public:
 
 
 private:
-	static constexpr auto state_stack_reserve_size = 4;
-
-
-	struct StateStackItem
-	{
-		static constexpr auto max_values = 6;
-
-		struct Value
-		{
-			union
-			{
-				int as_int_;
-				float as_float_;
-			}; // union
-		}; // Value
-
-		using Values = std::array<Value, max_values>;
-
-
-		StackStateItemType type_;
-		Values values_;
-
-
-		StateStackItem()
-			:
-			type_{},
-			values_{}
-		{
-		}
-	}; // StateStackItem
-
-	using StateStack = std::vector<StateStackItem>;
-
 	using ViewportSize = std::array<int, 2>;
 
 
@@ -87,17 +48,8 @@ private:
 	std::uint8_t clear_color_b_;
 	std::uint8_t clear_color_a_;
 
-	int viewport_x_;
-	int viewport_y_;
-	int viewport_width_;
-	int viewport_height_;
-
-	float viewport_depth_min_z_;
-	float viewport_depth_max_z_;
-
+	Viewport viewport_;
 	ViewportSize max_viewport_size_;
-
-	StateStack state_stack_;
 
 
 	bool do_is_initialized() const override
@@ -150,105 +102,44 @@ private:
 		do_set_clear_color_internal();
 	}
 
+	const Viewport& do_get_viewport() const override
+	{
+		return viewport_;
+	}
+
 	void do_set_viewport(
-		const int x,
-		const int y,
-		const int width,
-		const int height,
-		const float min_z,
-		const float max_z) override
+		const Viewport& viewport) override
 	{
 		if (!is_initialized_)
 		{
 			return;
 		}
 
-		if (x < 0 ||
-			y < 0 ||
-			width <= 0 ||
-			height <= 0 ||
-			x >= max_viewport_size_[0] ||
-			y >= max_viewport_size_[1] ||
-			width >= max_viewport_size_[0] ||
-			height >= max_viewport_size_[1])
+		if (viewport.x_ < 0 ||
+			viewport.y_ < 0 ||
+			viewport.width_ <= 0 ||
+			viewport.height_ <= 0 ||
+			viewport.x_ >= max_viewport_size_[0] ||
+			viewport.y_ >= max_viewport_size_[1] ||
+			viewport.width_ >= max_viewport_size_[0] ||
+			viewport.height_ >= max_viewport_size_[1])
 		{
 			return;
 		}
 
-		if (x == viewport_x_ &&
-			y == viewport_y_ &&
-			width == viewport_width_ &&
-			height == viewport_height_ &&
-			min_z == viewport_depth_min_z_ &&
-			max_z == viewport_depth_max_z_)
+		if (viewport.x_ == viewport_.x_ &&
+			viewport.y_ == viewport_.y_ &&
+			viewport.width_ == viewport_.width_ &&
+			viewport.height_ == viewport_.height_ &&
+			viewport.depth_min_z_ == viewport_.depth_min_z_ &&
+			viewport.depth_max_z_ == viewport_.depth_max_z_)
 		{
 			return;
 		}
 
-		viewport_x_ = x;
-		viewport_y_ = y;
-		viewport_width_ = width;
-		viewport_height_ = height;
-
-		viewport_depth_min_z_ = min_z;
-		viewport_depth_max_z_ = max_z;
+		viewport_ = viewport;
 
 		do_set_viewport_internal();
-	}
-
-	void do_push_state_item(
-		const StackStateItemType state_item_type) override
-	{
-		if (!is_initialized_)
-		{
-			return;
-		}
-
-		switch (state_item_type)
-		{
-		case StackStateItemType::viewport:
-			do_push_state_viewport_internal();
-			break;
-
-		default:
-			assert(!"Invalid item type.");
-			throw "Invalid item type.";
-		}
-	}
-
-	void do_pop_state_item() override
-	{
-		if (!is_initialized_)
-		{
-			return;
-		}
-
-		if (state_stack_.empty())
-		{
-			assert(!"Empty stack.");
-			throw "Empty stack.";
-		}
-
-		do_pop_state_item_internal();
-	}
-
-	void do_pop_state_items() override
-	{
-		if (!is_initialized_)
-		{
-			return;
-		}
-
-		if (state_stack_.empty())
-		{
-			assert(!"Empty stack.");
-			throw "Empty stack.";
-		}
-
-		while (!state_stack_.empty())
-		{
-			do_pop_state_item_internal();
-		}
 	}
 
 	void do_set_clear_color_internal()
@@ -262,10 +153,10 @@ private:
 
 	void do_set_viewport_internal()
 	{
-		const auto ogl_viewport_y = screen_height_ - (viewport_y_ + viewport_height_);
+		const auto ogl_viewport_y = screen_height_ - (viewport_.y_ + viewport_.height_);
 
-		::glViewport(viewport_x_, ogl_viewport_y, viewport_width_, viewport_height_);
-		::glDepthRange(viewport_depth_min_z_, viewport_depth_max_z_);
+		::glViewport(viewport_.x_, ogl_viewport_y, viewport_.width_, viewport_.height_);
+		::glDepthRange(viewport_.depth_min_z_, viewport_.depth_max_z_);
 	}
 
 	bool do_initialize_internal(
@@ -307,20 +198,18 @@ private:
 		clear_color_a_ = 0;
 		do_set_clear_color_internal();
 
-		viewport_x_ = 0;
-		viewport_y_ = 0;
-		viewport_width_ = screen_width_;
-		viewport_height_ = screen_height_;
-		viewport_depth_min_z_ = 0.0F;
-		viewport_depth_max_z_ = 1.0F;
+		viewport_.x_ = 0;
+		viewport_.y_ = 0;
+		viewport_.width_ = screen_width_;
+		viewport_.height_ = screen_height_;
+		viewport_.depth_min_z_ = 0.0F;
+		viewport_.depth_max_z_ = 1.0F;
 		do_set_viewport_internal();
 
 		if (!ogl_is_succeed())
 		{
 			return false;
 		}
-
-		state_stack_.reserve(state_stack_reserve_size);
 
 		is_initialized_ = true;
 
@@ -339,65 +228,22 @@ private:
 		clear_color_b_ = 0;
 		clear_color_a_ = 0;
 
-		viewport_x_ = 0;
-		viewport_y_ = 0;
-		viewport_width_ = 0;
-		viewport_height_ = 0;
-
-		viewport_depth_min_z_ = 0.0F;
-		viewport_depth_max_z_ = 0.0F;
-
+		viewport_ = {};
 		max_viewport_size_ = {};
-
-		state_stack_.clear();
-	}
-
-	void do_push_state_viewport_internal()
-	{
-		state_stack_.emplace_back();
-		auto& item = state_stack_.back();
-
-		item.type_ = StackStateItemType::viewport;
-		item.values_[0].as_int_ = viewport_x_;
-		item.values_[1].as_int_ = viewport_y_;
-		item.values_[2].as_int_ = viewport_width_;
-		item.values_[3].as_int_ = viewport_height_;
-		item.values_[4].as_float_ = viewport_depth_min_z_;
-		item.values_[5].as_float_ = viewport_depth_max_z_;
-	}
-
-	void do_pop_state_viewport_internal()
-	{
-		const auto& item = state_stack_.back();
-
-		do_set_viewport(
-			item.values_[0].as_int_,
-			item.values_[1].as_int_,
-			item.values_[2].as_int_,
-			item.values_[3].as_int_,
-			item.values_[4].as_float_,
-			item.values_[5].as_float_);
-
-		state_stack_.pop_back();
-	}
-
-	void do_pop_state_item_internal()
-	{
-		const auto& item = state_stack_.back();
-
-		switch (item.type_)
-		{
-		case StackStateItemType::viewport:
-			do_pop_state_viewport_internal();
-			break;
-
-		default:
-			assert(!"Invalid item type.");
-			throw "Invalid item type.";
-			break;
-		}
 	}
 }; // IOglRenderStateImpl
+
+
+IOglRenderState::Viewport::Viewport()
+	:
+	x_{},
+	y_{},
+	width_{},
+	height_{},
+	depth_min_z_{},
+	depth_max_z_{}
+{
+}
 
 
 IOglRenderState::IOglRenderState()
@@ -434,31 +280,15 @@ void IOglRenderState::set_clear_color(
 	do_set_clear_color(r, g, b, a);
 }
 
+const IOglRenderState::Viewport& IOglRenderState::get_viewport() const
+{
+	return do_get_viewport();
+}
+
 void IOglRenderState::set_viewport(
-	const int x,
-	const int y,
-	const int width,
-	const int height,
-	const float min_z,
-	const float max_z)
+	const Viewport& viewport)
 {
-	do_set_viewport(x, y, width, height, min_z, max_z);
-}
-
-void IOglRenderState::push_state_item(
-	const StackStateItemType state_item_type)
-{
-	do_push_state_item(state_item_type);
-}
-
-void IOglRenderState::pop_state_item()
-{
-	do_pop_state_item();
-}
-
-void IOglRenderState::pop_state_items()
-{
-	do_pop_state_items();
+	do_set_viewport(viewport);
 }
 
 void IOglRenderState::ogl_clear_error()
