@@ -613,6 +613,16 @@ int RunClientApp(HINSTANCE hInstance) {
 	constexpr auto ogl_window_width = 800;
 	constexpr auto ogl_window_height = 600;
 
+	const auto ogl_window_style = DWORD{WS_CAPTION};
+	const auto ogl_window_ex_style = DWORD{};
+
+	auto ogl_window_rect = RECT{0, 0, ogl_window_width, ogl_window_height};
+
+	static_cast<void>(::AdjustWindowRectEx(&ogl_window_rect, ogl_window_style, FALSE, ogl_window_ex_style));
+
+	const auto ogl_adjusted_window_width = ogl_window_rect.right - ogl_window_rect.left;
+	const auto ogl_adjusted_window_height = ogl_window_rect.bottom - ogl_window_rect.top;
+
 	WNDCLASSW ogl_window_class;
 	ZeroMemory(&ogl_window_class, sizeof(WNDCLASSW));
 	ogl_window_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
@@ -626,14 +636,14 @@ int RunClientApp(HINSTANCE hInstance) {
 	static_cast<void>(::RegisterClassW(&ogl_window_class));
 
 	ogl_window_ = CreateWindowExW(
-		0, // extra styles
+		ogl_window_ex_style, // extra styles
 		ogl_class_name, // window class name
 		L"OpenGL (work in progress)", // window caption
-		WS_CAPTION, // window style
-		(screenRect.right - screenRect.left) - ogl_window_width, // initial x position
-		((screenRect.bottom - screenRect.top) - ogl_window_height) / 2, // initial y position
-		ogl_window_width, // initial x size
-		ogl_window_height, // initial y size
+		ogl_window_style, // window style
+		(screenRect.right - screenRect.left) - ogl_adjusted_window_width, // initial x position
+		((screenRect.bottom - screenRect.top) - ogl_adjusted_window_height) / 2, // initial y position
+		ogl_adjusted_window_width, // initial x size
+		ogl_adjusted_window_height, // initial y size
 		nullptr, // parent window handle
 		nullptr, // window menu handle
 		pGlob->m_hInstance, // program instance handle
