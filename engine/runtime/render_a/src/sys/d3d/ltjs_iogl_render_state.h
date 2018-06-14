@@ -12,6 +12,13 @@ namespace ltjs
 class IOglRenderState
 {
 public:
+	enum class StackStateItemType
+	{
+		none,
+		viewport,
+	}; // StackStateItemType
+
+
 	bool is_initialized() const;
 
 	bool initialize(
@@ -38,6 +45,15 @@ public:
 		const int height,
 		const float min_z,
 		const float max_z);
+
+
+	void push_state_item(
+		const StackStateItemType state_item_type);
+
+	void pop_state_item();
+
+	void pop_state_items();
+
 
 	void ogl_clear_error();
 
@@ -82,6 +98,13 @@ private:
 		const int height,
 		const float min_z,
 		const float max_z) = 0;
+
+	virtual void do_push_state_item(
+		const StackStateItemType state_item_type) = 0;
+
+	virtual void do_pop_state_item() = 0;
+
+	virtual void do_pop_state_items() = 0;
 }; // IOglRenderState
 
 
