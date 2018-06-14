@@ -374,8 +374,7 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 	if (ogl_render_state.is_initialized())
 	{
 		ogl_render_state.set_clear_color(ClearColor.rgb.r, ClearColor.rgb.g, ClearColor.rgb.b, ClearColor.rgb.a);
-		ogl_render_state.set_viewport(0, 0, ::g_ScreenWidth, ::g_ScreenHeight);
-		ogl_render_state.set_depth_range(0.1F, 1.0F);
+		ogl_render_state.set_viewport(0, 0, ::g_ScreenWidth, ::g_ScreenHeight, 0.1F, 1.0F);
 
 		auto ogl_clear_bits = GLbitfield{};
 

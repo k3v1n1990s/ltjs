@@ -761,8 +761,6 @@ void ogl_swap_buffers()
 
 void ogl_test_draw()
 {
-	//::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
 	::glBindVertexArray(ogl_test_vao_);
 	::glDrawArrays(GL_TRIANGLES, 0, 3);
 	::glBindVertexArray(0);

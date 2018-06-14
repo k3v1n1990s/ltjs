@@ -35,9 +35,7 @@ public:
 		const int x,
 		const int y,
 		const int width,
-		const int height);
-
-	void set_depth_range(
+		const int height,
 		const float min_z,
 		const float max_z);
 
@@ -81,9 +79,7 @@ private:
 		const int x,
 		const int y,
 		const int width,
-		const int height) = 0;
-
-	virtual void do_set_depth_range(
+		const int height,
 		const float min_z,
 		const float max_z) = 0;
 }; // IOglRenderState

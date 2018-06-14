@@ -121,7 +121,9 @@ private:
 		const int x,
 		const int y,
 		const int width,
-		const int height) override
+		const int height,
+		const float min_z,
+		const float max_z) override
 	{
 		if (!is_initialized_)
 		{
@@ -143,7 +145,9 @@ private:
 		if (x == viewport_x_ &&
 			y == viewport_y_ &&
 			width == viewport_width_ &&
-			height == viewport_height_)
+			height == viewport_height_ &&
+			min_z == viewport_depth_min_z_ &&
+			max_z == viewport_depth_max_z_)
 		{
 			return;
 		}
@@ -153,37 +157,17 @@ private:
 		viewport_width_ = width;
 		viewport_height_ = height;
 
+		viewport_depth_min_z_ = min_z;
+		viewport_depth_max_z_ = max_z;
+
 		do_set_viewport_internal();
 	}
 
 	void do_set_viewport_internal()
 	{
-		::glViewport(viewport_x_, viewport_y_, viewport_width_, viewport_height_);
-	}
+		const auto ogl_viewport_y = screen_height_ - (viewport_y_ + viewport_height_);
 
-	void do_set_depth_range(
-		const float min_z,
-		const float max_z) override
-	{
-		if (!is_initialized_)
-		{
-			return;
-		}
-
-		if (min_z == viewport_depth_min_z_ &&
-			max_z == viewport_depth_max_z_)
-		{
-			return;
-		}
-
-		viewport_depth_min_z_ = min_z;
-		viewport_depth_max_z_ = max_z;
-
-		do_set_depth_range_internal();
-	}
-
-	void do_set_depth_range_internal()
-	{
+		::glViewport(viewport_x_, ogl_viewport_y, viewport_width_, viewport_height_);
 		::glDepthRange(viewport_depth_min_z_, viewport_depth_max_z_);
 	}
 
@@ -228,11 +212,9 @@ private:
 		viewport_y_ = 0;
 		viewport_width_ = screen_width_;
 		viewport_height_ = screen_height_;
-		do_set_viewport_internal();
-
 		viewport_depth_min_z_ = 0.0F;
 		viewport_depth_max_z_ = 1.0F;
-		do_set_depth_range_internal();
+		do_set_viewport_internal();
 
 		if (!ogl_is_succeed())
 		{
@@ -307,16 +289,11 @@ void IOglRenderState::set_viewport(
 	const int x,
 	const int y,
 	const int width,
-	const int height)
-{
-	do_set_viewport(x, y, width, height);
-}
-
-void IOglRenderState::set_depth_range(
+	const int height,
 	const float min_z,
 	const float max_z)
 {
-	do_set_depth_range(min_z, max_z);
+	do_set_viewport(x, y, width, height, min_z, max_z);
 }
 
 void IOglRenderState::ogl_clear_error()
