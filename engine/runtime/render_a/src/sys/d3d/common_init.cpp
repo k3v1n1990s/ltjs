@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include "glad.h"
 #include "ltjs_iogl_render_state.h"
+#include "ltjs_ogl_default_program.h"
 #endif // LTJS_WIP_OGL
 
 #include "3d_ops.h"
@@ -88,38 +89,6 @@ extern HWND ogl_window_;
 
 namespace
 {
-
-
-const auto ogl_default_vertex_shader_source = std::string{
-R"LTJ_VERTEX(
-
-#version 330 core
-
-layout(location = 0) in vec4 a_position;
-
-void main()
-{
-	gl_Position = a_position;
-	gl_Position.z = -gl_Position.z;
-}
-
-)LTJ_VERTEX"
-}; // ogl_default_vertex_shader
-
-const auto ogl_default_fragment_shader_source = std::string{
-R"LTJ_FRAGMENT(
-
-#version 330 core
-
-out vec4 o_fragment;
-
-void main()
-{
-	o_fragment = vec4(0, 1, 0, 1);
-}
-
-)LTJ_FRAGMENT"
-}; // ogl_default_fragment_shader
 
 
 // WGL_ARB_pixel_format
@@ -219,13 +188,6 @@ constexpr auto ogl_core_major = 3;
 constexpr auto ogl_core_minor = 3;
 
 
-enum class ShaderType
-{
-	vertex,
-	fragment,
-}; // ShaderType
-
-
 bool ogl_is_initialized_ = false;
 
 HDC ogl_window_dc_ = nullptr;
@@ -235,134 +197,9 @@ ExtensionSet ogl_wgl_extensions_;
 WglChoosePixelFormatArbFunc wglChoosePixelFormatARB = nullptr;
 WglCreateContextAttribsArbFunc wglCreateContextAttribsARB = nullptr;
 
-GLuint ogl_default_vertex_shader_ = 0;
-GLuint ogl_default_fragment_shader_ = 0;
-GLuint ogl_default_program_ = 0;
-
 GLuint ogl_test_vbo_ = 0;
 GLuint ogl_test_vao_ = 0;
 
-
-void ogl_get_build_status(
-	const GLenum object_status,
-	void (APIENTRYP ogl_get_parameter)(GLuint object, GLenum pname, GLint* params),
-	void (APIENTRYP ogl_get_log)(GLuint object, GLsizei bufSize, GLsizei* length, GLchar* infoLog),
-	const GLuint object,
-	bool& is_built,
-	std::string& log)
-{
-	is_built = false;
-	log.clear();
-
-	auto ogl_compile_status = GLint{};
-	auto ogl_log_length = GLint{};
-
-	ogl_get_parameter(object, object_status, &ogl_compile_status);
-	ogl_get_parameter(object, GL_INFO_LOG_LENGTH, &ogl_log_length);
-
-	is_built = (ogl_compile_status == GL_TRUE);
-
-	if (ogl_log_length > 0)
-	{
-		log.resize(ogl_log_length);
-		ogl_get_log(object, ogl_log_length, &ogl_log_length, &log[0]);
-	}
-}
-
-void ogl_get_shader_compile_status(
-	const GLuint shader,
-	bool& is_compiled,
-	std::string& log)
-{
-	ogl_get_build_status(GL_COMPILE_STATUS, ::glGetShaderiv, ::glGetShaderInfoLog, shader, is_compiled, log);
-}
-
-void ogl_get_program_link_status(
-	const GLuint program,
-	bool& is_linked,
-	std::string& log)
-{
-	ogl_get_build_status(GL_LINK_STATUS, ::glGetProgramiv, ::glGetProgramInfoLog, program, is_linked, log);
-}
-
-bool ogl_load_default_shader(
-	const ShaderType shader_type,
-	GLuint& shader)
-{
-	shader = GL_NONE;
-
-	const std::string* shader_source;
-	GLenum ogl_shader_type;
-
-	switch (shader_type)
-	{
-	case ShaderType::vertex:
-		ogl_shader_type = GL_VERTEX_SHADER;
-		shader_source = &ogl_default_vertex_shader_source;
-		break;
-
-	case ShaderType::fragment:
-		ogl_shader_type = GL_FRAGMENT_SHADER;
-		shader_source = &ogl_default_fragment_shader_source;
-		break;
-
-	default:
-		return GL_NONE;
-	}
-
-	shader = ::glCreateShader(ogl_shader_type);
-
-	const char* const source_lines[1] =
-	{
-		shader_source->c_str(),
-	}; // source_lines
-
-	const GLint source_lines_lengths[1] =
-	{
-		static_cast<GLint>(shader_source->length()),
-	}; // source_lines
-
-	::glShaderSource(shader, 1, source_lines, source_lines_lengths);
-	::glCompileShader(shader);
-
-	bool is_compiled;
-	std::string log;
-
-	ogl_get_shader_compile_status(shader, is_compiled, log);
-
-	return is_compiled;
-}
-
-bool ogl_load_default_program()
-{
-	if (!ogl_load_default_shader(ShaderType::vertex, ogl_default_vertex_shader_))
-	{
-		return false;
-	}
-
-	if (!ogl_load_default_shader(ShaderType::fragment, ogl_default_fragment_shader_))
-	{
-		return false;
-	}
-
-	ogl_default_program_ = ::glCreateProgram();
-
-	if (!ogl_default_program_)
-	{
-		return false;
-	}
-
-	::glAttachShader(ogl_default_program_, ogl_default_vertex_shader_);
-	::glAttachShader(ogl_default_program_, ogl_default_fragment_shader_);
-	::glLinkProgram(ogl_default_program_);
-
-	bool is_linked;
-	std::string log;
-
-	ogl_get_program_link_status(ogl_default_program_, is_linked, log);
-
-	return is_linked;
-}
 
 bool ogl_is_succeed()
 {
@@ -391,28 +228,8 @@ void ogl_uninitialize()
 		ogl_test_vbo_ = 0;
 	}
 
-	::glUseProgram(0);
+	ltjs::OglDefaultProgram::get_instance().uninitialize();
 
-	if (ogl_default_program_)
-	{
-		::glDetachShader(ogl_default_program_, ogl_default_vertex_shader_);
-		::glDetachShader(ogl_default_program_, ogl_default_fragment_shader_);
-		::glDeleteProgram(ogl_default_program_);
-
-		ogl_default_program_ = 0;
-	}
-
-	if (ogl_default_vertex_shader_)
-	{
-		::glDeleteShader(ogl_default_vertex_shader_);
-		ogl_default_vertex_shader_ = 0;
-	}
-
-	if (ogl_default_fragment_shader_)
-	{
-		::glDeleteShader(ogl_default_fragment_shader_);
-		ogl_default_fragment_shader_ = 0;
-	}
 
 	auto ogl_context = ::wglGetCurrentContext();
 	auto ogl_dc = ::wglGetCurrentDC();
@@ -684,7 +501,7 @@ void ogl_set_defaults()
 
 	::glBindVertexArray(0);
 
-	::glUseProgram(ogl_default_program_);
+	ltjs::OglDefaultProgram::get_instance().enable(true);
 }
 
 bool ogl_initialize_internal(
@@ -714,7 +531,7 @@ bool ogl_initialize_internal(
 	{
 	}
 
-	if (!ogl_load_default_program())
+	if (!ltjs::OglDefaultProgram::get_instance().initialize())
 	{
 		return false;
 	}

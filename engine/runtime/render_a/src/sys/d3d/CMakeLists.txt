@@ -161,6 +161,7 @@ set(
     lteffectinclude.h
     lteffectshadermgr.h
 	ltjs_iogl_render_state.h
+	ltjs_ogl_default_program.h
     ltpixelshadermgr.h
     ltshaderdevicestateimp.h
     ltvertexshadermgr.h
@@ -247,6 +248,7 @@ set(
     lteffectinclude.cpp
     lteffectshadermgr.cpp
 	ltjs_iogl_render_state_impl.cpp
+	ltjs_ogl_default_program.cpp
     ltpixelshadermgr.cpp
     ltshaderdevicestateimp.cpp
     ltvertexshadermgr.cpp

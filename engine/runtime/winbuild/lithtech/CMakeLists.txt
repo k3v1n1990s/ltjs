@@ -231,6 +231,7 @@ set(
     ../../render_a/src/sys/d3d/d3d_renderstyle.h
     ../../render_a/src/sys/d3d/d3d_utils.h
 	../../render_a/src/sys/d3d/ltjs_iogl_render_state.h
+	../../render_a/src/sys/d3d/ltjs_ogl_default_program.h
     ../../render_b/src/gendrawprim.h
     ../../render_b/src/sys/d3d/d3ddrawprim.h
     ../../render_b/src/sys/d3d/d3dtexinterface.h
