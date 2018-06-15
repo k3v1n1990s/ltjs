@@ -17,6 +17,9 @@ public:
 	IOglRenderStateImpl()
 		:
 		is_initialized_{},
+		is_context_current_{},
+		ogl_dc_{},
+		ogl_rc_{},
 		screen_width_{},
 		screen_height_{},
 		clear_color_r_{},
@@ -39,6 +42,10 @@ private:
 
 
 	bool is_initialized_;
+	bool is_context_current_;
+
+	HDC ogl_dc_;
+	HGLRC ogl_rc_;
 
 	int screen_width_;
 	int screen_height_;
@@ -75,13 +82,37 @@ private:
 		do_uninitialize_internal();
 	}
 
+	void do_set_current_context(
+		const bool is_current)
+	{
+		if (!is_initialized_)
+		{
+			return;
+		}
+
+		if (is_current == is_context_current_)
+		{
+			return;
+		}
+
+		const auto dc = (is_current ? ogl_dc_ : nullptr);
+		const auto rc = (is_current ? ogl_rc_ : nullptr);
+
+		const auto make_result = ::wglMakeCurrent(dc, rc);
+		assert(make_result);
+
+		is_context_current_ = is_current;
+	}
+
 	void do_set_clear_color(
 		const std::uint8_t r,
 		const std::uint8_t g,
 		const std::uint8_t b,
 		const std::uint8_t a) override
 	{
-		if (!is_initialized_)
+		assert(is_context_current_);
+
+		if (!is_initialized_ || !is_context_current_)
 		{
 			return;
 		}
@@ -110,7 +141,9 @@ private:
 	void do_set_viewport(
 		const Viewport& viewport) override
 	{
-		if (!is_initialized_)
+		assert(is_context_current_);
+
+		if (!is_initialized_ || !is_context_current_)
 		{
 			return;
 		}
@@ -170,6 +203,14 @@ private:
 			return false;
 		}
 
+		ogl_dc_ = ::wglGetCurrentDC();
+		ogl_rc_ = ::wglGetCurrentContext();
+
+		if (!ogl_dc_ || !ogl_rc_)
+		{
+			return false;
+		}
+
 		// Implementation defined values.
 		//
 		::glGetIntegerv(GL_MAX_VIEWPORT_DIMS, max_viewport_size_.data());
@@ -212,6 +253,7 @@ private:
 		}
 
 		is_initialized_ = true;
+		is_context_current_ = true;
 
 		return true;
 	}
@@ -219,6 +261,10 @@ private:
 	void do_uninitialize_internal()
 	{
 		is_initialized_ = false;
+		is_context_current_ = false;
+
+		ogl_dc_ = nullptr;
+		ogl_rc_ = nullptr;
 
 		screen_width_ = 0;
 		screen_height_ = 0;
@@ -269,6 +315,12 @@ bool IOglRenderState::initialize(
 void IOglRenderState::uninitialize()
 {
 	do_uninitialize();
+}
+
+void IOglRenderState::set_current_context(
+	const bool is_current)
+{
+	do_set_current_context(is_current);
 }
 
 void IOglRenderState::set_clear_color(

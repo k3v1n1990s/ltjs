@@ -36,6 +36,9 @@ public:
 	void uninitialize();
 
 
+	void set_current_context(
+		const bool is_current);
+
 	void set_clear_color(
 		const std::uint8_t r,
 		const std::uint8_t g,
@@ -85,6 +88,9 @@ private:
 		const int screen_height) = 0;
 
 	virtual void do_uninitialize() = 0;
+
+	virtual void do_set_current_context(
+		const bool is_current) = 0;
 
 	virtual void do_set_clear_color(
 		const std::uint8_t r,

@@ -229,14 +229,14 @@ void ogl_uninitialize()
 	}
 
 	ltjs::OglDefaultProgram::get_instance().uninitialize();
-
+	ltjs::IOglRenderState::get_instance()->uninitialize();
 
 	auto ogl_context = ::wglGetCurrentContext();
 	auto ogl_dc = ::wglGetCurrentDC();
 
 	if (ogl_dc)
 	{
-		static_cast<void>(::wglMakeCurrent(ogl_dc, nullptr));
+		static_cast<void>(::wglMakeCurrent(nullptr, nullptr));
 	}
 
 	if (ogl_context)
@@ -400,7 +400,7 @@ void ogl_detect_wgl_extensions()
 							}
 						}
 
-						static_cast<void>(::wglMakeCurrent(dc, nullptr));
+						static_cast<void>(::wglMakeCurrent(nullptr, nullptr));
 					}
 
 					static_cast<void>(::wglDeleteContext(glrc));
@@ -540,6 +540,8 @@ bool ogl_initialize_internal(
 
 	assert(ogl_is_succeed());
 
+	ltjs::IOglRenderState::get_instance()->set_current_context(false);
+
 	return true;
 }
 
@@ -572,15 +574,22 @@ void ogl_swap_buffers()
 	}
 
 	assert(ogl_is_succeed());
+	const auto swap_result = ::SwapBuffers(ogl_window_dc_);
+	assert(swap_result);
 
-	static_cast<void>(::SwapBuffers(ogl_window_dc_));
+#ifdef LTJS_WIP_OGL
+	ltjs::IOglRenderState::get_instance()->set_current_context(false);
+#endif // LTJS_WIP_OGL
 }
 
 void ogl_test_draw()
 {
 	::glBindVertexArray(ogl_test_vao_);
+	assert(ogl_is_succeed());
 	::glDrawArrays(GL_TRIANGLES, 0, 3);
+	assert(ogl_is_succeed());
 	::glBindVertexArray(0);
+	assert(ogl_is_succeed());
 }
 #endif // LTJS_WIP_OGL
 

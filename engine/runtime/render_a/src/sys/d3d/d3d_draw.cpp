@@ -373,6 +373,8 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 
 	if (ogl_render_state.is_initialized())
 	{
+		ogl_render_state.set_current_context(true);
+
 		auto old_viewport = ogl_render_state.get_viewport();
 
 		auto viewport = ltjs::IOglRenderState::Viewport{};
