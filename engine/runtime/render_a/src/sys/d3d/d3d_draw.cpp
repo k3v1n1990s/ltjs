@@ -369,15 +369,16 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 
 
 #ifdef LTJS_WIP_OGL
-	auto& ogl_render_state = *ltjs::IOglRenderState::get_instance();
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
 
-	if (ogl_render_state.is_initialized())
+	// TODO Remove "if"
+	if (ogl_renderer.is_initialized())
 	{
-		ogl_render_state.set_current_context(true);
+		ogl_renderer.set_current_context(true);
 
-		auto old_viewport = ogl_render_state.get_viewport();
+		auto old_viewport = ogl_renderer.get_viewport();
 
-		auto viewport = ltjs::IOglRenderState::Viewport{};
+		auto viewport = ltjs::OglRenderer::Viewport{};
 		viewport.x_ = 0;
 		viewport.y_ = 0;
 		viewport.width_ = ::g_ScreenWidth;
@@ -385,8 +386,8 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 		viewport.depth_min_z_ = 0.1F;
 		viewport.depth_max_z_ = 1.0F;
 
-		ogl_render_state.set_clear_color(ClearColor.rgb.r, ClearColor.rgb.g, ClearColor.rgb.b, ClearColor.rgb.a);
-		ogl_render_state.set_viewport(viewport);
+		ogl_renderer.set_clear_color(ClearColor.rgb.r, ClearColor.rgb.g, ClearColor.rgb.b, ClearColor.rgb.a);
+		ogl_renderer.set_viewport(viewport);
 
 		auto ogl_clear_bits = GLbitfield{};
 
@@ -405,7 +406,7 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 			::glClear(ogl_clear_bits);
 		}
 
-		ogl_render_state.set_viewport(old_viewport);
+		ogl_renderer.set_viewport(old_viewport);
 	}
 #endif // LTJS_WIP_OGL
 }

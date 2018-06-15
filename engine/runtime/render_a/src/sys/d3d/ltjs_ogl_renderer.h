@@ -1,5 +1,5 @@
-#ifndef LTJS_IOGL_RENDER_STATE_INCLUDED
-#define LTJS_IOGL_RENDER_STATE_INCLUDED
+#ifndef LTJS_OGL_RENDERER_INCLUDED
+#define LTJS_OGL_RENDERER_INCLUDED
 
 
 #include <cstdint>
@@ -9,7 +9,7 @@ namespace ltjs
 {
 
 
-class IOglRenderState
+class OglRenderer
 {
 public:
 	struct Viewport
@@ -64,21 +64,21 @@ public:
 	bool ogl_is_succeed();
 
 
-	static IOglRenderState* get_instance();
+	static OglRenderer& get_instance();
 
 
 protected:
-	IOglRenderState();
+	OglRenderer();
 
-	virtual ~IOglRenderState();
+	virtual ~OglRenderer();
 
 
 private:
-	IOglRenderState(
-		const IOglRenderState& that) = delete;
+	OglRenderer(
+		const OglRenderer& that) = delete;
 
-	IOglRenderState& operator=(
-		const IOglRenderState& that) = delete;
+	OglRenderer& operator=(
+		const OglRenderer& that) = delete;
 
 
 	virtual bool do_is_initialized() const = 0;
@@ -102,10 +102,10 @@ private:
 
 	virtual void do_set_viewport(
 		const Viewport& viewport) = 0;
-}; // IOglRenderState
+}; // OglRenderer
 
 
 } // ltjs
 
 
-#endif // LTJS_IOGL_RENDER_STATE_INCLUDED
+#endif // LTJS_OGL_RENDERER_INCLUDED

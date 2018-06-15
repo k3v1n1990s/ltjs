@@ -1,5 +1,5 @@
 #include "precompile.h"
-#include "ltjs_iogl_render_state.h"
+#include "ltjs_ogl_renderer.h"
 #include <cassert>
 #include <array>
 #include <vector>
@@ -10,11 +10,11 @@ namespace ltjs
 {
 
 
-class IOglRenderStateImpl final :
-	public IOglRenderState
+class OglRendererImpl final :
+	public OglRenderer
 {
 public:
-	IOglRenderStateImpl()
+	OglRendererImpl()
 		:
 		is_initialized_{},
 		is_context_current_{},
@@ -27,11 +27,14 @@ public:
 		clear_color_b_{},
 		clear_color_a_{},
 		viewport_{},
-		max_viewport_size_{}
+		max_viewport_size_{},
+		vertex_shader_{},
+		fragment_shader_{},
+		program_{}
 	{
 	}
 
-	~IOglRenderStateImpl() override
+	~OglRendererImpl() override
 	{
 		do_uninitialize_internal();
 	}
@@ -39,6 +42,13 @@ public:
 
 private:
 	using ViewportSize = std::array<int, 2>;
+
+	enum class ShaderType
+	{
+		none,
+		vertex,
+		fragment,
+	}; // ShaderType
 
 
 	bool is_initialized_;
@@ -57,6 +67,14 @@ private:
 
 	Viewport viewport_;
 	ViewportSize max_viewport_size_;
+
+	GLuint vertex_shader_;
+	GLuint fragment_shader_;
+	GLuint program_;
+
+
+	static const std::string vertex_shader_source;
+	static const std::string fragment_shader_source;
 
 
 	bool do_is_initialized() const override
@@ -203,6 +221,11 @@ private:
 			return false;
 		}
 
+		screen_width_ = screen_width;
+		screen_height_ = screen_height;
+
+		// Get current context (must exist).
+		//
 		ogl_dc_ = ::wglGetCurrentDC();
 		ogl_rc_ = ::wglGetCurrentContext();
 
@@ -211,7 +234,7 @@ private:
 			return false;
 		}
 
-		// Implementation defined values.
+		// Get implementation defined values.
 		//
 		::glGetIntegerv(GL_MAX_VIEWPORT_DIMS, max_viewport_size_.data());
 
@@ -222,17 +245,27 @@ private:
 
 		if (max_viewport_size_[0] <= 0 ||
 			max_viewport_size_[1] <= 0 ||
-			screen_width > max_viewport_size_[0] ||
-			screen_height > max_viewport_size_[1])
+			screen_width_ > max_viewport_size_[0] ||
+			screen_height_ > max_viewport_size_[1])
 		{
 			return false;
 		}
 
+		// Load default program.
+		//
+		if (!load_program())
+		{
+			return false;
+		}
+
+		if (!enable_program(true))
+		{
+			return false;
+		}
+
+
 		// Set defaults.
 		//
-		screen_width_ = screen_width;
-		screen_height_ = screen_height;
-
 		clear_color_r_ = 0;
 		clear_color_g_ = 0;
 		clear_color_b_ = 0;
@@ -276,11 +309,194 @@ private:
 
 		viewport_ = {};
 		max_viewport_size_ = {};
+
+		if (program_)
+		{
+			::glUseProgram(0);
+			::glDetachShader(program_, vertex_shader_);
+			::glDetachShader(program_, fragment_shader_);
+			::glDeleteProgram(program_);
+			program_ = 0;
+		}
+
+		if (vertex_shader_)
+		{
+			::glDeleteShader(vertex_shader_);
+			vertex_shader_ = 0;
+		}
+
+		if (fragment_shader_)
+		{
+			::glDeleteShader(fragment_shader_);
+			fragment_shader_ = 0;
+		}
 	}
-}; // IOglRenderStateImpl
 
 
-IOglRenderState::Viewport::Viewport()
+	void get_shader_build_status(
+		const GLenum object_status,
+		void (APIENTRYP ogl_get_parameter)(GLuint object, GLenum pname, GLint* params),
+		void (APIENTRYP ogl_get_log)(GLuint object, GLsizei bufSize, GLsizei* length, GLchar* infoLog),
+		const GLuint object,
+		bool& is_built,
+		std::string& log)
+	{
+		is_built = false;
+		log.clear();
+
+		auto ogl_compile_status = GLint{};
+		auto ogl_log_length = GLint{};
+
+		ogl_get_parameter(object, object_status, &ogl_compile_status);
+		ogl_get_parameter(object, GL_INFO_LOG_LENGTH, &ogl_log_length);
+
+		is_built = (ogl_compile_status == GL_TRUE);
+
+		if (ogl_log_length > 0)
+		{
+			log.resize(ogl_log_length);
+			ogl_get_log(object, ogl_log_length, &ogl_log_length, &log[0]);
+		}
+	}
+
+	void get_shader_compile_status(
+		const GLuint shader,
+		bool& is_compiled,
+		std::string& log)
+	{
+		get_shader_build_status(GL_COMPILE_STATUS, ::glGetShaderiv, ::glGetShaderInfoLog, shader, is_compiled, log);
+	}
+
+	void get_program_link_status(
+		const GLuint program,
+		bool& is_linked,
+		std::string& log)
+	{
+		get_shader_build_status(GL_LINK_STATUS, ::glGetProgramiv, ::glGetProgramInfoLog, program, is_linked, log);
+	}
+
+	bool load_shader(
+		const ShaderType shader_type,
+		GLuint& shader)
+	{
+		shader = GL_NONE;
+
+		const std::string* shader_source;
+		GLenum ogl_shader_type;
+
+		switch (shader_type)
+		{
+		case ShaderType::vertex:
+			ogl_shader_type = GL_VERTEX_SHADER;
+			shader_source = &vertex_shader_source;
+			break;
+
+		case ShaderType::fragment:
+			ogl_shader_type = GL_FRAGMENT_SHADER;
+			shader_source = &fragment_shader_source;
+			break;
+
+		default:
+			return GL_NONE;
+		}
+
+		shader = ::glCreateShader(ogl_shader_type);
+
+		const char* const source_lines[1] =
+		{
+			shader_source->c_str(),
+		}; // source_lines
+
+		const GLint source_lines_lengths[1] =
+		{
+			static_cast<GLint>(shader_source->length()),
+		}; // source_lines
+
+		::glShaderSource(shader, 1, source_lines, source_lines_lengths);
+		::glCompileShader(shader);
+
+		bool is_compiled;
+		std::string log;
+
+		get_shader_compile_status(shader, is_compiled, log);
+
+		return is_compiled;
+	}
+
+	bool load_program()
+	{
+		if (!load_shader(ShaderType::vertex, vertex_shader_))
+		{
+			return false;
+		}
+
+		if (!load_shader(ShaderType::fragment, fragment_shader_))
+		{
+			return false;
+		}
+
+		program_ = ::glCreateProgram();
+
+		if (!program_)
+		{
+			return false;
+		}
+
+		::glAttachShader(program_, vertex_shader_);
+		::glAttachShader(program_, fragment_shader_);
+		::glLinkProgram(program_);
+
+		bool is_linked;
+		std::string log;
+
+		get_program_link_status(program_, is_linked, log);
+
+		return is_linked;
+	}
+
+	bool enable_program(
+		const bool is_enable)
+	{
+		::glUseProgram(is_enable ? program_ : 0);
+
+		return ogl_is_succeed();
+	}
+}; // OglRendererImpl
+
+
+const std::string OglRendererImpl::vertex_shader_source = std::string{
+R"LTJ_VERTEX(
+
+#version 330 core
+
+layout(location = 0) in vec4 a_position;
+
+void main()
+{
+	gl_Position = a_position;
+	gl_Position.z = -gl_Position.z;
+}
+
+)LTJ_VERTEX"
+}; // vertex_shader_source
+
+const std::string OglRendererImpl::fragment_shader_source = std::string{
+R"LTJ_FRAGMENT(
+
+#version 330 core
+
+out vec4 o_fragment;
+
+void main()
+{
+	o_fragment = vec4(0, 1, 0, 1);
+}
+
+)LTJ_FRAGMENT"
+}; // fragment_shader_source
+
+
+OglRenderer::Viewport::Viewport()
 	:
 	x_{},
 	y_{},
@@ -292,38 +508,38 @@ IOglRenderState::Viewport::Viewport()
 }
 
 
-IOglRenderState::IOglRenderState()
+OglRenderer::OglRenderer()
 {
 }
 
-IOglRenderState::~IOglRenderState()
+OglRenderer::~OglRenderer()
 {
 }
 
-bool IOglRenderState::is_initialized() const
+bool OglRenderer::is_initialized() const
 {
 	return do_is_initialized();
 }
 
-bool IOglRenderState::initialize(
+bool OglRenderer::initialize(
 	const int screen_width,
 	const int screen_height)
 {
 	return do_initialize(screen_width, screen_height);
 }
 
-void IOglRenderState::uninitialize()
+void OglRenderer::uninitialize()
 {
 	do_uninitialize();
 }
 
-void IOglRenderState::set_current_context(
+void OglRenderer::set_current_context(
 	const bool is_current)
 {
 	do_set_current_context(is_current);
 }
 
-void IOglRenderState::set_clear_color(
+void OglRenderer::set_clear_color(
 	const std::uint8_t r,
 	const std::uint8_t g,
 	const std::uint8_t b,
@@ -332,23 +548,23 @@ void IOglRenderState::set_clear_color(
 	do_set_clear_color(r, g, b, a);
 }
 
-const IOglRenderState::Viewport& IOglRenderState::get_viewport() const
+const OglRenderer::Viewport& OglRenderer::get_viewport() const
 {
 	return do_get_viewport();
 }
 
-void IOglRenderState::set_viewport(
+void OglRenderer::set_viewport(
 	const Viewport& viewport)
 {
 	do_set_viewport(viewport);
 }
 
-void IOglRenderState::ogl_clear_error()
+void OglRenderer::ogl_clear_error()
 {
 	static_cast<void>(ogl_is_succeed());
 }
 
-bool IOglRenderState::ogl_is_succeed()
+bool OglRenderer::ogl_is_succeed()
 {
 	auto is_failed = false;
 
@@ -360,10 +576,10 @@ bool IOglRenderState::ogl_is_succeed()
 	return !is_failed;
 }
 
-IOglRenderState* IOglRenderState::get_instance()
+OglRenderer& OglRenderer::get_instance()
 {
-	static IOglRenderStateImpl instance{};
-	return &instance;
+	static OglRendererImpl instance{};
+	return instance;
 }
 
 

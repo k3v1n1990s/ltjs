@@ -9,8 +9,7 @@
 #include <string>
 #include <unordered_set>
 #include "glad.h"
-#include "ltjs_iogl_render_state.h"
-#include "ltjs_ogl_default_program.h"
+#include "ltjs_ogl_renderer.h"
 #endif // LTJS_WIP_OGL
 
 #include "3d_ops.h"
@@ -228,8 +227,7 @@ void ogl_uninitialize()
 		ogl_test_vbo_ = 0;
 	}
 
-	ltjs::OglDefaultProgram::get_instance().uninitialize();
-	ltjs::IOglRenderState::get_instance()->uninitialize();
+	ltjs::OglRenderer::get_instance().uninitialize();
 
 	auto ogl_context = ::wglGetCurrentContext();
 	auto ogl_dc = ::wglGetCurrentDC();
@@ -478,7 +476,7 @@ bool ogl_create_context_and_make_current()
 	return true;
 }
 
-void ogl_set_defaults()
+void ogl_set_test_data()
 {
 	::glGenBuffers(1, &ogl_test_vbo_);
 	::glGenVertexArrays(1, &ogl_test_vao_);
@@ -500,8 +498,6 @@ void ogl_set_defaults()
 	::glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(0));
 
 	::glBindVertexArray(0);
-
-	ltjs::OglDefaultProgram::get_instance().enable(true);
 }
 
 bool ogl_initialize_internal(
@@ -527,20 +523,17 @@ bool ogl_initialize_internal(
 		return false;
 	}
 
-	if (!ltjs::IOglRenderState::get_instance()->initialize(screen_width, screen_height))
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+
+	if (!ogl_renderer.initialize(screen_width, screen_height))
 	{
 	}
 
-	if (!ltjs::OglDefaultProgram::get_instance().initialize())
-	{
-		return false;
-	}
-
-	ogl_set_defaults();
+	ogl_set_test_data();
 
 	assert(ogl_is_succeed());
 
-	ltjs::IOglRenderState::get_instance()->set_current_context(false);
+	ogl_renderer.set_current_context(false);
 
 	return true;
 }
@@ -574,12 +567,10 @@ void ogl_swap_buffers()
 	}
 
 	assert(ogl_is_succeed());
+	ltjs::OglRenderer::get_instance().set_current_context(false);
+
 	const auto swap_result = ::SwapBuffers(ogl_window_dc_);
 	assert(swap_result);
-
-#ifdef LTJS_WIP_OGL
-	ltjs::IOglRenderState::get_instance()->set_current_context(false);
-#endif // LTJS_WIP_OGL
 }
 
 void ogl_test_draw()

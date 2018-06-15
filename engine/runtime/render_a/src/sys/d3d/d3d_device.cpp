@@ -27,7 +27,7 @@
 #include "consolecommands.h"
 
 #ifdef LTJS_WIP_OGL
-#include "ltjs_iogl_render_state.h"
+#include "ltjs_ogl_renderer.h"
 #endif // LTJS_WIP_OGL
 
 
@@ -763,12 +763,9 @@ bool CD3D_Device::Start3D()
 	D3D_CALL(g_Device.m_pD3DDevice->SetFVF(D3DFVF_XYZ));
 
 #ifdef LTJS_WIP_OGL
-	auto& ogl_render_state = *ltjs::IOglRenderState::get_instance();
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
 
-	if (ogl_render_state.is_initialized())
-	{
-		ogl_render_state.set_current_context(true);
-	}
+	ogl_renderer.set_current_context(true);
 #endif // LTJS_WIP_OGL
 
 	return g_Device.m_bIn3D;
