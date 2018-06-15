@@ -13,6 +13,7 @@ include(ltjs_common)
 
 include_directories(
     .
+	../../../../../../libs/bibendovsky_spul_lib/include
 	../../../../../../libs/DirectXMath/Inc
 	../../../../../../libs/glad
     ../../../../../../libs/stdlith

@@ -371,7 +371,7 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 #ifdef LTJS_WIP_OGL
 	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
 
-	// TODO Remove "if"
+	// TODO Remove "if" later
 	if (ogl_renderer.is_initialized())
 	{
 		ogl_renderer.set_current_context(true);
@@ -389,23 +389,19 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 		ogl_renderer.set_clear_color(ClearColor.rgb.r, ClearColor.rgb.g, ClearColor.rgb.b, ClearColor.rgb.a);
 		ogl_renderer.set_viewport(viewport);
 
-		auto ogl_clear_bits = GLbitfield{};
+		auto clear_bits = ltjs::OglRenderer::ClearFlags{};
 
 		if ((flags & CLEARSCREEN_SCREEN) != 0)
 		{
-			ogl_clear_bits |= GL_COLOR_BUFFER_BIT;
+			clear_bits |= ltjs::OglRenderer::ClearFlags::color;
 		}
 
 		if ((flags & CLEARSCREEN_RENDER) != 0)
 		{
-			ogl_clear_bits |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
+			clear_bits |= ltjs::OglRenderer::ClearFlags::depth | ltjs::OglRenderer::ClearFlags::stencil;
 		}
 
-		if (ogl_clear_bits)
-		{
-			::glClear(ogl_clear_bits);
-		}
-
+		ogl_renderer.clear(clear_bits);
 		ogl_renderer.set_viewport(old_viewport);
 	}
 #endif // LTJS_WIP_OGL

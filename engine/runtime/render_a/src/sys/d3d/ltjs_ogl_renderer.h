@@ -3,15 +3,38 @@
 
 
 #include <cstdint>
+#include "bibendovsky_spul_enum_flags.h"
 
 
 namespace ltjs
 {
 
 
+namespace ul = bibendovsky::spul;
+
+
 class OglRenderer
 {
 public:
+	struct ClearFlags :
+		public ul::EnumFlags
+	{
+		ClearFlags(
+			const Value flags = none)
+			:
+			ul::EnumFlags{flags}
+		{
+		}
+
+		enum : Value
+		{
+			color = 1 << 0,
+			depth = 1 << 1,
+			stencil = 1 << 2,
+		}; // enum
+	}; // ClearFlags
+
+
 	struct Viewport
 	{
 		int x_;
@@ -44,6 +67,9 @@ public:
 		const std::uint8_t g,
 		const std::uint8_t b,
 		const std::uint8_t a = 0xFF);
+
+	void clear(
+		const ClearFlags clear_flags);
 
 	//
 	// Notes:
@@ -97,6 +123,9 @@ private:
 		const std::uint8_t g,
 		const std::uint8_t b,
 		const std::uint8_t a) = 0;
+
+	virtual void do_clear(
+		const ClearFlags clear_flags) = 0;
 
 	virtual const Viewport& do_get_viewport() const = 0;
 

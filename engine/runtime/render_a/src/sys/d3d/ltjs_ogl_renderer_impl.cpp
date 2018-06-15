@@ -151,6 +151,37 @@ private:
 		do_set_clear_color_internal();
 	}
 
+	void do_clear(
+		const ClearFlags clear_flags) override
+	{
+		assert(is_context_current_);
+
+		if (!is_initialized_ || !is_context_current_ || clear_flags == ClearFlags::none)
+		{
+			return;
+		}
+
+		auto ogl_clear_flags = GLbitfield{};
+
+		if ((clear_flags & ClearFlags::color) != 0)
+		{
+			ogl_clear_flags |= GL_COLOR_BUFFER_BIT;
+		}
+
+		if ((clear_flags & ClearFlags::depth) != 0)
+		{
+			ogl_clear_flags |= GL_DEPTH_BUFFER_BIT;
+		}
+
+		if ((clear_flags & ClearFlags::stencil) != 0)
+		{
+			ogl_clear_flags |= GL_STENCIL_BUFFER_BIT;
+		}
+
+		::glClear(ogl_clear_flags);
+		assert(ogl_is_succeed());
+	}
+
 	const Viewport& do_get_viewport() const override
 	{
 		return viewport_;
@@ -551,6 +582,12 @@ void OglRenderer::set_clear_color(
 const OglRenderer::Viewport& OglRenderer::get_viewport() const
 {
 	return do_get_viewport();
+}
+
+void OglRenderer::clear(
+	const ClearFlags clear_flags)
+{
+	do_clear(clear_flags);
 }
 
 void OglRenderer::set_viewport(
