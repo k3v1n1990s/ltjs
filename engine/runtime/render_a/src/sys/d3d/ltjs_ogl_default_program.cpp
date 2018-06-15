@@ -15,6 +15,7 @@ public:
 	Impl()
 		:
 		is_initialized_{},
+		is_enabled_{},
 		vertex_shader_{},
 		fragment_shader_{},
 		program_{}
@@ -51,6 +52,7 @@ public:
 	void api_uninitialize()
 	{
 		is_initialized_ = false;
+		is_enabled_ = false;
 
 		if (program_)
 		{
@@ -82,7 +84,96 @@ public:
 			return;
 		}
 
-		::glUseProgram(is_enable ? program_ : 0);
+		is_enabled_ = is_enable;
+
+		::glUseProgram(is_enabled_ ? program_ : 0);
+	}
+
+	int api_get_uniform_location(
+		const char* const uniform_name) const
+	{
+		assert(is_enabled_);
+
+		if (!is_initialized_ || !uniform_name)
+		{
+			return -1;
+		}
+
+		return ::glGetUniformLocation(program_, uniform_name);
+	}
+
+	void api_set_int(
+		const GLint uniformat_location,
+		const GLint value)
+	{
+		assert(is_enabled_);
+
+		if (!is_initialized_ || !is_enabled_ || uniformat_location < 0)
+		{
+			return;
+		}
+
+		::glUniform1i(uniformat_location, value);
+	}
+
+	void api_set_uint(
+		const GLint uniformat_location,
+		const GLuint value)
+	{
+		assert(is_enabled_);
+
+		if (!is_initialized_ || !is_enabled_ || uniformat_location < 0)
+		{
+			return;
+		}
+
+		::glUniform1ui(uniformat_location, value);
+	}
+
+	void api_set_vector(
+		const GLint uniformat_location,
+		const int item_count,
+		const GLfloat* const items)
+	{
+		assert(is_enabled_);
+
+		if (!is_initialized_ || !is_enabled_ || uniformat_location < 0 || !items)
+		{
+			return;
+		}
+
+		switch (item_count)
+		{
+		case 2:
+			::glUniform2fv(uniformat_location, 1, items);
+			break;
+
+		case 3:
+			::glUniform3fv(uniformat_location, 1, items);
+			break;
+
+		case 4:
+			::glUniform4fv(uniformat_location, 1, items);
+			break;
+
+		default:
+			return;
+		}
+
+	}
+
+	void api_set_matrix4(
+		const GLint uniformat_location,
+		const GLfloat* const items)
+	{
+		assert(is_enabled_);
+
+		if (!is_initialized_ || !is_enabled_ || uniformat_location < 0 || !items)
+		{
+			return;
+		}
+
+		::glUniformMatrix4fv(uniformat_location, 1, GL_TRUE, items);
 	}
 
 
@@ -99,6 +190,7 @@ private:
 
 
 	bool is_initialized_;
+	bool is_enabled_;
 
 	GLuint vertex_shader_;
 	GLuint fragment_shader_;
@@ -292,6 +384,69 @@ void OglDefaultProgram::enable(
 	const bool is_enable)
 {
 	impl_->api_enable(is_enable);
+}
+
+int OglDefaultProgram::get_uniform_location(
+	const char* const uniform_name) const
+{
+	return impl_->api_get_uniform_location(uniform_name);
+}
+
+void OglDefaultProgram::set_bool(
+	const int uniformat_location,
+	const bool value)
+{
+	impl_->api_set_int(uniformat_location, value);
+}
+
+void OglDefaultProgram::set_int(
+	const int uniformat_location,
+	const int value)
+{
+	impl_->api_set_int(uniformat_location, value);
+}
+
+void OglDefaultProgram::set_uint(
+	const int uniformat_location,
+	const unsigned int value)
+{
+	impl_->api_set_uint(uniformat_location, value);
+}
+
+void OglDefaultProgram::set_vector(
+	const int uniformat_location,
+	const int item_count,
+	const float* const values)
+{
+	impl_->api_set_vector(uniformat_location, item_count, values);
+}
+
+void OglDefaultProgram::set_vector2(
+	const int uniformat_location,
+	const float* const items)
+{
+	impl_->api_set_vector(uniformat_location, 2, items);
+}
+
+void OglDefaultProgram::set_vector3(
+	const int uniformat_location,
+	const float* const items)
+{
+	impl_->api_set_vector(uniformat_location, 3, items);
+}
+
+void OglDefaultProgram::set_vector4(
+	const int uniformat_location,
+	const float* const items)
+{
+	impl_->api_set_vector(uniformat_location, 4, items);
+}
+
+void OglDefaultProgram::set_matrix4(
+	const int uniformat_location,
+	const float* const values)
+{
+	impl_->api_set_matrix4(uniformat_location, values);
 }
 
 OglDefaultProgram &OglDefaultProgram::get_instance()
