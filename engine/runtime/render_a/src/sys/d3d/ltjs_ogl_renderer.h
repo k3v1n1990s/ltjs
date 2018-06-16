@@ -37,6 +37,7 @@ public:
 	enum class CullMode
 	{
 		none,
+		disabled,
 		clockwise,
 		counterclockwise,
 	}; // CullMode

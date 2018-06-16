@@ -291,8 +291,8 @@ private:
 			return;
 		}
 
-		const auto is_old_enabled = (cull_mode_ != CullMode::none);
-		const auto is_new_enabled = (cull_mode != CullMode::none);
+		const auto is_old_enabled = (cull_mode_ != CullMode::disabled);
+		const auto is_new_enabled = (cull_mode != CullMode::disabled);
 
 		cull_mode_ = cull_mode;
 
@@ -580,11 +580,11 @@ private:
 	void do_set_cull_mode_internal(
 		const bool enforce_cull_face)
 	{
-		const auto is_cull_face_enabled = (cull_mode_ != CullMode::none);
+		const auto is_cull_face_enabled = (cull_mode_ != CullMode::disabled);
 
 		switch (cull_mode_)
 		{
-		case CullMode::none:
+		case CullMode::disabled:
 			break;
 
 		case CullMode::clockwise:
