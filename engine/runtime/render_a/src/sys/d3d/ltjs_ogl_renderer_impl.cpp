@@ -95,6 +95,11 @@ private:
 	GLuint program_;
 
 
+	static int default_viewport_x;
+	static int default_viewport_y;
+	static float default_viewport_depth_min_z;
+	static float default_viewport_depth_max_z;
+
 	static std::uint8_t default_clear_color_r;
 	static std::uint8_t default_clear_color_g;
 	static std::uint8_t default_clear_color_b;
@@ -325,6 +330,25 @@ private:
 			clear_color_a_ / 255.0F);
 	}
 
+	Viewport get_default_viewport()
+	{
+		auto viewport = Viewport{};
+		viewport.x_ = default_viewport_x;
+		viewport.y_ = default_viewport_y;
+		viewport.width_ = screen_width_;
+		viewport.height_ = screen_height_;
+		viewport.depth_min_z_ = default_viewport_depth_min_z;
+		viewport.depth_max_z_ = default_viewport_depth_max_z;
+
+		return viewport;
+	}
+
+	void set_default_viewport()
+	{
+		viewport_ = get_default_viewport();
+		do_set_viewport_internal();
+	}
+
 	void do_set_viewport_internal()
 	{
 		const auto ogl_viewport_y = screen_height_ - (viewport_.y_ + viewport_.height_);
@@ -394,15 +418,7 @@ private:
 		// Set defaults.
 		//
 		set_default_clear_color();
-
-		viewport_.x_ = 0;
-		viewport_.y_ = 0;
-		viewport_.width_ = screen_width_;
-		viewport_.height_ = screen_height_;
-		viewport_.depth_min_z_ = 0.0F;
-		viewport_.depth_max_z_ = 1.0F;
-		do_set_viewport_internal();
-
+		set_default_viewport();
 		set_default_cull_mode();
 		set_default_is_clipping();
 
@@ -708,6 +724,11 @@ private:
 	}
 }; // OglRendererImpl
 
+
+int OglRendererImpl::default_viewport_x = 0;
+int OglRendererImpl::default_viewport_y = 0;
+float OglRendererImpl::default_viewport_depth_min_z = 0.0F;
+float OglRendererImpl::default_viewport_depth_max_z = 1.0F;
 
 std::uint8_t OglRendererImpl::default_clear_color_r = 0;
 std::uint8_t OglRendererImpl::default_clear_color_g = 0;
