@@ -98,6 +98,12 @@ public:
 		const CullMode cull_mode);
 
 
+	bool get_is_clipping() const;
+
+	void set_is_clipping(
+		const bool is_clipping);
+
+
 	void ogl_clear_error();
 
 	bool ogl_is_succeed();
@@ -149,6 +155,11 @@ private:
 
 	virtual void do_set_cull_mode(
 		const CullMode cull_mode) = 0;
+
+	virtual bool do_get_is_clipping() const = 0;
+
+	virtual void do_set_is_clipping(
+		const bool is_clipping) = 0;
 }; // OglRenderer
 
 

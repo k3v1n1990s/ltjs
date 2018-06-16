@@ -1,9 +1,18 @@
 #include "precompile.h"
 #include "ltjs_ogl_renderer.h"
 #include <cassert>
+#include <algorithm>
 #include <array>
+#include <iterator>
+#include <sstream>
+#include <string>
 #include <vector>
 #include "glad.h"
+
+
+#ifndef GL_CLIP_VOLUME_CLIPPING_HINT_EXT
+#define GL_CLIP_VOLUME_CLIPPING_HINT_EXT (0x80F0)
+#endif // GL_CLIP_VOLUME_CLIPPING_HINT_EXT
 
 
 namespace ltjs
@@ -20,6 +29,8 @@ public:
 		is_context_current_{},
 		ogl_dc_{},
 		ogl_rc_{},
+		extensions_{},
+		has_gl_ext_clip_volume_hint_{},
 		screen_width_{},
 		screen_height_{},
 		clear_color_r_{},
@@ -29,6 +40,7 @@ public:
 		viewport_{},
 		max_viewport_size_{},
 		cull_mode_{},
+		is_clipping_{},
 		vertex_shader_{},
 		fragment_shader_{},
 		program_{}
@@ -37,12 +49,13 @@ public:
 
 	~OglRendererImpl() override
 	{
-		do_uninitialize_internal();
+		assert(!is_initialized_);
 	}
 
 
 private:
 	using ViewportSize = std::array<int, 2>;
+	using Extensions = std::vector<std::string>;
 
 	enum class ShaderType
 	{
@@ -58,6 +71,10 @@ private:
 	HDC ogl_dc_;
 	HGLRC ogl_rc_;
 
+	Extensions extensions_;
+
+	bool has_gl_ext_clip_volume_hint_;
+
 	int screen_width_;
 	int screen_height_;
 
@@ -71,12 +88,15 @@ private:
 
 	CullMode cull_mode_;
 
+	bool is_clipping_;
+
 	GLuint vertex_shader_;
 	GLuint fragment_shader_;
 	GLuint program_;
 
 
 	static const CullMode default_cull_mode;
+	static const bool default_is_clipping;
 	static const std::string vertex_shader_source;
 	static const std::string fragment_shader_source;
 
@@ -256,6 +276,29 @@ private:
 		do_set_cull_mode_internal(is_old_enabled != is_new_enabled);
 	}
 
+	bool do_get_is_clipping() const override
+	{
+		return is_clipping_;
+	}
+
+	void do_set_is_clipping(
+		const bool is_clipping) override
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			return;
+		}
+
+		if (is_clipping == is_clipping_)
+		{
+			return;
+		}
+
+		is_clipping_ = is_clipping;
+
+		do_set_is_clipping_internal();
+	}
+
 	void do_set_clear_color_internal()
 	{
 		::glClearColor(
@@ -296,6 +339,10 @@ private:
 		{
 			return false;
 		}
+
+		// Detect extensions.
+		//
+		detect_extensions();
 
 		// Get implementation defined values.
 		//
@@ -344,6 +391,7 @@ private:
 		do_set_viewport_internal();
 
 		set_default_cull_mode();
+		set_default_is_clipping();
 
 		if (!ogl_is_succeed())
 		{
@@ -364,6 +412,10 @@ private:
 		ogl_dc_ = nullptr;
 		ogl_rc_ = nullptr;
 
+		extensions_.clear();
+
+		has_gl_ext_clip_volume_hint_ = false;
+
 		screen_width_ = 0;
 		screen_height_ = 0;
 
@@ -374,6 +426,10 @@ private:
 
 		viewport_ = {};
 		max_viewport_size_ = {};
+
+		cull_mode_ = CullMode::none;
+
+		is_clipping_ = false;
 
 		if (program_)
 		{
@@ -441,6 +497,73 @@ private:
 		}
 	}
 
+	void set_default_is_clipping()
+	{
+		is_clipping_ = default_is_clipping;
+		do_set_is_clipping_internal();
+	}
+
+	void do_set_is_clipping_internal()
+	{
+		if (!has_gl_ext_clip_volume_hint_)
+		{
+			return;
+		}
+
+		const auto ogl_hint_value = (is_clipping_ ? GL_DONT_CARE : GL_FASTEST);
+
+		::glHint(GL_CLIP_VOLUME_CLIPPING_HINT_EXT, ogl_hint_value);
+	}
+
+	void get_extensions()
+	{
+		auto extension_count = GLint{};
+
+		::glGetIntegerv(GL_NUM_EXTENSIONS, &extension_count);
+
+		extensions_.reserve(extension_count);
+
+		for (auto i = 0; i < extension_count; ++i)
+		{
+			const auto extension_name = reinterpret_cast<const char*>(::glGetStringi(GL_EXTENSIONS, i));
+
+			assert(extension_name);
+
+			if (extension_name)
+			{
+				extensions_.emplace_back(extension_name);
+			}
+		}
+	}
+
+	bool has_extension(
+		const std::string& extension_name)
+	{
+		if (extensions_.empty() || extension_name.empty())
+		{
+			return false;
+		}
+
+		const auto extension_end_it = extensions_.cend();
+
+		const auto extension_it = std::find_if(
+			extensions_.cbegin(),
+			extension_end_it,
+			[&](const auto& item)
+			{
+				return item == extension_name;
+			}
+		);
+
+		return extension_it != extension_end_it;
+	}
+
+	void detect_extensions()
+	{
+		get_extensions();
+
+		has_gl_ext_clip_volume_hint_ = has_extension("GL_EXT_clip_volume_hint");
+	}
 
 	void get_shader_build_status(
 		const GLenum object_status,
@@ -573,6 +696,8 @@ private:
 }; // OglRendererImpl
 
 
+const bool OglRendererImpl::default_is_clipping = true;
+
 const OglRenderer::CullMode OglRendererImpl::default_cull_mode = OglRenderer::CullMode::counterclockwise;
 
 const std::string OglRendererImpl::vertex_shader_source = std::string{
@@ -685,6 +810,17 @@ void OglRenderer::set_cull_mode(
 	const CullMode cull_mode)
 {
 	do_set_cull_mode(cull_mode);
+}
+
+bool OglRenderer::get_is_clipping() const
+{
+	return do_get_is_clipping();
+}
+
+void OglRenderer::set_is_clipping(
+	const bool is_clipping)
+{
+	do_set_is_clipping(is_clipping);
 }
 
 void OglRenderer::ogl_clear_error()
