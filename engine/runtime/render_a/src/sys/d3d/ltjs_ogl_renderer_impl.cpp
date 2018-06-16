@@ -41,6 +41,9 @@ public:
 		max_viewport_size_{},
 		cull_mode_{},
 		is_clipping_{},
+		is_depth_enabled_{},
+		is_depth_writable_{},
+		depth_func_{},
 		vertex_shader_{},
 		fragment_shader_{},
 		program_{}
@@ -90,6 +93,10 @@ private:
 
 	bool is_clipping_;
 
+	bool is_depth_enabled_;
+	bool is_depth_writable_;
+	DepthFunc depth_func_;
+
 	GLuint vertex_shader_;
 	GLuint fragment_shader_;
 	GLuint program_;
@@ -108,6 +115,10 @@ private:
 	static const CullMode default_cull_mode;
 
 	static const bool default_is_clipping;
+
+	static const bool default_is_depth_enabled;
+	static const bool default_is_depth_writable;
+	static const DepthFunc default_depth_func;
 
 	static const std::string vertex_shader_source;
 	static const std::string fragment_shader_source;
@@ -357,6 +368,75 @@ private:
 		::glDepthRange(viewport_.depth_min_z_, viewport_.depth_max_z_);
 	}
 
+	bool do_is_depth_enabled() const
+	{
+		return is_depth_enabled_;
+	}
+
+	void do_set_is_depth_enabled(
+		const bool is_enabled)
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			return;
+		}
+
+		if (is_enabled == is_depth_enabled_)
+		{
+			return;
+		}
+
+		is_depth_enabled_ = is_enabled;
+
+		do_set_is_depth_enabled_internal();
+	}
+
+	bool do_is_depth_writable() const
+	{
+		return is_depth_writable_;
+	}
+
+	void do_set_is_depth_writable(
+		const bool is_writable)
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			return;
+		}
+
+		if (is_writable == is_depth_writable_)
+		{
+			return;
+		}
+
+		is_depth_writable_ = is_writable;
+
+		do_set_is_depth_writable_internal();
+	}
+
+	DepthFunc do_get_depth_func() const
+	{
+		return depth_func_;
+	}
+
+	void do_set_depth_func(
+		const DepthFunc depth_func)
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			return;
+		}
+
+		if (depth_func == depth_func_)
+		{
+			return;
+		}
+
+		depth_func_ = depth_func;
+
+		do_set_depth_func_internal();
+	}
+
 	bool do_initialize_internal(
 		const int screen_width,
 		const int screen_height)
@@ -421,6 +501,9 @@ private:
 		set_default_viewport();
 		set_default_cull_mode();
 		set_default_is_clipping();
+		set_default_is_depth_enabled();
+		set_default_is_depth_writable();
+		set_default_depth_func();
 
 		if (!ogl_is_succeed())
 		{
@@ -459,6 +542,10 @@ private:
 		cull_mode_ = CullMode::none;
 
 		is_clipping_ = false;
+
+		is_depth_enabled_ = false;
+		is_depth_writable_ = false;
+		depth_func_ = DepthFunc::none;
 
 		if (program_)
 		{
@@ -542,6 +629,83 @@ private:
 		const auto ogl_hint_value = (is_clipping_ ? GL_DONT_CARE : GL_FASTEST);
 
 		::glHint(GL_CLIP_VOLUME_CLIPPING_HINT_EXT, ogl_hint_value);
+	}
+
+	void set_default_is_depth_enabled()
+	{
+		is_depth_enabled_ = default_is_depth_enabled;
+		do_set_is_depth_enabled_internal();
+	}
+
+	void do_set_is_depth_enabled_internal()
+	{
+		if (is_depth_enabled_)
+		{
+			::glEnable(GL_DEPTH_TEST);
+		}
+		else
+		{
+			::glDisable(GL_DEPTH_TEST);
+		}
+	}
+
+	void set_default_is_depth_writable()
+	{
+		is_depth_writable_ = default_is_depth_writable;
+		do_set_is_depth_writable_internal();
+	}
+
+	void do_set_is_depth_writable_internal()
+	{
+		::glDepthMask(is_depth_writable_);
+	}
+
+	void set_default_depth_func()
+	{
+		depth_func_ = default_depth_func;
+		do_set_depth_func_internal();
+	}
+
+	void do_set_depth_func_internal()
+	{
+		auto ogl_depth_func = GLenum{};
+
+		switch (depth_func_)
+		{
+		case DepthFunc::always:
+			ogl_depth_func = GL_ALWAYS;
+			break;
+
+		case DepthFunc::equal:
+			ogl_depth_func = GL_EQUAL;
+			break;
+
+		case DepthFunc::greater:
+			ogl_depth_func = GL_GREATER;
+			break;
+
+		case DepthFunc::greater_or_equal:
+			ogl_depth_func = GL_GEQUAL;
+			break;
+
+		case DepthFunc::less:
+			ogl_depth_func = GL_LESS;
+			break;
+
+		case DepthFunc::lees_or_equal:
+			ogl_depth_func = GL_LEQUAL;
+			break;
+
+		case DepthFunc::not_equal:
+			ogl_depth_func = GL_NOTEQUAL;
+			break;
+
+		default:
+			assert(!"Invalid depth func.");
+			return;
+		}
+
+		::glDepthFunc(ogl_depth_func);
 	}
 
 	void get_extensions()
@@ -735,9 +899,13 @@ std::uint8_t OglRendererImpl::default_clear_color_g = 0;
 std::uint8_t OglRendererImpl::default_clear_color_b = 0;
 std::uint8_t OglRendererImpl::default_clear_color_a = 0;
 
+const OglRenderer::CullMode OglRendererImpl::default_cull_mode = OglRenderer::CullMode::counterclockwise;
+
 const bool OglRendererImpl::default_is_clipping = true;
 
-const OglRenderer::CullMode OglRendererImpl::default_cull_mode = OglRenderer::CullMode::counterclockwise;
+const bool OglRendererImpl::default_is_depth_enabled = true;
+const bool OglRendererImpl::default_is_depth_writable = true;
+const OglRendererImpl::DepthFunc OglRendererImpl::default_depth_func = OglRendererImpl::DepthFunc::lees_or_equal;
 
 const std::string OglRendererImpl::vertex_shader_source = std::string{
 R"LTJ_VERTEX(
@@ -860,6 +1028,39 @@ void OglRenderer::set_is_clipping(
 	const bool is_clipping)
 {
 	do_set_is_clipping(is_clipping);
+}
+
+bool OglRenderer::is_depth_enabled() const
+{
+	return do_is_depth_enabled();
+}
+
+void OglRenderer::set_is_depth_enabled(
+	const bool is_enabled)
+{
+	do_set_is_depth_enabled(is_enabled);
+}
+
+bool OglRenderer::is_depth_writable() const
+{
+	return do_is_depth_writable();
+}
+
+void OglRenderer::set_is_depth_writable(
+	const bool is_writable)
+{
+	do_set_is_depth_writable(is_writable);
+}
+
+OglRenderer::DepthFunc OglRenderer::get_depth_func() const
+{
+	return do_get_depth_func();
+}
+
+void OglRenderer::set_depth_func(
+	const DepthFunc depth_func)
+{
+	do_set_depth_func(depth_func);
 }
 
 void OglRenderer::ogl_clear_error()

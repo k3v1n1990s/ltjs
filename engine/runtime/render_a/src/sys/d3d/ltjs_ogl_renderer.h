@@ -41,6 +41,18 @@ public:
 		counterclockwise,
 	}; // CullMode
 
+	enum class DepthFunc
+	{
+		none,
+		always,
+		equal,
+		greater,
+		greater_or_equal,
+		less,
+		lees_or_equal,
+		not_equal,
+	}; // DepthFunc
+
 
 	struct Viewport
 	{
@@ -104,6 +116,24 @@ public:
 		const bool is_clipping);
 
 
+	bool is_depth_enabled() const;
+
+	void set_is_depth_enabled(
+		const bool is_enabled);
+
+
+	bool is_depth_writable() const;
+
+	void set_is_depth_writable(
+		const bool is_writable);
+
+
+	DepthFunc get_depth_func() const;
+
+	void set_depth_func(
+		const DepthFunc depth_func);
+
+
 	void ogl_clear_error();
 
 	bool ogl_is_succeed();
@@ -137,6 +167,9 @@ private:
 	virtual void do_set_current_context(
 		const bool is_current) = 0;
 
+	// Clearing.
+	//
+
 	virtual void do_set_clear_color(
 		const std::uint8_t r,
 		const std::uint8_t g,
@@ -146,20 +179,47 @@ private:
 	virtual void do_clear(
 		const ClearFlags clear_flags) = 0;
 
+	// Viewport.
+	//
+
 	virtual const Viewport& do_get_viewport() const = 0;
 
 	virtual void do_set_viewport(
 		const Viewport& viewport) = 0;
+
+	// Culling.
+	//
 
 	virtual CullMode do_get_cull_mode() const = 0;
 
 	virtual void do_set_cull_mode(
 		const CullMode cull_mode) = 0;
 
+	// Clipping.
+	//
+
 	virtual bool do_get_is_clipping() const = 0;
 
 	virtual void do_set_is_clipping(
 		const bool is_clipping) = 0;
+
+	// Depth buffer.
+	//
+
+	virtual bool do_is_depth_enabled() const = 0;
+
+	virtual void do_set_is_depth_enabled(
+		const bool is_enabled) = 0;
+
+	virtual bool do_is_depth_writable() const = 0;
+
+	virtual void do_set_is_depth_writable(
+		const bool is_writable) = 0;
+
+	virtual DepthFunc do_get_depth_func() const = 0;
+
+	virtual void do_set_depth_func(
+		const DepthFunc depth_func) = 0;
 }; // OglRenderer
 
 
