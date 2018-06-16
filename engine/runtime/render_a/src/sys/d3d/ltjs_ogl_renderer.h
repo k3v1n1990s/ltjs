@@ -34,6 +34,13 @@ public:
 		}; // enum
 	}; // ClearFlags
 
+	enum class CullMode
+	{
+		none,
+		clockwise,
+		counterclockwise,
+	}; // CullMode
+
 
 	struct Viewport
 	{
@@ -85,6 +92,12 @@ public:
 		const Viewport& viewport);
 
 
+	CullMode get_cull_mode() const;
+
+	void set_cull_mode(
+		const CullMode cull_mode);
+
+
 	void ogl_clear_error();
 
 	bool ogl_is_succeed();
@@ -131,6 +144,11 @@ private:
 
 	virtual void do_set_viewport(
 		const Viewport& viewport) = 0;
+
+	virtual CullMode do_get_cull_mode() const = 0;
+
+	virtual void do_set_cull_mode(
+		const CullMode cull_mode) = 0;
 }; // OglRenderer
 
 

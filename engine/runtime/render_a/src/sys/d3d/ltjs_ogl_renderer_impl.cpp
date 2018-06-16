@@ -28,6 +28,7 @@ public:
 		clear_color_a_{},
 		viewport_{},
 		max_viewport_size_{},
+		cull_mode_{},
 		vertex_shader_{},
 		fragment_shader_{},
 		program_{}
@@ -68,11 +69,14 @@ private:
 	Viewport viewport_;
 	ViewportSize max_viewport_size_;
 
+	CullMode cull_mode_;
+
 	GLuint vertex_shader_;
 	GLuint fragment_shader_;
 	GLuint program_;
 
 
+	static const CullMode default_cull_mode;
 	static const std::string vertex_shader_source;
 	static const std::string fragment_shader_source;
 
@@ -224,6 +228,34 @@ private:
 		do_set_viewport_internal();
 	}
 
+	CullMode do_get_cull_mode() const override
+	{
+		return cull_mode_;
+	}
+
+	void do_set_cull_mode(
+		const CullMode cull_mode) override
+	{
+		assert(is_context_current_);
+
+		if (!is_initialized_ || !is_context_current_)
+		{
+			return;
+		}
+
+		if (cull_mode == cull_mode_)
+		{
+			return;
+		}
+
+		const auto is_old_enabled = (cull_mode_ != CullMode::none);
+		const auto is_new_enabled = (cull_mode != CullMode::none);
+
+		cull_mode_ = cull_mode;
+
+		do_set_cull_mode_internal(is_old_enabled != is_new_enabled);
+	}
+
 	void do_set_clear_color_internal()
 	{
 		::glClearColor(
@@ -311,6 +343,8 @@ private:
 		viewport_.depth_max_z_ = 1.0F;
 		do_set_viewport_internal();
 
+		set_default_cull_mode();
+
 		if (!ogl_is_succeed())
 		{
 			return false;
@@ -360,6 +394,50 @@ private:
 		{
 			::glDeleteShader(fragment_shader_);
 			fragment_shader_ = 0;
+		}
+	}
+
+	void set_default_cull_mode()
+	{
+		::glFrontFace(GL_CW);
+
+		cull_mode_ = default_cull_mode;
+		do_set_cull_mode_internal(true);
+	}
+
+	void do_set_cull_mode_internal(
+		const bool enforce_cull_face)
+	{
+		const auto is_cull_face_enabled = (cull_mode_ != CullMode::none);
+
+		switch (cull_mode_)
+		{
+		case CullMode::none:
+			break;
+
+		case CullMode::clockwise:
+			::glCullFace(GL_FRONT);
+			break;
+
+		case CullMode::counterclockwise:
+			::glCullFace(GL_BACK);
+			break;
+
+		default:
+			assert(!"Invalid culling mode.");
+			return;
+		}
+
+		if (enforce_cull_face)
+		{
+			if (is_cull_face_enabled)
+			{
+				::glEnable(GL_CULL_FACE);
+			}
+			else
+			{
+				::glDisable(GL_CULL_FACE);
+			}
 		}
 	}
 
@@ -495,6 +573,8 @@ private:
 }; // OglRendererImpl
 
 
+const OglRenderer::CullMode OglRendererImpl::default_cull_mode = OglRenderer::CullMode::counterclockwise;
+
 const std::string OglRendererImpl::vertex_shader_source = std::string{
 R"LTJ_VERTEX(
 
@@ -594,6 +674,17 @@ void OglRenderer::set_viewport(
 	const Viewport& viewport)
 {
 	do_set_viewport(viewport);
+}
+
+OglRenderer::CullMode OglRenderer::get_cull_mode() const
+{
+	return do_get_cull_mode();
+}
+
+void OglRenderer::set_cull_mode(
+	const CullMode cull_mode)
+{
+	do_set_cull_mode(cull_mode);
 }
 
 void OglRenderer::ogl_clear_error()

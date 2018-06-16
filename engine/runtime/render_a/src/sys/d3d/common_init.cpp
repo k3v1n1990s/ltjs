@@ -484,9 +484,9 @@ void ogl_set_test_data()
 
 	static const GLfloat test_data[] =
 	{
-	   -1.0f, -1.0f, 0.0f,
-	   1.0f, -1.0f, 0.0f,
-	   0.0f,  1.0f, 0.0f,
+		-1.0F, -1.0F, 0.0F,
+		0.0F, 1.0F, 0.0F,
+		1.0F, -1.0F, 0.0F,
 	}; // test_data
 
 	::glBindVertexArray(ogl_test_vao_);
