@@ -95,8 +95,15 @@ private:
 	GLuint program_;
 
 
+	static std::uint8_t default_clear_color_r;
+	static std::uint8_t default_clear_color_g;
+	static std::uint8_t default_clear_color_b;
+	static std::uint8_t default_clear_color_a;
+
 	static const CullMode default_cull_mode;
+
 	static const bool default_is_clipping;
+
 	static const std::string vertex_shader_source;
 	static const std::string fragment_shader_source;
 
@@ -299,6 +306,16 @@ private:
 		do_set_is_clipping_internal();
 	}
 
+	void set_default_clear_color()
+	{
+		clear_color_r_ = default_clear_color_r;
+		clear_color_g_ = default_clear_color_g;
+		clear_color_b_ = default_clear_color_b;
+		clear_color_a_ = default_clear_color_a;
+
+		do_set_clear_color_internal();
+	}
+
 	void do_set_clear_color_internal()
 	{
 		::glClearColor(
@@ -376,11 +393,7 @@ private:
 
 		// Set defaults.
 		//
-		clear_color_r_ = 0;
-		clear_color_g_ = 0;
-		clear_color_b_ = 0;
-		clear_color_a_ = 0;
-		do_set_clear_color_internal();
+		set_default_clear_color();
 
 		viewport_.x_ = 0;
 		viewport_.y_ = 0;
@@ -695,6 +708,11 @@ private:
 	}
 }; // OglRendererImpl
 
+
+std::uint8_t OglRendererImpl::default_clear_color_r = 0;
+std::uint8_t OglRendererImpl::default_clear_color_g = 0;
+std::uint8_t OglRendererImpl::default_clear_color_b = 0;
+std::uint8_t OglRendererImpl::default_clear_color_a = 0;
 
 const bool OglRendererImpl::default_is_clipping = true;
 
