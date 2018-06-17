@@ -19,6 +19,74 @@ namespace ltjs
 {
 
 
+namespace
+{
+
+
+constexpr std::uint32_t d3dfvf_xyz = 0x002;
+constexpr std::uint32_t d3dfvf_xyzrhw = 0x004;
+
+constexpr std::uint32_t d3dfvf_xyzb1 = 0x006;
+constexpr std::uint32_t d3dfvf_xyzb2 = 0x008;
+constexpr std::uint32_t d3dfvf_xyzb3 = 0x00A;
+
+constexpr std::uint32_t d3dfvf_normal = 0x010;
+
+constexpr std::uint32_t d3dfvf_diffuse = 0x040;
+
+constexpr std::uint32_t d3dfvf_tex1 = 0x100;
+constexpr std::uint32_t d3dfvf_tex2 = 0x200;
+constexpr std::uint32_t d3dfvf_tex3 = 0x300;
+constexpr std::uint32_t d3dfvf_tex4 = 0x400;
+
+constexpr std::uint32_t d3dfvf_textureformat2 = 0; // Two floating point values
+constexpr std::uint32_t d3dfvf_textureformat3 = 1; // Three floating point values
+constexpr std::uint32_t d3dfvf_textureformat4 = 2; // Four floating point values
+
+constexpr std::uint32_t d3dfvf_texcoordsize2(
+	const int index)
+{
+	return d3dfvf_textureformat2;
+}
+
+constexpr std::uint32_t d3dfvf_texcoordsize3(
+	const int index)
+{
+	return d3dfvf_textureformat3 << ((index * 2) + 16);
+}
+
+constexpr std::uint32_t d3dfvf_texcoordsize4(
+	const int index)
+{
+	return d3dfvf_textureformat4 << ((index * 2) + 16);
+}
+
+constexpr auto d3dfvf_valid_flags =
+	d3dfvf_xyz |
+	d3dfvf_xyzrhw |
+	d3dfvf_xyzb1 |
+	d3dfvf_xyzb2 |
+	d3dfvf_xyzb3 |
+	d3dfvf_normal |
+	d3dfvf_diffuse |
+	d3dfvf_tex1 |
+	d3dfvf_tex2 |
+	d3dfvf_tex4 |
+	d3dfvf_texcoordsize3(0) |
+	d3dfvf_texcoordsize3(1) |
+	d3dfvf_texcoordsize4(1) |
+	d3dfvf_texcoordsize4(2) |
+	d3dfvf_texcoordsize4(3) |
+	0;
+
+
+} // namespace
+
+
+// ==========================================================================
+// OglRendererImpl
+//
+
 class OglRendererImpl final :
 	public OglRenderer
 {
@@ -938,6 +1006,14 @@ void main()
 )LTJ_FRAGMENT"
 }; // fragment_shader_source
 
+//
+// OglRendererImpl
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRenderer::Viewport
+//
 
 OglRenderer::Viewport::Viewport()
 	:
@@ -950,6 +1026,190 @@ OglRenderer::Viewport::Viewport()
 {
 }
 
+//
+// OglRenderer::Viewport
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRenderer::VertexArrayObject::Fvf
+//
+
+OglRenderer::VertexArrayObject::Fvf::Fvf()
+	:
+	has_position_{},
+	is_untransformed_{},
+	blending_weight_count_{},
+	has_normal_{},
+	has_diffuse_{},
+	tex_coord_set_count_{},
+	tex_coord_item_counts_{},
+	vertex_size_{}
+{
+}
+
+OglRenderer::VertexArrayObject::Fvf::Fvf(
+	const std::uint32_t d3d_fvf)
+{
+	*this = from_d3d(d3d_fvf);
+}
+
+bool OglRenderer::VertexArrayObject::Fvf::has_blending_weights() const
+{
+	return blending_weight_count_ > 0;
+}
+
+bool OglRenderer::VertexArrayObject::Fvf::has_tex_coord_sets() const
+{
+	return tex_coord_set_count_ > 0;
+}
+
+OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3d(
+	const std::uint32_t d3d_fvf)
+{
+	auto is_zero = false;
+
+	if (d3d_fvf == 0)
+	{
+		is_zero = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_valid_flags) != d3d_fvf)
+	{
+		assert(!"Unsupported flags.");
+		is_zero = true;
+	}
+
+	if (is_zero)
+	{
+		return {};
+	}
+
+	auto has_transformed = false;
+	auto has_untransformed = false;
+
+	if ((d3d_fvf & (d3dfvf_xyz | d3dfvf_xyzb1 | d3dfvf_xyzb2 | d3dfvf_xyzb3)) != 0)
+	{
+		has_transformed = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_xyzrhw) != 0)
+	{
+		has_untransformed = false;
+	}
+
+	if (has_transformed && has_untransformed)
+	{
+		return {};
+	}
+
+
+	auto fvf = Fvf{};
+
+	if (has_transformed)
+	{
+		fvf.has_position_ = true;
+		fvf.is_untransformed_ = false;
+	}
+
+	if (has_untransformed)
+	{
+		fvf.has_position_ = true;
+		fvf.is_untransformed_ = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1)
+	{
+		fvf.has_position_ = true;
+		fvf.blending_weight_count_ = 1;
+	}
+
+	if ((d3d_fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2)
+	{
+		fvf.has_position_ = true;
+		fvf.blending_weight_count_ = 2;
+	}
+
+	if ((d3d_fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
+	{
+		fvf.has_position_ = true;
+		fvf.blending_weight_count_ = 3;
+	}
+
+	if ((d3d_fvf & d3dfvf_normal) == d3dfvf_normal)
+	{
+		fvf.has_normal_ = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_diffuse) == d3dfvf_diffuse)
+	{
+		fvf.has_diffuse_ = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_tex1) == d3dfvf_tex1)
+	{
+		fvf.tex_coord_set_count_ = 1;
+	}
+
+	if ((d3d_fvf & d3dfvf_tex2) == d3dfvf_tex2)
+	{
+		fvf.tex_coord_set_count_ = 2;
+	}
+
+	if ((d3d_fvf & d3dfvf_tex3) == d3dfvf_tex3)
+	{
+		fvf.tex_coord_set_count_ = 3;
+	}
+
+	if ((d3d_fvf & d3dfvf_tex4) == d3dfvf_tex4)
+	{
+		fvf.tex_coord_set_count_ = 4;
+	}
+
+	for (auto i = 0; i < fvf.tex_coord_set_count_; ++i)
+	{
+		if ((d3d_fvf & d3dfvf_texcoordsize4(i)) == d3dfvf_texcoordsize4(i))
+		{
+			fvf.tex_coord_item_counts_[i] = 4;
+		}
+		else if ((d3d_fvf & d3dfvf_texcoordsize3(i)) == d3dfvf_texcoordsize3(i))
+		{
+			fvf.tex_coord_item_counts_[i] = 3;
+		}
+		else
+		{
+			fvf.tex_coord_item_counts_[i] = 2;
+		}
+	}
+
+	return fvf;
+}
+
+//
+// OglRenderer::VertexArrayObject::Fvf
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRenderer::VertexArrayObject
+//
+
+OglRenderer::VertexArrayObject::VertexArrayObject()
+{
+}
+
+OglRenderer::VertexArrayObject::~VertexArrayObject()
+{
+}
+
+//
+// OglRenderer::VertexArrayObject
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRenderer
+//
 
 OglRenderer::OglRenderer()
 {
@@ -1085,6 +1345,10 @@ OglRenderer& OglRenderer::get_instance()
 	static OglRendererImpl instance{};
 	return instance;
 }
+
+//
+// OglRenderer
+// ==========================================================================
 
 
 } // ltjs
