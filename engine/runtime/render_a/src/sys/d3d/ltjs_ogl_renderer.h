@@ -102,7 +102,7 @@ public:
 			bool has_position_;
 
 			// Is position already transformed? (D3DFVF_XYZRHW)
-			bool is_untransformed_;
+			bool is_position_transformed_;
 
 			// Geometry blending weight count.
 			int blending_weight_count_;

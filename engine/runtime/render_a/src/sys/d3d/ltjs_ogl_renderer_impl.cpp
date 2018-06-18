@@ -1038,7 +1038,7 @@ OglRenderer::Viewport::Viewport()
 OglRenderer::VertexArrayObject::Fvf::Fvf()
 	:
 	has_position_{},
-	is_untransformed_{},
+	is_position_transformed_{},
 	blending_weight_count_{},
 	has_normal_{},
 	has_diffuse_{},
@@ -1090,12 +1090,12 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 
 	if ((d3d_fvf & (d3dfvf_xyz | d3dfvf_xyzb1 | d3dfvf_xyzb2 | d3dfvf_xyzb3)) != 0)
 	{
-		has_transformed = true;
+		has_transformed = false;
 	}
 
 	if ((d3d_fvf & d3dfvf_xyzrhw) != 0)
 	{
-		has_untransformed = false;
+		has_untransformed = true;
 	}
 
 	if (has_transformed && has_untransformed)
@@ -1109,13 +1109,13 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 	if (has_transformed)
 	{
 		fvf.has_position_ = true;
-		fvf.is_untransformed_ = false;
+		fvf.is_position_transformed_ = true;
 	}
 
 	if (has_untransformed)
 	{
 		fvf.has_position_ = true;
-		fvf.is_untransformed_ = true;
+		fvf.is_position_transformed_ = false;
 	}
 
 	if ((d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1)
