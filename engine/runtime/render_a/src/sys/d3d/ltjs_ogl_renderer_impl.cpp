@@ -4,9 +4,12 @@
 #include <algorithm>
 #include <array>
 #include <iterator>
+#include <list>
+#include <memory>
 #include <numeric>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 #include "glad.h"
 
@@ -81,6 +84,39 @@ constexpr auto d3dfvf_valid_flags =
 	0;
 
 
+GLenum usage_flags_to_ogl_usage(
+	const OglRenderer::VertexArrayObject::UsageFlags usage_flags)
+{
+	if (usage_flags == OglRenderer::VertexArrayObject::UsageFlags::none)
+	{
+		return 0;
+	}
+
+	if ((usage_flags & OglRenderer::VertexArrayObject::UsageFlags::is_dynamic) != 0)
+	{
+		if ((usage_flags & OglRenderer::VertexArrayObject::UsageFlags::is_readable) != 0)
+		{
+			return GL_DYNAMIC_COPY;
+		}
+		else
+		{
+			return GL_DYNAMIC_DRAW;
+		}
+	}
+	else
+	{
+		if ((usage_flags & OglRenderer::VertexArrayObject::UsageFlags::is_readable) != 0)
+		{
+			return GL_STATIC_COPY;
+		}
+		else
+		{
+			return GL_STATIC_DRAW;
+		}
+	}
+}
+
+
 } // namespace
 
 
@@ -115,7 +151,10 @@ public:
 		depth_func_{},
 		vertex_shader_{},
 		fragment_shader_{},
-		program_{}
+		program_{},
+		ogl_current_vao_{},
+		current_vao_{},
+		vertex_array_objects_{}
 	{
 	}
 
@@ -126,6 +165,54 @@ public:
 
 
 private:
+	class VertexArrayObjectImpl final :
+		public VertexArrayObject
+	{
+	public:
+		VertexArrayObjectImpl(
+			OglRendererImpl& impl);
+
+		virtual ~VertexArrayObjectImpl();
+
+
+	private:
+		static constexpr auto index_element_size = 2;
+
+
+		OglRendererImpl& impl_;
+
+		bool is_initialized_;
+		bool is_state_recorded_;
+
+		Fvf vertex_format_;
+		UsageFlags vertex_usage_flags_;
+		UsageFlags index_usage_flags_;
+		int vertex_count_;
+		int index_count_;
+
+		GLuint ogl_vao_;
+		GLuint ogl_vertex_buffer_;
+		GLuint ogl_index_buffer_;
+
+		bool ogl_is_vertex_buffer_initialized_;
+		bool ogl_is_index_buffer_initialized_;
+
+
+		bool do_initialize(
+			const InitializeParam& param) override;
+
+		bool initialize_internal(
+			const InitializeParam& param);
+
+		void do_uninitialize() override;
+
+		void do_uninitialize_internal();
+	}; // VertexArrayObjectImpl
+
+
+	using VertexArrayObjectUPtr = std::unique_ptr<VertexArrayObjectImpl>;
+	using VertexArrayObjectList = std::list<VertexArrayObjectUPtr>;
+
 	using ViewportSize = std::array<int, 2>;
 	using Extensions = std::vector<std::string>;
 
@@ -169,6 +256,11 @@ private:
 	GLuint vertex_shader_;
 	GLuint fragment_shader_;
 	GLuint program_;
+
+	GLuint ogl_current_vao_;
+	VertexArrayObjectImpl* current_vao_;
+
+	VertexArrayObjectList vertex_array_objects_;
 
 
 	static int default_viewport_x;
@@ -391,44 +483,6 @@ private:
 		do_set_is_clipping_internal();
 	}
 
-	void set_default_clear_color()
-	{
-		clear_color_r_ = default_clear_color_r;
-		clear_color_g_ = default_clear_color_g;
-		clear_color_b_ = default_clear_color_b;
-		clear_color_a_ = default_clear_color_a;
-
-		do_set_clear_color_internal();
-	}
-
-	void do_set_clear_color_internal()
-	{
-		::glClearColor(
-			clear_color_r_ / 255.0F,
-			clear_color_g_ / 255.0F,
-			clear_color_b_ / 255.0F,
-			clear_color_a_ / 255.0F);
-	}
-
-	Viewport get_default_viewport()
-	{
-		auto viewport = Viewport{};
-		viewport.x_ = default_viewport_x;
-		viewport.y_ = default_viewport_y;
-		viewport.width_ = screen_width_;
-		viewport.height_ = screen_height_;
-		viewport.depth_min_z_ = default_viewport_depth_min_z;
-		viewport.depth_max_z_ = default_viewport_depth_max_z;
-
-		return viewport;
-	}
-
-	void set_default_viewport()
-	{
-		viewport_ = get_default_viewport();
-		do_set_viewport_internal();
-	}
-
 	void do_set_viewport_internal()
 	{
 		const auto ogl_viewport_y = screen_height_ - (viewport_.y_ + viewport_.height_);
@@ -437,13 +491,13 @@ private:
 		::glDepthRange(viewport_.depth_min_z_, viewport_.depth_max_z_);
 	}
 
-	bool do_is_depth_enabled() const
+	bool do_is_depth_enabled() const override
 	{
 		return is_depth_enabled_;
 	}
 
 	void do_set_is_depth_enabled(
-		const bool is_enabled)
+		const bool is_enabled) override
 	{
 		if (!is_initialized_ || !is_context_current_)
 		{
@@ -460,13 +514,13 @@ private:
 		do_set_is_depth_enabled_internal();
 	}
 
-	bool do_is_depth_writable() const
+	bool do_is_depth_writable() const override
 	{
 		return is_depth_writable_;
 	}
 
 	void do_set_is_depth_writable(
-		const bool is_writable)
+		const bool is_writable) override
 	{
 		if (!is_initialized_ || !is_context_current_)
 		{
@@ -483,13 +537,13 @@ private:
 		do_set_is_depth_writable_internal();
 	}
 
-	DepthFunc do_get_depth_func() const
+	DepthFunc do_get_depth_func() const override
 	{
 		return depth_func_;
 	}
 
 	void do_set_depth_func(
-		const DepthFunc depth_func)
+		const DepthFunc depth_func) override
 	{
 		if (!is_initialized_ || !is_context_current_)
 		{
@@ -636,6 +690,16 @@ private:
 			::glDeleteShader(fragment_shader_);
 			fragment_shader_ = 0;
 		}
+
+		if (ogl_current_vao_)
+		{
+			::glBindVertexArray(0);
+			ogl_current_vao_ = 0;
+		}
+
+		current_vao_ = nullptr;
+
+		vertex_array_objects_.clear();
 	}
 
 	void set_default_cull_mode()
@@ -698,6 +762,44 @@ private:
 		const auto ogl_hint_value = (is_clipping_ ? GL_DONT_CARE : GL_FASTEST);
 
 		::glHint(GL_CLIP_VOLUME_CLIPPING_HINT_EXT, ogl_hint_value);
+	}
+
+	void set_default_clear_color()
+	{
+		clear_color_r_ = default_clear_color_r;
+		clear_color_g_ = default_clear_color_g;
+		clear_color_b_ = default_clear_color_b;
+		clear_color_a_ = default_clear_color_a;
+
+		do_set_clear_color_internal();
+	}
+
+	void do_set_clear_color_internal()
+	{
+		::glClearColor(
+			clear_color_r_ / 255.0F,
+			clear_color_g_ / 255.0F,
+			clear_color_b_ / 255.0F,
+			clear_color_a_ / 255.0F);
+	}
+
+	Viewport get_default_viewport()
+	{
+		auto viewport = Viewport{};
+		viewport.x_ = default_viewport_x;
+		viewport.y_ = default_viewport_y;
+		viewport.width_ = screen_width_;
+		viewport.height_ = screen_height_;
+		viewport.depth_min_z_ = default_viewport_depth_min_z;
+		viewport.depth_max_z_ = default_viewport_depth_max_z;
+
+		return viewport;
+	}
+
+	void set_default_viewport()
+	{
+		viewport_ = get_default_viewport();
+		do_set_viewport_internal();
 	}
 
 	void set_default_is_depth_enabled()
@@ -955,6 +1057,34 @@ private:
 
 		return ogl_is_succeed();
 	}
+
+	VertexArrayObjectPtr do_add_vertex_array_object() override
+	{
+		vertex_array_objects_.emplace_back(std::make_unique<VertexArrayObjectImpl>(*this));
+		return vertex_array_objects_.back().get();
+	}
+
+	bool do_remove_vertex_array_object(
+		VertexArrayObjectPtr vertex_array_object) override
+	{
+		if (vertex_array_objects_.empty())
+		{
+			return false;
+		}
+
+		const auto size_before = vertex_array_objects_.size();
+
+		vertex_array_objects_.remove_if(
+			[&](const auto& item_uptr)
+			{
+				return item_uptr.get() == vertex_array_object;
+			}
+		);
+
+		const auto size_after = vertex_array_objects_.size();
+
+		return size_before == size_after;
+	}
 }; // OglRendererImpl
 
 
@@ -1013,6 +1143,184 @@ void main()
 
 
 // ==========================================================================
+// OglRendererImpl::VertexArrayObjectImpl
+//
+
+OglRendererImpl::VertexArrayObjectImpl::VertexArrayObjectImpl(
+	OglRendererImpl& impl)
+	:
+	impl_{impl},
+	is_initialized_{},
+	is_state_recorded_{},
+	vertex_format_{},
+	vertex_usage_flags_{},
+	index_usage_flags_{},
+	vertex_count_{},
+	index_count_{},
+	ogl_vao_{},
+	ogl_vertex_buffer_{},
+	ogl_index_buffer_{},
+	ogl_is_vertex_buffer_initialized_{},
+	ogl_is_index_buffer_initialized_{}
+{
+}
+
+OglRendererImpl::VertexArrayObjectImpl::~VertexArrayObjectImpl()
+{
+	do_uninitialize_internal();
+}
+
+bool OglRendererImpl::VertexArrayObjectImpl::do_initialize(
+	const InitializeParam& param)
+{
+	do_uninitialize_internal();
+
+	if (!param.is_valid())
+	{
+		return false;
+	}
+
+	if (!initialize_internal(param))
+	{
+		do_uninitialize_internal();
+		return false;
+	}
+
+	return true;
+}
+
+bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
+	const InitializeParam& param)
+{
+	::glGenVertexArrays(1, &ogl_vao_);
+	::glGenBuffers(1, &ogl_vertex_buffer_);
+
+	if (!ogl_vao_ || !ogl_vertex_buffer_)
+	{
+		return false;
+	}
+
+	if (param.has_index_)
+	{
+		::glGenBuffers(1, &ogl_index_buffer_);
+
+		if (!ogl_index_buffer_)
+		{
+			return false;
+		}
+	}
+
+
+	// Vertex buffer.
+	//
+	const auto ogl_vertex_usage = usage_flags_to_ogl_usage(param.vertex_usage_flags_);
+	const auto vertex_size = param.vertex_format_.vertex_size_;
+	const auto vertex_buffer_size = vertex_size * param.vertex_count_;
+
+	::glBindBuffer(GL_ARRAY_BUFFER, ogl_vertex_buffer_);
+	::glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size, param.raw_vertex_data_, ogl_vertex_usage);
+	::glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+
+	// Index buffer.
+	//
+	if (param.has_index_)
+	{
+		const auto ogl_index_usage = usage_flags_to_ogl_usage(param.index_usage_flags_);
+		const auto index_buffer_size = index_element_size * param.index_count_;
+
+		::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ogl_index_buffer_);
+		::glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size, param.raw_index_data_, ogl_index_usage);
+		::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}
+
+
+	// Setup the state.
+	//
+	::glBindVertexArray(ogl_vao_);
+
+	::glBindBuffer(GL_ARRAY_BUFFER, ogl_vertex_buffer_);
+	::glEnableVertexAttribArray(0);
+	::glVertexAttribPointer(0, 3 + (param.vertex_format_.is_position_transformed_), GL_FLOAT, GL_FALSE, vertex_size, nullptr);
+
+	::glBindVertexArray(0);
+
+	vertex_format_ = param.vertex_format_;
+
+	return true;
+}
+
+void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize()
+{
+	do_uninitialize_internal();
+}
+
+void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize_internal()
+{
+	is_initialized_ = false;
+	is_state_recorded_ = false;
+	vertex_format_ = {};
+	vertex_usage_flags_ = UsageFlags::none;
+	index_usage_flags_ = UsageFlags::none;
+	vertex_count_ = 0;
+	index_count_ = 0;
+
+	if (ogl_vao_)
+	{
+		if (impl_.ogl_current_vao_ == ogl_vao_)
+		{
+			::glBindVertexArray(0);
+
+			impl_.current_vao_ = nullptr;
+			impl_.ogl_current_vao_ = 0;
+		}
+
+		::glDeleteVertexArrays(1, &ogl_vao_);
+		ogl_vao_ = 0;
+	}
+
+	if (ogl_vertex_buffer_)
+	{
+		::glDeleteBuffers(1, &ogl_vertex_buffer_);
+		ogl_vertex_buffer_ = 0;
+	}
+
+	if (ogl_index_buffer_)
+	{
+		::glDeleteBuffers(1, &ogl_index_buffer_);
+		ogl_index_buffer_ = 0;
+	}
+
+	ogl_is_vertex_buffer_initialized_ = false;
+	ogl_is_index_buffer_initialized_ = false;
+}
+
+//
+// OglRendererImpl::VertexArrayObjectImpl
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRendererImpl::VertexArrayObject
+//
+
+bool OglRendererImpl::VertexArrayObject::initialize(
+	const InitializeParam& param)
+{
+	return do_initialize(param);
+}
+
+void OglRendererImpl::VertexArrayObject::uninitialize()
+{
+	return do_uninitialize();
+}
+
+//
+// OglRendererImpl::VertexArrayObjectImpl
+// ==========================================================================
+
+
+// ==========================================================================
 // OglRenderer::Viewport
 //
 
@@ -1063,6 +1371,11 @@ bool OglRenderer::VertexArrayObject::Fvf::has_blending_weights() const
 bool OglRenderer::VertexArrayObject::Fvf::has_tex_coord_sets() const
 {
 	return tex_coord_set_count_ > 0;
+}
+
+bool OglRenderer::VertexArrayObject::Fvf::is_valid() const
+{
+	return has_position_ && vertex_size_ > 0;
 }
 
 OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3d(
@@ -1207,6 +1520,55 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 
 
 // ==========================================================================
+// OglRenderer::VertexArrayObject::InitializeParam
+//
+
+OglRenderer::VertexArrayObject::InitializeParam::InitializeParam()
+	:
+	has_index_{},
+	vertex_format_{},
+	vertex_usage_flags_{},
+	vertex_count_{},
+	raw_vertex_data_{},
+	index_usage_flags_{},
+	index_count_{},
+	raw_index_data_{}
+{
+}
+
+bool OglRenderer::VertexArrayObject::InitializeParam::is_valid() const
+{
+	if (!vertex_format_.is_valid())
+	{
+		return false;
+	}
+
+	const auto ogl_vertex_usage = usage_flags_to_ogl_usage(vertex_usage_flags_);
+
+	if (!ogl_vertex_usage || vertex_count_ <= 0 || !raw_vertex_data_)
+	{
+		return false;
+	}
+
+	if (has_index_)
+	{
+		const auto ogl_index_usage = usage_flags_to_ogl_usage(index_usage_flags_);
+
+		if (!ogl_index_usage || index_count_ <= 0 || !raw_index_data_)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+//
+// OglRenderer::VertexArrayObject::InitializeParam
+// ==========================================================================
+
+
+// ==========================================================================
 // OglRenderer::VertexArrayObject
 //
 
@@ -1337,6 +1699,17 @@ void OglRenderer::set_depth_func(
 	const DepthFunc depth_func)
 {
 	do_set_depth_func(depth_func);
+}
+
+OglRenderer::VertexArrayObjectPtr OglRenderer::add_vertex_array_object()
+{
+	return do_add_vertex_array_object();
+}
+
+bool OglRenderer::remove_vertex_array_object(
+	VertexArrayObjectPtr vertex_array_object)
+{
+	return do_remove_vertex_array_object(vertex_array_object);
 }
 
 void OglRenderer::ogl_clear_error()

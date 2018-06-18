@@ -132,12 +132,38 @@ public:
 			bool has_blending_weights() const;
 
 			// Has texture coordinate set? (D3DFVF_TEX#)
-			bool has_tex_coord_sets() const;;
+			bool has_tex_coord_sets() const;
+
+
+			bool is_valid() const;
 
 
 			static Fvf from_d3d(
 				const std::uint32_t d3d_fvf);
 		}; // Fvf
+
+		struct InitializeParam
+		{
+			bool has_index_;
+			Fvf vertex_format_;
+			UsageFlags vertex_usage_flags_;
+			int vertex_count_;
+			const void* raw_vertex_data_;
+			UsageFlags index_usage_flags_;
+			int index_count_;
+			const void* raw_index_data_;
+
+
+			InitializeParam();
+
+			bool is_valid() const;
+		}; // InitializeParam
+
+
+		bool initialize(
+			const InitializeParam& param);
+
+		void uninitialize();
 
 
 	protected:
@@ -147,7 +173,13 @@ public:
 
 
 	private:
+		virtual bool do_initialize(
+			const InitializeParam& param) = 0;
+
+		virtual void do_uninitialize() = 0;
 	}; // VertexArrayObject
+
+	using VertexArrayObjectPtr = VertexArrayObject*;
 
 
 	bool is_initialized() const;
@@ -213,6 +245,12 @@ public:
 
 	void set_depth_func(
 		const DepthFunc depth_func);
+
+
+	VertexArrayObjectPtr add_vertex_array_object();
+
+	bool remove_vertex_array_object(
+		VertexArrayObjectPtr vertex_array_object);
 
 
 	void ogl_clear_error();
@@ -301,6 +339,14 @@ private:
 
 	virtual void do_set_depth_func(
 		const DepthFunc depth_func) = 0;
+
+
+	// Vertex array objects.
+	//
+	virtual VertexArrayObjectPtr do_add_vertex_array_object() = 0;
+
+	virtual bool do_remove_vertex_array_object(
+		VertexArrayObjectPtr vertex_array_object) = 0;
 }; // OglRenderer
 
 
