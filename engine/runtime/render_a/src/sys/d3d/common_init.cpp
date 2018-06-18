@@ -195,9 +195,7 @@ int ogl_pixel_format_index_ = 0;
 ExtensionSet ogl_wgl_extensions_;
 WglChoosePixelFormatArbFunc wglChoosePixelFormatARB = nullptr;
 WglCreateContextAttribsArbFunc wglCreateContextAttribsARB = nullptr;
-
-GLuint ogl_test_vbo_ = 0;
-GLuint ogl_test_vao_ = 0;
+ltjs::OglRenderer::VertexArrayObjectPtr ogl_test_vao_;
 
 
 bool ogl_is_succeed()
@@ -215,19 +213,14 @@ void ogl_uninitialize()
 	ogl_is_initialized_ = false;
 	ogl_window_dc_ = nullptr;
 
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+
 	if (ogl_test_vao_)
 	{
-		::glDeleteVertexArrays(1, &ogl_test_vao_);
-		ogl_test_vao_ = 0;
+		ogl_renderer.remove_vertex_array_object(ogl_test_vao_);
 	}
 
-	if (ogl_test_vbo_)
-	{
-		::glDeleteBuffers(1, &ogl_test_vbo_);
-		ogl_test_vbo_ = 0;
-	}
-
-	ltjs::OglRenderer::get_instance().uninitialize();
+	ogl_renderer.uninitialize();
 
 	auto ogl_context = ::wglGetCurrentContext();
 	auto ogl_dc = ::wglGetCurrentDC();
@@ -478,10 +471,6 @@ bool ogl_create_context_and_make_current()
 
 void ogl_set_test_data()
 {
-	::glGenBuffers(1, &ogl_test_vbo_);
-	::glGenVertexArrays(1, &ogl_test_vao_);
-
-
 	static const GLfloat test_data[] =
 	{
 		-1.0F, -1.0F, 0.0F,
@@ -489,15 +478,12 @@ void ogl_set_test_data()
 		1.0F, -1.0F, 0.0F,
 	}; // test_data
 
-	::glBindVertexArray(ogl_test_vao_);
+	auto param = ltjs::OglRenderer::VertexArrayObject::InitializeParam{};
+	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZ);
+	param.vertex_count_ = 3;
+	param.raw_vertex_data_ = test_data;
 
-	::glBindBuffer(GL_ARRAY_BUFFER, ogl_test_vbo_);
-	::glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizei>(sizeof(test_data)), test_data, GL_STATIC_DRAW);
-
-	::glEnableVertexAttribArray(0);
-	::glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(0));
-
-	::glBindVertexArray(0);
+	const auto init_result = ogl_test_vao_->initialize(param);
 }
 
 bool ogl_initialize_internal(
@@ -527,7 +513,10 @@ bool ogl_initialize_internal(
 
 	if (!ogl_renderer.initialize(screen_width, screen_height))
 	{
+		return false;
 	}
+
+	ogl_test_vao_ = ogl_renderer.add_vertex_array_object();
 
 	ogl_set_test_data();
 
@@ -575,12 +564,7 @@ void ogl_swap_buffers()
 
 void ogl_test_draw()
 {
-	::glBindVertexArray(ogl_test_vao_);
-	assert(ogl_is_succeed());
-	::glDrawArrays(GL_TRIANGLES, 0, 3);
-	assert(ogl_is_succeed());
-	::glBindVertexArray(0);
-	assert(ogl_is_succeed());
+	ogl_test_vao_->draw(0, 1);
 }
 #endif // LTJS_WIP_OGL
 

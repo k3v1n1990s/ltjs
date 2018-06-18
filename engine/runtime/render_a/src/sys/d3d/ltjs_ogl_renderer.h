@@ -104,6 +104,7 @@ public:
 			// Is position already transformed? (D3DFVF_XYZRHW)
 			bool is_position_transformed_;
 
+
 			// Geometry blending weight count.
 			int blending_weight_count_;
 
@@ -166,6 +167,11 @@ public:
 		void uninitialize();
 
 
+		void draw(
+			const int first_triangle_index,
+			const int triangle_count);
+
+
 	protected:
 		VertexArrayObject();
 
@@ -177,6 +183,10 @@ public:
 			const InitializeParam& param) = 0;
 
 		virtual void do_uninitialize() = 0;
+
+		virtual void do_draw(
+			const int first_triangle_index,
+			const int triangle_count) = 0;
 	}; // VertexArrayObject
 
 	using VertexArrayObjectPtr = VertexArrayObject*;

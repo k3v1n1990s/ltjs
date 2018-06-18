@@ -87,11 +87,6 @@ constexpr auto d3dfvf_valid_flags =
 GLenum usage_flags_to_ogl_usage(
 	const OglRenderer::VertexArrayObject::UsageFlags usage_flags)
 {
-	if (usage_flags == OglRenderer::VertexArrayObject::UsageFlags::none)
-	{
-		return 0;
-	}
-
 	if ((usage_flags & OglRenderer::VertexArrayObject::UsageFlags::is_dynamic) != 0)
 	{
 		if ((usage_flags & OglRenderer::VertexArrayObject::UsageFlags::is_readable) != 0)
@@ -152,7 +147,6 @@ public:
 		vertex_shader_{},
 		fragment_shader_{},
 		program_{},
-		ogl_current_vao_{},
 		current_vao_{},
 		vertex_array_objects_{}
 	{
@@ -182,7 +176,6 @@ private:
 		OglRendererImpl& impl_;
 
 		bool is_initialized_;
-		bool is_state_recorded_;
 
 		Fvf vertex_format_;
 		UsageFlags vertex_usage_flags_;
@@ -194,9 +187,6 @@ private:
 		GLuint ogl_vertex_buffer_;
 		GLuint ogl_index_buffer_;
 
-		bool ogl_is_vertex_buffer_initialized_;
-		bool ogl_is_index_buffer_initialized_;
-
 
 		bool do_initialize(
 			const InitializeParam& param) override;
@@ -205,6 +195,10 @@ private:
 			const InitializeParam& param);
 
 		void do_uninitialize() override;
+
+		void do_draw(
+			const int first_triangle_index,
+			const int triangle_count) override;
 
 		void do_uninitialize_internal();
 	}; // VertexArrayObjectImpl
@@ -257,7 +251,6 @@ private:
 	GLuint fragment_shader_;
 	GLuint program_;
 
-	GLuint ogl_current_vao_;
 	VertexArrayObjectImpl* current_vao_;
 
 	VertexArrayObjectList vertex_array_objects_;
@@ -691,12 +684,6 @@ private:
 			fragment_shader_ = 0;
 		}
 
-		if (ogl_current_vao_)
-		{
-			::glBindVertexArray(0);
-			ogl_current_vao_ = 0;
-		}
-
 		current_vao_ = nullptr;
 
 		vertex_array_objects_.clear();
@@ -1107,11 +1094,18 @@ const bool OglRendererImpl::default_is_depth_writable = true;
 const OglRendererImpl::DepthFunc OglRendererImpl::default_depth_func = OglRendererImpl::DepthFunc::lees_or_equal;
 
 const std::string OglRendererImpl::vertex_shader_source = std::string{
-R"LTJ_VERTEX(
+R"LTJS_VERTEX(
 
 #version 330 core
 
 layout(location = 0) in vec4 a_position;
+layout(location = 1) in vec4 a_bweights;
+layout(location = 2) in vec4 a_normal;
+layout(location = 3) in vec4 a_diffuse;
+layout(location = 4) in vec4 a_tcs_0;
+layout(location = 5) in vec4 a_tcs_1;
+layout(location = 6) in vec4 a_tcs_2;
+layout(location = 7) in vec4 a_tcs_3;
 
 void main()
 {
@@ -1119,11 +1113,11 @@ void main()
 	gl_Position.z = -gl_Position.z;
 }
 
-)LTJ_VERTEX"
+)LTJS_VERTEX"
 }; // vertex_shader_source
 
 const std::string OglRendererImpl::fragment_shader_source = std::string{
-R"LTJ_FRAGMENT(
+R"LTJS_FRAGMENT(
 
 #version 330 core
 
@@ -1134,7 +1128,7 @@ void main()
 	o_fragment = vec4(0, 1, 0, 1);
 }
 
-)LTJ_FRAGMENT"
+)LTJS_FRAGMENT"
 }; // fragment_shader_source
 
 //
@@ -1151,7 +1145,6 @@ OglRendererImpl::VertexArrayObjectImpl::VertexArrayObjectImpl(
 	:
 	impl_{impl},
 	is_initialized_{},
-	is_state_recorded_{},
 	vertex_format_{},
 	vertex_usage_flags_{},
 	index_usage_flags_{},
@@ -1159,9 +1152,7 @@ OglRendererImpl::VertexArrayObjectImpl::VertexArrayObjectImpl(
 	index_count_{},
 	ogl_vao_{},
 	ogl_vertex_buffer_{},
-	ogl_index_buffer_{},
-	ogl_is_vertex_buffer_initialized_{},
-	ogl_is_index_buffer_initialized_{}
+	ogl_index_buffer_{}
 {
 }
 
@@ -1235,17 +1226,106 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 	}
 
 
-	// Setup the state.
+	// Record the state.
 	//
-	::glBindVertexArray(ogl_vao_);
+	vertex_format_ = param.vertex_format_;
 
+	const auto float_size = static_cast<int>(sizeof(float));
+
+	auto component_offset_ptr = static_cast<const char*>(nullptr);
+
+	if (impl_.current_vao_ != this)
+	{
+		impl_.current_vao_ = nullptr;
+	}
+
+	::glBindVertexArray(ogl_vao_);
 	::glBindBuffer(GL_ARRAY_BUFFER, ogl_vertex_buffer_);
-	::glEnableVertexAttribArray(0);
-	::glVertexAttribPointer(0, 3 + (param.vertex_format_.is_position_transformed_), GL_FLOAT, GL_FALSE, vertex_size, nullptr);
+
+	if (param.has_index_)
+	{
+		::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ogl_index_buffer_);
+	}
+
+	// Position
+	//
+	{
+		const auto position_item_count = 3 + (vertex_format_.is_position_transformed_);
+		const auto position_size = position_item_count * float_size;
+
+		::glEnableVertexAttribArray(0);
+		::glVertexAttribPointer(0, position_item_count, GL_FLOAT, GL_FALSE, vertex_size, component_offset_ptr);
+
+		component_offset_ptr += position_size;
+	}
+
+
+	// Blending weights.
+	//
+	if (vertex_format_.has_blending_weights())
+	{
+		const auto blending_weights_item_count = vertex_format_.blending_weight_count_;
+		const auto blending_weights_size = blending_weights_item_count * float_size;
+
+		::glEnableVertexAttribArray(1);
+		::glVertexAttribPointer(1, blending_weights_item_count, GL_FLOAT, GL_FALSE, vertex_size, component_offset_ptr);
+
+		component_offset_ptr += blending_weights_size;
+	}
+
+	// Normal.
+	//
+	if (vertex_format_.has_normal_)
+	{
+		const auto normal_item_count = 3;
+		const auto normals_size = normal_item_count * float_size;
+
+		::glEnableVertexAttribArray(2);
+		::glVertexAttribPointer(2, normal_item_count, GL_FLOAT, GL_FALSE, vertex_size, component_offset_ptr);
+
+		component_offset_ptr += normals_size;
+	}
+
+	if (vertex_format_.has_diffuse_)
+	{
+		const auto diffuse_size = float_size;
+
+		::glEnableVertexAttribArray(3);
+		::glVertexAttribPointer(3, GL_BGRA, GL_UNSIGNED_BYTE, GL_TRUE, vertex_size, component_offset_ptr);
+
+		component_offset_ptr += diffuse_size;
+	}
+
+	if (vertex_format_.has_tex_coord_sets())
+	{
+		auto base_array_index = 4;
+
+		for (auto i = 0; i < vertex_format_.tex_coord_set_count_; ++i)
+		{
+			const auto array_index = base_array_index + i;
+			const auto tex_coord_set_item_count = vertex_format_.tex_coord_item_counts_[i];
+			const auto tex_coord_set_size = tex_coord_set_item_count * float_size;
+
+			::glEnableVertexAttribArray(array_index);
+			::glVertexAttribPointer(array_index, tex_coord_set_item_count, GL_FLOAT, GL_FALSE, vertex_size, component_offset_ptr);
+
+			component_offset_ptr += tex_coord_set_size;
+		}
+	}
 
 	::glBindVertexArray(0);
+	::glBindBuffer(GL_ARRAY_BUFFER, 0);
+	::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-	vertex_format_ = param.vertex_format_;
+
+	// Finalize.
+	//
+	is_initialized_ = true;
+
+	vertex_usage_flags_ = param.vertex_usage_flags_;
+	index_usage_flags_ = param.index_usage_flags_;
+	vertex_count_ = param.vertex_count_;
+	index_count_ = param.index_count_;
 
 	return true;
 }
@@ -1255,10 +1335,27 @@ void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize()
 	do_uninitialize_internal();
 }
 
+void OglRendererImpl::VertexArrayObjectImpl::do_draw(
+	const int first_triangle_index,
+	const int triangle_count)
+{
+	if (!is_initialized_ || first_triangle_index < 0 || triangle_count <= 0)
+	{
+		return;
+	}
+
+	if (impl_.current_vao_ != this)
+	{
+		impl_.current_vao_ = this;
+		::glBindVertexArray(ogl_vao_);
+	}
+
+	::glDrawArrays(GL_TRIANGLES, first_triangle_index * 3, triangle_count * 3);
+}
+
 void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize_internal()
 {
 	is_initialized_ = false;
-	is_state_recorded_ = false;
 	vertex_format_ = {};
 	vertex_usage_flags_ = UsageFlags::none;
 	index_usage_flags_ = UsageFlags::none;
@@ -1267,12 +1364,10 @@ void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize_internal()
 
 	if (ogl_vao_)
 	{
-		if (impl_.ogl_current_vao_ == ogl_vao_)
+		if (impl_.current_vao_ == this)
 		{
-			::glBindVertexArray(0);
-
 			impl_.current_vao_ = nullptr;
-			impl_.ogl_current_vao_ = 0;
+			::glBindVertexArray(0);
 		}
 
 		::glDeleteVertexArrays(1, &ogl_vao_);
@@ -1290,9 +1385,6 @@ void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize_internal()
 		::glDeleteBuffers(1, &ogl_index_buffer_);
 		ogl_index_buffer_ = 0;
 	}
-
-	ogl_is_vertex_buffer_initialized_ = false;
-	ogl_is_index_buffer_initialized_ = false;
 }
 
 //
@@ -1313,6 +1405,13 @@ bool OglRendererImpl::VertexArrayObject::initialize(
 void OglRendererImpl::VertexArrayObject::uninitialize()
 {
 	return do_uninitialize();
+}
+
+void OglRendererImpl::VertexArrayObject::draw(
+	const int first_triangle_index,
+	const int triangle_count)
+{
+	do_draw(first_triangle_index, triangle_count);
 }
 
 //
@@ -1404,12 +1503,12 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 
 	if ((d3d_fvf & (d3dfvf_xyz | d3dfvf_xyzb1 | d3dfvf_xyzb2 | d3dfvf_xyzb3)) != 0)
 	{
-		has_transformed = false;
+		has_untransformed = true;
 	}
 
 	if ((d3d_fvf & d3dfvf_xyzrhw) != 0)
 	{
-		has_untransformed = true;
+		has_transformed = true;
 	}
 
 	if (has_transformed && has_untransformed)
