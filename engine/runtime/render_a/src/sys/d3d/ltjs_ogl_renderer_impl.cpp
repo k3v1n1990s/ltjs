@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <iterator>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -1181,6 +1182,21 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 			fvf.tex_coord_item_counts_[i] = 2;
 		}
 	}
+
+
+	// Calculate a size of the vertex.
+	// Each component item has four byte size (float, DWORD).
+	//
+	fvf.vertex_size_ = 4 * (
+		(fvf.has_position_ ? (fvf.is_position_transformed_ ? 4 : 3) : 0) +
+		fvf.blending_weight_count_ +
+		(fvf.has_normal_ ? 3 : 0) +
+		(fvf.has_diffuse_ ? 1 : 0) +
+		std::accumulate(
+			fvf.tex_coord_item_counts_.cbegin(),
+			fvf.tex_coord_item_counts_.cbegin() + fvf.tex_coord_set_count_,
+			0) +
+		0);
 
 	return fvf;
 }
