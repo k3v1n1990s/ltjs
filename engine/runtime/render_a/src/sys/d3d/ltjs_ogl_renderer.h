@@ -168,7 +168,15 @@ public:
 
 
 		void draw(
-			const int first_triangle_index,
+			const int triangle_count);
+
+		void draw(
+			const int vertex_base,
+			const int triangle_count);
+
+		void draw(
+			const int index_base,
+			const int vertex_base,
 			const int triangle_count);
 
 
@@ -185,7 +193,8 @@ public:
 		virtual void do_uninitialize() = 0;
 
 		virtual void do_draw(
-			const int first_triangle_index,
+			const int index_base,
+			const int vertex_base,
 			const int triangle_count) = 0;
 	}; // VertexArrayObject
 

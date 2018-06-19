@@ -471,17 +471,33 @@ bool ogl_create_context_and_make_current()
 
 void ogl_set_test_data()
 {
-	static const GLfloat test_data[] =
+	struct Vertex
 	{
-		-1.0F, -1.0F, 0.0F,
-		0.0F, 1.0F, 0.0F,
-		1.0F, -1.0F, 0.0F,
-	}; // test_data
+		float x;
+		float y;
+		float z;
+		std::uint32_t diffuse;
+	}; // Vertex
+
+	static const Vertex vertices[] =
+	{
+		{-1.0F, -1.0F, 0.0F, 0xFFFF0000},
+		{0.0F, 1.0F, 0.0F, 0xFF00FF00},
+		{1.0F, -1.0F, 0.0F, 0xFF0000FF},
+	}; // vertices
+
+	static const std::uint16_t indices[] =
+	{
+		2, 0, 1,
+	}; // indices
 
 	auto param = ltjs::OglRenderer::VertexArrayObject::InitializeParam{};
-	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZ);
+	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZ | D3DFVF_DIFFUSE);
 	param.vertex_count_ = 3;
-	param.raw_vertex_data_ = test_data;
+	param.raw_vertex_data_ = vertices;
+	param.has_index_ = true;
+	param.index_count_ = 3;
+	param.raw_index_data_ = indices;
 
 	const auto init_result = ogl_test_vao_->initialize(param);
 }
@@ -564,7 +580,12 @@ void ogl_swap_buffers()
 
 void ogl_test_draw()
 {
-	ogl_test_vao_->draw(0, 1);
+	if (!ogl_test_vao_)
+	{
+		return;
+	}
+
+	ogl_test_vao_->draw(1);
 }
 #endif // LTJS_WIP_OGL
 

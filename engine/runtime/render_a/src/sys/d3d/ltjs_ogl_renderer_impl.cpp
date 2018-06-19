@@ -199,7 +199,8 @@ private:
 		void do_uninitialize() override;
 
 		void do_draw(
-			const int first_triangle_index,
+			const int index_base,
+			const int vertex_base,
 			const int triangle_count) override;
 
 		void uninitialize_internal();
@@ -1416,10 +1417,11 @@ void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize()
 }
 
 void OglRendererImpl::VertexArrayObjectImpl::do_draw(
-	const int first_triangle_index,
+	const int index_base,
+	const int vertex_base,
 	const int triangle_count)
 {
-	if (!is_initialized_ || first_triangle_index < 0 || triangle_count <= 0)
+	if (!is_initialized_ || index_base < 0 || vertex_base < 0 || triangle_count <= 0)
 	{
 		return;
 	}
@@ -1432,7 +1434,19 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 		::glBindVertexArray(ogl_vao_);
 	}
 
-	::glDrawArrays(GL_TRIANGLES, first_triangle_index * 3, triangle_count * 3);
+	if (index_count_ > 0)
+	{
+		::glDrawElementsBaseVertex(
+			GL_TRIANGLES,
+			triangle_count * 3,
+			GL_UNSIGNED_SHORT,
+			reinterpret_cast<const char*>(static_cast<std::intptr_t>(index_base)),
+			vertex_base);
+	}
+	else
+	{
+		::glDrawArrays(GL_TRIANGLES, vertex_base * 3, triangle_count * 3);
+	}
 }
 
 void OglRendererImpl::VertexArrayObjectImpl::uninitialize_internal()
@@ -1490,10 +1504,24 @@ void OglRendererImpl::VertexArrayObject::uninitialize()
 }
 
 void OglRendererImpl::VertexArrayObject::draw(
-	const int first_triangle_index,
 	const int triangle_count)
 {
-	do_draw(first_triangle_index, triangle_count);
+	do_draw(0, 0, triangle_count);
+}
+
+void OglRendererImpl::VertexArrayObject::draw(
+	const int vertex_base,
+	const int triangle_count)
+{
+	do_draw(0, vertex_base, triangle_count);
+}
+
+void OglRendererImpl::VertexArrayObject::draw(
+	const int index_base,
+	const int vertex_base,
+	const int triangle_count)
+{
+	do_draw(index_base, vertex_base, triangle_count);
 }
 
 //
