@@ -147,6 +147,8 @@ public:
 		vertex_shader_{},
 		fragment_shader_{},
 		program_{},
+		has_diffuse_{},
+		u_has_diffuse_{},
 		current_vao_{},
 		vertex_array_objects_{}
 	{
@@ -251,6 +253,9 @@ private:
 	GLuint fragment_shader_;
 	GLuint program_;
 
+	bool has_diffuse_;
+	GLint u_has_diffuse_;
+
 	VertexArrayObjectImpl* current_vao_;
 
 	VertexArrayObjectList vertex_array_objects_;
@@ -273,6 +278,8 @@ private:
 	static const bool default_is_depth_enabled;
 	static const bool default_is_depth_writable;
 	static const DepthFunc default_depth_func;
+
+	static const bool default_has_diffuse;
 
 	static const std::string vertex_shader_source;
 	static const std::string fragment_shader_source;
@@ -589,6 +596,7 @@ private:
 	// API
 	// ======================================================================
 
+
 	bool initialize_internal(
 		const int screen_width,
 		const int screen_height)
@@ -646,6 +654,10 @@ private:
 			return false;
 		}
 
+		if (!locate_uniforms())
+		{
+			return false;
+		}
 
 		// Set defaults.
 		//
@@ -656,6 +668,7 @@ private:
 		set_default_is_depth_enabled();
 		set_default_is_depth_writable();
 		set_default_depth_func();
+		set_uniform_defaults();
 
 		if (!ogl_is_succeed())
 		{
@@ -707,6 +720,9 @@ private:
 			::glDeleteProgram(program_);
 			program_ = 0;
 		}
+
+		has_diffuse_ = false;
+		u_has_diffuse_ = -1;
 
 		if (vertex_shader_)
 		{
@@ -902,6 +918,12 @@ private:
 		::glDepthFunc(ogl_depth_func);
 	}
 
+	void set_uniform_defaults()
+	{
+		has_diffuse_ = default_has_diffuse;
+		set_has_diffuse_internal();
+	}
+
 	void get_extensions()
 	{
 		auto extension_count = GLint{};
@@ -1080,6 +1102,36 @@ private:
 
 		return ogl_is_succeed();
 	}
+
+	bool locate_uniforms()
+	{
+		u_has_diffuse_ = ::glGetUniformLocation(program_, "u_has_diffuse");
+
+		return ogl_is_succeed();
+	}
+
+	void set_has_diffuse(
+		const bool has_diffuse)
+	{
+		if (!is_initialized_)
+		{
+			return;
+		}
+
+		if (has_diffuse == has_diffuse_)
+		{
+			return;
+		}
+
+		has_diffuse_ = has_diffuse;
+
+		set_has_diffuse_internal();
+	}
+
+	void set_has_diffuse_internal()
+	{
+		::glUniform1i(u_has_diffuse_, has_diffuse_);
+	}
 }; // OglRendererImpl
 
 
@@ -1101,22 +1153,40 @@ const bool OglRendererImpl::default_is_depth_enabled = true;
 const bool OglRendererImpl::default_is_depth_writable = true;
 const OglRendererImpl::DepthFunc OglRendererImpl::default_depth_func = OglRendererImpl::DepthFunc::lees_or_equal;
 
+const bool OglRendererImpl::default_has_diffuse = false;
+
 const std::string OglRendererImpl::vertex_shader_source = std::string{
 R"LTJS_VERTEX(
 
 #version 330 core
 
+// Maximum texture coordinate sets.
+const int max_tcs = 4;
+
+// Default diffuse color.
+const vec4 default_diffuse = vec4(1, 1, 1, 1);
+
 layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec4 a_bweights;
 layout(location = 2) in vec4 a_normal;
 layout(location = 3) in vec4 a_diffuse;
-layout(location = 4) in vec4 a_tcs_0;
-layout(location = 5) in vec4 a_tcs_1;
-layout(location = 6) in vec4 a_tcs_2;
-layout(location = 7) in vec4 a_tcs_3;
+layout(location = 4) in vec4 a_tcs[max_tcs];
+
+out vec4 v_diffuse;
+
+uniform bool u_has_diffuse = false;
 
 void main()
 {
+	if (u_has_diffuse)
+	{
+		v_diffuse = a_diffuse;
+	}
+	else
+	{
+		v_diffuse = default_diffuse;
+	}
+
 	gl_Position = a_position;
 	gl_Position.z = -gl_Position.z;
 }
@@ -1129,11 +1199,13 @@ R"LTJS_FRAGMENT(
 
 #version 330 core
 
+in vec4 v_diffuse;
+
 out vec4 o_fragment;
 
 void main()
 {
-	o_fragment = vec4(0, 1, 0, 1);
+	o_fragment = v_diffuse;
 }
 
 )LTJS_FRAGMENT"
@@ -1351,6 +1423,8 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 	{
 		return;
 	}
+
+	impl_.set_has_diffuse(vertex_format_.has_diffuse_);
 
 	if (impl_.current_vao_ != this)
 	{
