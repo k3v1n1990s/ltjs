@@ -149,6 +149,9 @@ public:
 		program_{},
 		has_diffuse_{},
 		u_has_diffuse_{},
+		is_position_transformed_{},
+		u_is_position_transformed_{},
+		u_xyzrhw_proj_{},
 		current_vao_{},
 		vertex_array_objects_{}
 	{
@@ -256,6 +259,10 @@ private:
 
 	bool has_diffuse_;
 	GLint u_has_diffuse_;
+
+	bool is_position_transformed_;
+	GLint u_is_position_transformed_;
+	GLint u_xyzrhw_proj_;
 
 	VertexArrayObjectImpl* current_vao_;
 
@@ -725,6 +732,10 @@ private:
 		has_diffuse_ = false;
 		u_has_diffuse_ = -1;
 
+		is_position_transformed_ = false;
+		u_is_position_transformed_ = -1;
+		u_xyzrhw_proj_ = -1;
+
 		if (vertex_shader_)
 		{
 			::glDeleteShader(vertex_shader_);
@@ -923,6 +934,8 @@ private:
 	{
 		has_diffuse_ = default_has_diffuse;
 		set_has_diffuse_internal();
+
+		set_default_xyzrhw_proj();
 	}
 
 	void get_extensions()
@@ -1108,6 +1121,9 @@ private:
 	{
 		u_has_diffuse_ = ::glGetUniformLocation(program_, "u_has_diffuse");
 
+		u_is_position_transformed_ = ::glGetUniformLocation(program_, "u_is_position_transformed");
+		u_xyzrhw_proj_ = ::glGetUniformLocation(program_, "u_xyzrhw_proj");
+
 		return ogl_is_succeed();
 	}
 
@@ -1132,6 +1148,64 @@ private:
 	void set_has_diffuse_internal()
 	{
 		::glUniform1i(u_has_diffuse_, has_diffuse_);
+	}
+
+	void set_is_position_transformed(
+		const bool is_position_transformed)
+	{
+		if (!is_initialized_)
+		{
+			return;
+		}
+
+		if (is_position_transformed == is_position_transformed_)
+		{
+			return;
+		}
+
+		is_position_transformed_ = is_position_transformed;
+
+		set_is_position_transformed_internal();
+	}
+
+	void set_is_position_transformed_internal()
+	{
+		::glUniform1i(u_is_position_transformed_, is_position_transformed_);
+	}
+
+	void set_default_xyzrhw_proj()
+	{
+		// Build an orthographic projection for D3DFVF_XYZW.
+		//
+
+		const auto l = 0.0F;
+		const auto r = static_cast<GLfloat>(screen_width_);
+
+		// Swapped to conform to left-handed coordinate system.
+		const auto b = static_cast<GLfloat>(screen_height_);
+		const auto t = 0.0F;
+
+		const auto f = 0.0F;
+		const auto n = 1.0F;
+
+		const auto m11 = 2.0F / (r - l);
+		const auto m22 = 2.0F / (t - b);
+		const auto m33 = -2.0F / (f - n);
+
+		const auto m41 = -(r + l) / (r - l);
+		const auto m42 = -(t + b) / (t - b);
+		const auto m43 = -(f + n) / (f - n);
+
+		// Column-major layout.
+		const GLfloat mat[16] =
+		{
+			m11, 0.0F, 0.0F, 0.0F,
+			0.0F, m22, 0.0F, 0.0F,
+			0.0F, 0.0F, m33, 0.0F,
+			m41, m42, m43, 1.0F,
+		}; // mat
+
+		::glUniformMatrix4fv(u_xyzrhw_proj_, 1, GL_FALSE, mat);
 	}
 }; // OglRendererImpl
 
@@ -1175,7 +1249,16 @@ layout(location = 4) in vec4 a_tcs[max_tcs];
 
 out vec4 v_diffuse;
 
+
+// Has diffuse attribute?
 uniform bool u_has_diffuse = false;
+
+// Is position already transformed? (D3DFVF_XYZRHW)
+uniform bool u_is_position_transformed = false;
+
+// A matrix for transformed vertex (D3DFVF_XYZRHW).
+uniform mat4 u_xyzrhw_proj;
+
 
 void main()
 {
@@ -1188,7 +1271,15 @@ void main()
 		v_diffuse = default_diffuse;
 	}
 
-	gl_Position = a_position;
+	if (u_is_position_transformed)
+	{
+		gl_Position = vec4(((a_position * a_position.w) * u_xyzrhw_proj).xyz, 1);
+	}
+	else
+	{
+		gl_Position = a_position;
+	}
+
 	gl_Position.z = -gl_Position.z;
 }
 
@@ -1427,6 +1518,7 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 	}
 
 	impl_.set_has_diffuse(vertex_format_.has_diffuse_);
+	impl_.set_is_position_transformed(vertex_format_.is_position_transformed_);
 
 	if (impl_.current_vao_ != this)
 	{
@@ -1611,12 +1703,15 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 	auto has_transformed = false;
 	auto has_untransformed = false;
 
-	if ((d3d_fvf & (d3dfvf_xyz | d3dfvf_xyzb1 | d3dfvf_xyzb2 | d3dfvf_xyzb3)) != 0)
+	if (((d3d_fvf & d3dfvf_xyz) == d3dfvf_xyz && (d3d_fvf & d3dfvf_xyzrhw) != d3dfvf_xyzrhw) ||
+		(d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1 ||
+		(d3d_fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2 ||
+		(d3d_fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
 	{
 		has_untransformed = true;
 	}
 
-	if ((d3d_fvf & d3dfvf_xyzrhw) != 0)
+	if ((d3d_fvf & d3dfvf_xyzrhw) == d3dfvf_xyzrhw)
 	{
 		has_transformed = true;
 	}

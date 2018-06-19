@@ -476,15 +476,27 @@ void ogl_set_test_data()
 		float x;
 		float y;
 		float z;
+#if 1
+		float w;
+#endif
 		std::uint32_t diffuse;
 	}; // Vertex
 
+#if 0
 	static const Vertex vertices[] =
 	{
 		{-1.0F, -1.0F, 0.0F, 0xFFFF0000},
 		{0.0F, 1.0F, 0.0F, 0xFF00FF00},
 		{1.0F, -1.0F, 0.0F, 0xFF0000FF},
 	}; // vertices
+#else
+	static const Vertex vertices[] =
+	{
+		{0.0F, 0.0F, 0.0F, 1.0F, 0xFFFF0000},
+		{800.0F, 0.0F, 0.0F, 1.0F, 0xFF0000FF},
+		{400.0F, 600.0F, 0.0F, 1.0F, 0xFF00FF00},
+	}; // vertices
+#endif
 
 	static const std::uint16_t indices[] =
 	{
@@ -492,7 +504,13 @@ void ogl_set_test_data()
 	}; // indices
 
 	auto param = ltjs::OglRenderer::VertexArrayObject::InitializeParam{};
+
+#if 0
 	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZ | D3DFVF_DIFFUSE);
+#else
+	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
+#endif
+
 	param.vertex_count_ = 3;
 	param.raw_vertex_data_ = vertices;
 	param.has_index_ = true;
