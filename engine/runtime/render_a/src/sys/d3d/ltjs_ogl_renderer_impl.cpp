@@ -200,7 +200,7 @@ private:
 			const int first_triangle_index,
 			const int triangle_count) override;
 
-		void do_uninitialize_internal();
+		void uninitialize_internal();
 	}; // VertexArrayObjectImpl
 
 
@@ -278,6 +278,10 @@ private:
 	static const std::string fragment_shader_source;
 
 
+	// ======================================================================
+	// API
+	//
+
 	bool do_is_initialized() const override
 	{
 		return is_initialized_;
@@ -287,9 +291,9 @@ private:
 		const int screen_width,
 		const int screen_height) override
 	{
-		if (!do_initialize_internal(screen_width, screen_height))
+		if (!initialize_internal(screen_width, screen_height))
 		{
-			do_uninitialize_internal();
+			uninitialize_internal();
 			return false;
 		}
 
@@ -298,7 +302,7 @@ private:
 
 	void do_uninitialize() override
 	{
-		do_uninitialize_internal();
+		uninitialize_internal();
 	}
 
 	void do_set_current_context(
@@ -349,7 +353,7 @@ private:
 		clear_color_b_ = b;
 		clear_color_a_ = a;
 
-		do_set_clear_color_internal();
+		set_clear_color_internal();
 	}
 
 	void do_clear(
@@ -450,7 +454,7 @@ private:
 
 		cull_mode_ = cull_mode;
 
-		do_set_cull_mode_internal(is_old_enabled != is_new_enabled);
+		set_cull_mode_internal(is_old_enabled != is_new_enabled);
 	}
 
 	bool do_get_is_clipping() const override
@@ -473,7 +477,7 @@ private:
 
 		is_clipping_ = is_clipping;
 
-		do_set_is_clipping_internal();
+		set_is_clipping_internal();
 	}
 
 	void do_set_viewport_internal()
@@ -504,7 +508,7 @@ private:
 
 		is_depth_enabled_ = is_enabled;
 
-		do_set_is_depth_enabled_internal();
+		set_is_depth_enabled_internal();
 	}
 
 	bool do_is_depth_writable() const override
@@ -527,7 +531,7 @@ private:
 
 		is_depth_writable_ = is_writable;
 
-		do_set_is_depth_writable_internal();
+		set_is_depth_writable_internal();
 	}
 
 	DepthFunc do_get_depth_func() const override
@@ -550,10 +554,42 @@ private:
 
 		depth_func_ = depth_func;
 
-		do_set_depth_func_internal();
+		set_depth_func_internal();
 	}
 
-	bool do_initialize_internal(
+	VertexArrayObjectPtr do_add_vertex_array_object() override
+	{
+		vertex_array_objects_.emplace_back(std::make_unique<VertexArrayObjectImpl>(*this));
+		return vertex_array_objects_.back().get();
+	}
+
+	bool do_remove_vertex_array_object(
+		VertexArrayObjectPtr vertex_array_object) override
+	{
+		if (vertex_array_objects_.empty())
+		{
+			return false;
+		}
+
+		const auto size_before = vertex_array_objects_.size();
+
+		vertex_array_objects_.remove_if(
+			[&](const auto& item_uptr)
+			{
+				return item_uptr.get() == vertex_array_object;
+			}
+		);
+
+		const auto size_after = vertex_array_objects_.size();
+
+		return size_before == size_after;
+	}
+
+	//
+	// API
+	// ======================================================================
+
+	bool initialize_internal(
 		const int screen_width,
 		const int screen_height)
 	{
@@ -632,7 +668,7 @@ private:
 		return true;
 	}
 
-	void do_uninitialize_internal()
+	void uninitialize_internal()
 	{
 		is_initialized_ = false;
 		is_context_current_ = false;
@@ -694,10 +730,10 @@ private:
 		::glFrontFace(GL_CW);
 
 		cull_mode_ = default_cull_mode;
-		do_set_cull_mode_internal(true);
+		set_cull_mode_internal(true);
 	}
 
-	void do_set_cull_mode_internal(
+	void set_cull_mode_internal(
 		const bool enforce_cull_face)
 	{
 		const auto is_cull_face_enabled = (cull_mode_ != CullMode::disabled);
@@ -736,10 +772,10 @@ private:
 	void set_default_is_clipping()
 	{
 		is_clipping_ = default_is_clipping;
-		do_set_is_clipping_internal();
+		set_is_clipping_internal();
 	}
 
-	void do_set_is_clipping_internal()
+	void set_is_clipping_internal()
 	{
 		if (!has_gl_ext_clip_volume_hint_)
 		{
@@ -758,10 +794,10 @@ private:
 		clear_color_b_ = default_clear_color_b;
 		clear_color_a_ = default_clear_color_a;
 
-		do_set_clear_color_internal();
+		set_clear_color_internal();
 	}
 
-	void do_set_clear_color_internal()
+	void set_clear_color_internal()
 	{
 		::glClearColor(
 			clear_color_r_ / 255.0F,
@@ -792,10 +828,10 @@ private:
 	void set_default_is_depth_enabled()
 	{
 		is_depth_enabled_ = default_is_depth_enabled;
-		do_set_is_depth_enabled_internal();
+		set_is_depth_enabled_internal();
 	}
 
-	void do_set_is_depth_enabled_internal()
+	void set_is_depth_enabled_internal()
 	{
 		if (is_depth_enabled_)
 		{
@@ -810,10 +846,10 @@ private:
 	void set_default_is_depth_writable()
 	{
 		is_depth_writable_ = default_is_depth_writable;
-		do_set_is_depth_writable_internal();
+		set_is_depth_writable_internal();
 	}
 
-	void do_set_is_depth_writable_internal()
+	void set_is_depth_writable_internal()
 	{
 		::glDepthMask(is_depth_writable_);
 	}
@@ -821,10 +857,10 @@ private:
 	void set_default_depth_func()
 	{
 		depth_func_ = default_depth_func;
-		do_set_depth_func_internal();
+		set_depth_func_internal();
 	}
 
-	void do_set_depth_func_internal()
+	void set_depth_func_internal()
 	{
 		auto ogl_depth_func = GLenum{};
 
@@ -1044,34 +1080,6 @@ private:
 
 		return ogl_is_succeed();
 	}
-
-	VertexArrayObjectPtr do_add_vertex_array_object() override
-	{
-		vertex_array_objects_.emplace_back(std::make_unique<VertexArrayObjectImpl>(*this));
-		return vertex_array_objects_.back().get();
-	}
-
-	bool do_remove_vertex_array_object(
-		VertexArrayObjectPtr vertex_array_object) override
-	{
-		if (vertex_array_objects_.empty())
-		{
-			return false;
-		}
-
-		const auto size_before = vertex_array_objects_.size();
-
-		vertex_array_objects_.remove_if(
-			[&](const auto& item_uptr)
-			{
-				return item_uptr.get() == vertex_array_object;
-			}
-		);
-
-		const auto size_after = vertex_array_objects_.size();
-
-		return size_before == size_after;
-	}
 }; // OglRendererImpl
 
 
@@ -1158,13 +1166,13 @@ OglRendererImpl::VertexArrayObjectImpl::VertexArrayObjectImpl(
 
 OglRendererImpl::VertexArrayObjectImpl::~VertexArrayObjectImpl()
 {
-	do_uninitialize_internal();
+	uninitialize_internal();
 }
 
 bool OglRendererImpl::VertexArrayObjectImpl::do_initialize(
 	const InitializeParam& param)
 {
-	do_uninitialize_internal();
+	uninitialize_internal();
 
 	if (!param.is_valid())
 	{
@@ -1173,7 +1181,7 @@ bool OglRendererImpl::VertexArrayObjectImpl::do_initialize(
 
 	if (!initialize_internal(param))
 	{
-		do_uninitialize_internal();
+		uninitialize_internal();
 		return false;
 	}
 
@@ -1332,7 +1340,7 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 
 void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize()
 {
-	do_uninitialize_internal();
+	uninitialize_internal();
 }
 
 void OglRendererImpl::VertexArrayObjectImpl::do_draw(
@@ -1353,7 +1361,7 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 	::glDrawArrays(GL_TRIANGLES, first_triangle_index * 3, triangle_count * 3);
 }
 
-void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize_internal()
+void OglRendererImpl::VertexArrayObjectImpl::uninitialize_internal()
 {
 	is_initialized_ = false;
 	vertex_format_ = {};
