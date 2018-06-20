@@ -500,7 +500,7 @@ void ogl_set_test_data()
 
 	static const std::uint16_t indices[] =
 	{
-		2, 0, 1,
+		0, 1, 2,
 	}; // indices
 
 	auto param = ltjs::OglRenderer::VertexArrayObject::InitializeParam{};

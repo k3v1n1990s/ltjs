@@ -1201,8 +1201,8 @@ private:
 		{
 			m11, 0.0F, 0.0F, 0.0F,
 			0.0F, m22, 0.0F, 0.0F,
-			0.0F, 0.0F, m33, 0.0F,
-			m41, m42, m43, 1.0F,
+			0.0F, 0.0F, 1.0F, 0.0F,
+			m41, m42, 0.0F, 1.0F,
 		}; // mat
 
 		::glUniformMatrix4fv(u_xyzrhw_proj_, 1, GL_FALSE, mat);
@@ -1271,16 +1271,17 @@ void main()
 		v_diffuse = default_diffuse;
 	}
 
+	vec4 position = a_position;
+
 	if (u_is_position_transformed)
 	{
-		gl_Position = vec4(((a_position * a_position.w) * u_xyzrhw_proj).xyz, 1);
-	}
-	else
-	{
-		gl_Position = a_position;
+		position *= a_position.w;
+		position = vec4((u_xyzrhw_proj * position).xyz, 1);
 	}
 
-	gl_Position.z = -gl_Position.z;
+	position.z = -position.z;
+
+	gl_Position = position;
 }
 
 )LTJS_VERTEX"
