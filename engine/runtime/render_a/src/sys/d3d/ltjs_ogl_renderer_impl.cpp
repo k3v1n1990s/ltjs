@@ -563,6 +563,7 @@ private:
 		is_depth_enabled_ = is_enabled;
 
 		set_is_depth_enabled_internal();
+		set_default_xyzrhw_proj();
 	}
 
 	bool do_is_depth_writable() const override
@@ -1233,34 +1234,68 @@ private:
 
 	void set_default_xyzrhw_proj()
 	{
-		// Build an orthographic projection for D3DFVF_XYZW.
+		//
+		// Based on WineD3D.
+		//
+		// There are a couple of additional things we have to take into account
+		// here besides the projection transformation itself:
+		//   - We need to flip along the y-axis in case of offscreen rendering.
+		//   - OpenGL Z range is {-Wc,...,Wc} while D3D Z range is {0,...,Wc}.
+		//   - <= D3D9 coordinates refer to pixel centers while GL coordinates
+		//     refer to pixel corners.
+		//   - D3D has a top-left filling convention. We need to maintain this
+		//     even after the y-flip mentioned above.
+		// In order to handle the last two points, we translate by
+		// (63.0 / 128.0) / VPw and (63.0 / 128.0) / VPh. This is equivalent to
+		// translating slightly less than half a pixel. We want the difference to
+		// be large enough that it doesn't get lost due to rounding inside the
+		// driver, but small enough to prevent it from interfering with any
+		// anti-aliasing. 
 		//
 
-		const auto l = 0.0F;
-		const auto r = static_cast<GLfloat>(screen_width_);
+		// Transform D3D RHW coordinates to OpenGL clip coordinates.
+		//
+		const auto is_offscreen = false; // TODO Make field if necessary.
+		const auto is_pixel_center_integer = true; // Direct3D 9
+		const auto is_flip = (!has_gl_arb_clip_control_ && is_offscreen);
 
-		// Swapped to conform to left-handed coordinate system.
-		const auto b = static_cast<GLfloat>(screen_height_);
-		const auto t = 0.0F;
+		float center_offset;
 
-		const auto f = 0.0F;
-		const auto n = 1.0F;
-
-		const auto m11 = 2.0F / (r - l);
-		const auto m22 = 2.0F / (t - b);
-		const auto m33 = -2.0F / (f - n);
-
-		const auto m41 = -(r + l) / (r - l);
-		const auto m42 = -(t + b) / (t - b);
-		const auto m43 = -(f + n) / (f - n);
-
-		// Column-major layout.
-		const GLfloat mat[16] =
+		if (!has_gl_arb_clip_control_ && is_pixel_center_integer)
 		{
-			m11, 0.0F, 0.0F, 0.0F,
-			0.0F, m22, 0.0F, 0.0F,
-			0.0F, 0.0F, 1.0F, 0.0F,
-			m41, m42, 0.0F, 1.0F,
+			center_offset = 63.0F / 64.0F;
+		}
+		else
+		{
+			center_offset = -1.0F / 64.0F;
+		}
+
+		const auto x = viewport_.x_;
+		const auto y = viewport_.y_;
+		const auto w = viewport_.width_;
+		const auto h = viewport_.height_;
+
+		const auto x_scale = 2.0F / w;
+		const auto x_offset = (center_offset - (2.0F * x) - w) / w;
+		const auto y_scale = (is_flip ? (2.0F / h) : (2.0F / -h));
+
+		const auto y_offset = (
+			is_flip
+			?
+			(center_offset - (2.0F * y) - h) / h
+			:
+			(center_offset - (2.0F * y) - h) / -h
+		);
+
+		const auto z_scale = (is_depth_enabled_ ? (has_gl_arb_clip_control_ ? 1.0F : 2.0F) : 0.0F);
+		const auto z_offset = (is_depth_enabled_ ? (has_gl_arb_clip_control_ ? 0.0F : -1.0F) : 0.0F);
+
+		const float mat[16] =
+		{
+			x_scale, 0.0F, 0.0F, 0.0F,
+			0.0F, y_scale, 0.0F, 0.0F,
+			0.0F, 0.0F, z_scale, 0.0F,
+			x_offset, y_offset, z_offset, 1.0F,
 		}; // mat
 
 		::glUniformMatrix4fv(u_xyzrhw_proj_, 1, GL_FALSE, mat);
@@ -1333,11 +1368,8 @@ void main()
 
 	if (u_is_position_transformed)
 	{
-		position *= a_position.w;
-		position = vec4((u_xyzrhw_proj * position).xyz, 1);
+		position = u_xyzrhw_proj * position;
 	}
-
-	position.z = -position.z;
 
 	gl_Position = position;
 }
