@@ -14,9 +14,37 @@
 #include "glad.h"
 
 
+// --------------------------------------------------------------------------
+// GL_CLIP_VOLUME_CLIPPING_HINT_EXT
+//
+
 #ifndef GL_CLIP_VOLUME_CLIPPING_HINT_EXT
 #define GL_CLIP_VOLUME_CLIPPING_HINT_EXT (0x80F0)
 #endif // GL_CLIP_VOLUME_CLIPPING_HINT_EXT
+
+//
+// GL_CLIP_VOLUME_CLIPPING_HINT_EXT
+// --------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------
+// GL_ARB_clip_control
+//
+
+#ifndef GL_CLIP_ORIGIN
+#define GL_CLIP_ORIGIN (0x935C)
+#endif // GL_CLIP_ORIGIN
+
+#ifndef GL_CLIP_DEPTH_MODE
+#define GL_CLIP_DEPTH_MODE (0x935D)
+#endif // GL_CLIP_DEPTH_MODE
+
+using PFNGLCLIPCONTROLPROC = void (APIENTRYP)(GLenum origin, GLenum depth);
+static PFNGLCLIPCONTROLPROC glClipControl = nullptr;
+
+//
+// GL_ARB_clip_control
+// --------------------------------------------------------------------------
 
 
 namespace ltjs
@@ -46,6 +74,15 @@ constexpr std::uint32_t d3dfvf_tex4 = 0x400;
 constexpr std::uint32_t d3dfvf_textureformat2 = 0; // Two floating point values
 constexpr std::uint32_t d3dfvf_textureformat3 = 1; // Three floating point values
 constexpr std::uint32_t d3dfvf_textureformat4 = 2; // Four floating point values
+
+
+template<typename T>
+T ogl_resolve_symbol(
+	const char* const symbol_name)
+{
+	return reinterpret_cast<T>(::wglGetProcAddress(symbol_name));
+}
+
 
 constexpr std::uint32_t d3dfvf_texcoordsize2(
 	const int index)
@@ -130,6 +167,7 @@ public:
 		ogl_dc_{},
 		ogl_rc_{},
 		extensions_{},
+		has_gl_arb_clip_control_{},
 		has_gl_ext_clip_volume_hint_{},
 		screen_width_{},
 		screen_height_{},
@@ -232,6 +270,7 @@ private:
 
 	Extensions extensions_;
 
+	bool has_gl_arb_clip_control_;
 	bool has_gl_ext_clip_volume_hint_;
 
 	int screen_width_;
@@ -699,6 +738,7 @@ private:
 
 		extensions_.clear();
 
+		has_gl_arb_clip_control_ = false;
 		has_gl_ext_clip_volume_hint_ = false;
 
 		screen_width_ = 0;
@@ -981,11 +1021,29 @@ private:
 		return extension_it != extension_end_it;
 	}
 
+	void detect_gl_arb_clip_control_extension()
+	{
+		has_gl_arb_clip_control_ = has_extension("GL_ARB_clip_control");
+		::glClipControl = ogl_resolve_symbol<PFNGLCLIPCONTROLPROC>("glClipControl");
+
+		if (!has_gl_arb_clip_control_ || !::glClipControl)
+		{
+			has_gl_arb_clip_control_ = false;
+			::glClipControl = nullptr;
+		}
+	}
+
+	void detect_gl_ext_clip_volume_hint_extension()
+	{
+		has_gl_ext_clip_volume_hint_ = has_extension("GL_EXT_clip_volume_hint");
+	}
+
 	void detect_extensions()
 	{
 		get_extensions();
 
-		has_gl_ext_clip_volume_hint_ = has_extension("GL_EXT_clip_volume_hint");
+		detect_gl_arb_clip_control_extension();
+		detect_gl_ext_clip_volume_hint_extension();
 	}
 
 	void get_shader_build_status(
