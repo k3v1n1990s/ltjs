@@ -3,6 +3,7 @@
 #include <cassert>
 #include <algorithm>
 #include <array>
+#include <bitset>
 #include <iterator>
 #include <list>
 #include <memory>
@@ -38,6 +39,14 @@
 #ifndef GL_CLIP_DEPTH_MODE
 #define GL_CLIP_DEPTH_MODE (0x935D)
 #endif // GL_CLIP_DEPTH_MODE
+
+#ifndef GL_NEGATIVE_ONE_TO_ONE
+#define GL_NEGATIVE_ONE_TO_ONE (0x935E)
+#endif // GL_NEGATIVE_ONE_TO_ONE
+
+#ifndef GL_ZERO_TO_ONE
+#define GL_ZERO_TO_ONE (0x935F)
+#endif // GL_ZERO_TO_ONE
 
 using PFNGLCLIPCONTROLPROC = void (APIENTRYP)(GLenum origin, GLenum depth);
 static PFNGLCLIPCONTROLPROC glClipControl = nullptr;
@@ -171,6 +180,7 @@ public:
 		has_gl_ext_clip_volume_hint_{},
 		screen_width_{},
 		screen_height_{},
+		is_dirty_{},
 		clear_color_r_{},
 		clear_color_g_{},
 		clear_color_b_{},
@@ -188,8 +198,13 @@ public:
 		has_diffuse_{},
 		u_has_diffuse_{},
 		is_position_transformed_{},
-		u_is_position_transformed_{},
-		u_xyzrhw_proj_{},
+		are_u_model_views_dirty_{},
+		is_u_projection_dirty_{},
+		world_matrices_{},
+		view_matrix_{},
+		projection_matrix_{},
+		u_model_views_{},
+		u_projection_{},
 		current_vao_{},
 		vertex_array_objects_{}
 	{
@@ -202,6 +217,31 @@ public:
 
 
 private:
+	static constexpr auto is_offscreen = false;
+	static constexpr auto max_world_matrices = 4;
+	static constexpr auto max_texture_stages = 4;
+
+
+	using Matrix4F = std::array<float, 16>;
+
+	using WorldMatrix = Matrix4F;
+	using WorldMatrices = std::array<WorldMatrix, max_world_matrices>;
+
+	using ModelViewMatrixDirtyFlags = std::bitset<max_world_matrices>;
+
+	using ViewMatrix = Matrix4F;
+
+	using ModelViewMatrix = Matrix4F;
+
+	using ProjectionMatrix = Matrix4F;
+
+	using TextureMatrix = Matrix4F;
+	using TextureMatrices = std::array<TextureMatrix, max_texture_stages>;
+
+	using UModelViewMatrices = std::array<GLint, max_world_matrices>;
+	using UTextureMatrices = std::array<GLint, max_texture_stages>;
+
+
 	class VertexArrayObjectImpl final :
 		public VertexArrayObject
 	{
@@ -276,6 +316,8 @@ private:
 	int screen_width_;
 	int screen_height_;
 
+	bool is_dirty_;
+
 	std::uint8_t clear_color_r_;
 	std::uint8_t clear_color_g_;
 	std::uint8_t clear_color_b_;
@@ -300,8 +342,16 @@ private:
 	GLint u_has_diffuse_;
 
 	bool is_position_transformed_;
-	GLint u_is_position_transformed_;
-	GLint u_xyzrhw_proj_;
+
+	ModelViewMatrixDirtyFlags are_u_model_views_dirty_;
+	bool is_u_projection_dirty_;
+
+	WorldMatrices world_matrices_;
+	ViewMatrix view_matrix_;
+	ProjectionMatrix projection_matrix_;
+
+	UModelViewMatrices u_model_views_;
+	GLint u_projection_;
 
 	VertexArrayObjectImpl* current_vao_;
 
@@ -327,6 +377,8 @@ private:
 	static const DepthFunc default_depth_func;
 
 	static const bool default_has_diffuse;
+
+	static const Matrix4F identity_matrix;
 
 	static const std::string vertex_shader_source;
 	static const std::string fragment_shader_source;
@@ -364,6 +416,7 @@ private:
 	{
 		if (!is_initialized_)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -387,10 +440,9 @@ private:
 		const std::uint8_t b,
 		const std::uint8_t a) override
 	{
-		assert(is_context_current_);
-
 		if (!is_initialized_ || !is_context_current_)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -413,10 +465,9 @@ private:
 	void do_clear(
 		const ClearFlags clear_flags) override
 	{
-		assert(is_context_current_);
-
 		if (!is_initialized_ || !is_context_current_ || clear_flags == ClearFlags::none)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -443,16 +494,16 @@ private:
 
 	const Viewport& do_get_viewport() const override
 	{
+		assert(is_initialized_);
 		return viewport_;
 	}
 
 	void do_set_viewport(
 		const Viewport& viewport) override
 	{
-		assert(is_context_current_);
-
 		if (!is_initialized_ || !is_context_current_)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -468,33 +519,49 @@ private:
 			return;
 		}
 
-		if (viewport.x_ == viewport_.x_ &&
-			viewport.y_ == viewport_.y_ &&
-			viewport.width_ == viewport_.width_ &&
-			viewport.height_ == viewport_.height_ &&
-			viewport.depth_min_z_ == viewport_.depth_min_z_ &&
-			viewport.depth_max_z_ == viewport_.depth_max_z_)
+		const auto is_size_changed =
+			viewport.x_ != viewport_.x_ ||
+			viewport.y_ != viewport_.y_ ||
+			viewport.width_ != viewport_.width_ ||
+			viewport.height_ != viewport_.height_;
+
+		const auto is_depth_changed =
+			viewport.depth_min_z_ != viewport_.depth_min_z_ ||
+			viewport.depth_max_z_ != viewport_.depth_max_z_;
+
+		if (!is_size_changed && !is_depth_changed)
 		{
 			return;
 		}
 
 		viewport_ = viewport;
 
-		do_set_viewport_internal();
+		if (is_size_changed)
+		{
+			is_dirty_ = true;
+			is_u_projection_dirty_ = true;
+
+			set_viewport_size_internal();
+		}
+
+		if (is_depth_changed)
+		{
+			set_viewport_depth_internal();
+		}
 	}
 
 	CullMode do_get_cull_mode() const override
 	{
+		assert(is_initialized_);
 		return cull_mode_;
 	}
 
 	void do_set_cull_mode(
 		const CullMode cull_mode) override
 	{
-		assert(is_context_current_);
-
 		if (!is_initialized_ || !is_context_current_)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -513,6 +580,7 @@ private:
 
 	bool do_get_is_clipping() const override
 	{
+		assert(is_initialized_);
 		return is_clipping_;
 	}
 
@@ -521,6 +589,7 @@ private:
 	{
 		if (!is_initialized_ || !is_context_current_)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -534,16 +603,21 @@ private:
 		set_is_clipping_internal();
 	}
 
-	void do_set_viewport_internal()
+	void set_viewport_size_internal()
 	{
 		const auto ogl_viewport_y = screen_height_ - (viewport_.y_ + viewport_.height_);
 
 		::glViewport(viewport_.x_, ogl_viewport_y, viewport_.width_, viewport_.height_);
+	}
+
+	void set_viewport_depth_internal()
+	{
 		::glDepthRange(viewport_.depth_min_z_, viewport_.depth_max_z_);
 	}
 
 	bool do_is_depth_enabled() const override
 	{
+		assert(is_initialized_);
 		return is_depth_enabled_;
 	}
 
@@ -552,6 +626,7 @@ private:
 	{
 		if (!is_initialized_ || !is_context_current_)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -563,11 +638,14 @@ private:
 		is_depth_enabled_ = is_enabled;
 
 		set_is_depth_enabled_internal();
-		set_default_xyzrhw_proj();
+
+		is_dirty_ = true;
+		is_u_projection_dirty_ = true;
 	}
 
 	bool do_is_depth_writable() const override
 	{
+		assert(is_initialized_);
 		return is_depth_writable_;
 	}
 
@@ -576,6 +654,7 @@ private:
 	{
 		if (!is_initialized_ || !is_context_current_)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -591,6 +670,7 @@ private:
 
 	DepthFunc do_get_depth_func() const override
 	{
+		assert(is_initialized_);
 		return depth_func_;
 	}
 
@@ -599,6 +679,7 @@ private:
 	{
 		if (!is_initialized_ || !is_context_current_)
 		{
+			assert(!"Invalid state.");
 			return;
 		}
 
@@ -610,6 +691,113 @@ private:
 		depth_func_ = depth_func;
 
 		set_depth_func_internal();
+	}
+
+	const float* do_get_world_matrix(
+		const int index) const override
+	{
+		assert(is_initialized_);
+
+		if (index < 0 || index >= VertexArrayObject::Fvf::max_tex_coord_sets)
+		{
+			assert(!"Invalid state.");
+			return nullptr;
+		}
+
+		return world_matrices_[index].data();
+	}
+
+	void do_set_world_matrix(
+		const int index,
+		const float* const world_matrix_ptr) override
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (index < 0 ||
+			index >= VertexArrayObject::Fvf::max_tex_coord_sets ||
+			!world_matrix_ptr)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if ((*reinterpret_cast<const Matrix4F*>(world_matrix_ptr)) == world_matrices_[index])
+		{
+			return;
+		}
+
+		world_matrices_[index] = *reinterpret_cast<const Matrix4F*>(world_matrix_ptr);
+
+		is_dirty_ = true;
+		are_u_model_views_dirty_.set(index);
+	}
+
+	const float* do_get_view_matrix() const override
+	{
+		assert(is_initialized_);
+		return view_matrix_.data();
+	}
+
+	void do_set_view_matrix(
+		const float* const view_matrix_ptr) override
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (!view_matrix_ptr)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if ((*reinterpret_cast<const ViewMatrix*>(view_matrix_ptr)) == view_matrix_)
+		{
+			return;
+		}
+
+		view_matrix_ = *reinterpret_cast<const ViewMatrix*>(view_matrix_ptr);
+
+		is_dirty_ = true;
+		are_u_model_views_dirty_.set();
+	}
+
+	const float* do_get_projection_matrix() const override
+	{
+		assert(is_initialized_);
+		return projection_matrix_.data();
+	}
+
+	void do_set_projection_matrix(
+		const float* const projection_matrix_ptr) override
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (!projection_matrix_ptr)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if ((*reinterpret_cast<const ProjectionMatrix*>(projection_matrix_ptr)) == projection_matrix_)
+		{
+			return;
+		}
+
+		projection_matrix_ = *reinterpret_cast<const ProjectionMatrix*>(projection_matrix_ptr);
+
+		is_dirty_ = true;
+		is_u_projection_dirty_ = true;
 	}
 
 	VertexArrayObjectPtr do_add_vertex_array_object() override
@@ -709,6 +897,11 @@ private:
 
 		// Set defaults.
 		//
+		if (has_gl_arb_clip_control_)
+		{
+			::glClipControl(is_offscreen ? GL_UPPER_LEFT : GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+		}
+
 		set_default_clear_color();
 		set_default_viewport();
 		set_default_cull_mode();
@@ -716,10 +909,14 @@ private:
 		set_default_is_depth_enabled();
 		set_default_is_depth_writable();
 		set_default_depth_func();
+		set_default_world_matrices();
+		set_default_view_matrix();
+		set_default_projection_matrix();
 		set_uniform_defaults();
 
 		if (!ogl_is_succeed())
 		{
+			assert(!"OpenGL error.");
 			return false;
 		}
 
@@ -744,6 +941,8 @@ private:
 
 		screen_width_ = 0;
 		screen_height_ = 0;
+
+		is_dirty_ = false;
 
 		clear_color_r_ = 0;
 		clear_color_g_ = 0;
@@ -774,8 +973,16 @@ private:
 		u_has_diffuse_ = -1;
 
 		is_position_transformed_ = false;
-		u_is_position_transformed_ = -1;
-		u_xyzrhw_proj_ = -1;
+
+		are_u_model_views_dirty_ = {};
+		is_u_projection_dirty_ = false;
+
+		world_matrices_ = {};
+		view_matrix_ = {};
+		projection_matrix_ = {};
+
+		u_model_views_.fill(-1);
+		u_projection_ = -1;
 
 		if (vertex_shader_)
 		{
@@ -891,7 +1098,9 @@ private:
 	void set_default_viewport()
 	{
 		viewport_ = get_default_viewport();
-		do_set_viewport_internal();
+
+		set_viewport_size_internal();
+		set_viewport_depth_internal();
 	}
 
 	void set_default_is_depth_enabled()
@@ -975,8 +1184,6 @@ private:
 	{
 		has_diffuse_ = default_has_diffuse;
 		set_has_diffuse_internal();
-
-		set_default_xyzrhw_proj();
 	}
 
 	void get_extensions()
@@ -1180,8 +1387,13 @@ private:
 	{
 		u_has_diffuse_ = ::glGetUniformLocation(program_, "u_has_diffuse");
 
-		u_is_position_transformed_ = ::glGetUniformLocation(program_, "u_is_position_transformed");
-		u_xyzrhw_proj_ = ::glGetUniformLocation(program_, "u_xyzrhw_proj");
+		for (auto i = 0; i < max_world_matrices; ++i)
+		{
+			const auto uniform_name = "u_model_views[" + std::to_string(i) + "]";
+			u_model_views_[i] = ::glGetUniformLocation(program_, uniform_name.c_str());
+		}
+
+		u_projection_ = ::glGetUniformLocation(program_, "u_projection");
 
 		return ogl_is_succeed();
 	}
@@ -1224,15 +1436,29 @@ private:
 
 		is_position_transformed_ = is_position_transformed;
 
-		set_is_position_transformed_internal();
+		is_dirty_ = true;
+		are_u_model_views_dirty_.set();
+		is_u_projection_dirty_ = true;
 	}
 
-	void set_is_position_transformed_internal()
+	void set_u_model_view(
+		const int index)
 	{
-		::glUniform1i(u_is_position_transformed_, is_position_transformed_);
+		ModelViewMatrix matrix;
+
+		if (is_position_transformed_)
+		{
+			matrix = identity_matrix;
+		}
+		else
+		{
+			matrix = multiply_matrices(world_matrices_[index], view_matrix_);
+		}
+
+		::glUniformMatrix4fv(u_model_views_[index], 1, GL_FALSE, matrix.data());
 	}
 
-	void set_default_xyzrhw_proj()
+	void set_u_projection()
 	{
 		//
 		// Based on WineD3D.
@@ -1250,12 +1476,9 @@ private:
 		// translating slightly less than half a pixel. We want the difference to
 		// be large enough that it doesn't get lost due to rounding inside the
 		// driver, but small enough to prevent it from interfering with any
-		// anti-aliasing. 
+		// anti-aliasing.
 		//
 
-		// Transform D3D RHW coordinates to OpenGL clip coordinates.
-		//
-		const auto is_offscreen = false; // TODO Make field if necessary.
 		const auto is_pixel_center_integer = true; // Direct3D 9
 		const auto is_flip = (!has_gl_arb_clip_control_ && is_offscreen);
 
@@ -1270,35 +1493,155 @@ private:
 			center_offset = -1.0F / 64.0F;
 		}
 
+		const auto flip_sign = (is_flip ? 1.0F : -1.0F);
+
 		const auto x = viewport_.x_;
 		const auto y = viewport_.y_;
 		const auto w = viewport_.width_;
 		const auto h = viewport_.height_;
 
-		const auto x_scale = 2.0F / w;
-		const auto x_offset = (center_offset - (2.0F * x) - w) / w;
-		const auto y_scale = (is_flip ? (2.0F / h) : (2.0F / -h));
+		ProjectionMatrix matrix;
 
-		const auto y_offset = (
-			is_flip
-			?
-			(center_offset - (2.0F * y) - h) / h
-			:
-			(center_offset - (2.0F * y) - h) / -h
-		);
-
-		const auto z_scale = (is_depth_enabled_ ? (has_gl_arb_clip_control_ ? 1.0F : 2.0F) : 0.0F);
-		const auto z_offset = (is_depth_enabled_ ? (has_gl_arb_clip_control_ ? 0.0F : -1.0F) : 0.0F);
-
-		const float mat[16] =
+		if (is_position_transformed_)
 		{
-			x_scale, 0.0F, 0.0F, 0.0F,
-			0.0F, y_scale, 0.0F, 0.0F,
-			0.0F, 0.0F, z_scale, 0.0F,
-			x_offset, y_offset, z_offset, 1.0F,
-		}; // mat
+			// Transform D3D RHW coordinates to OpenGL clip coordinates.
+			//
 
-		::glUniformMatrix4fv(u_xyzrhw_proj_, 1, GL_FALSE, mat);
+			const auto x_scale = 2.0F / w;
+			const auto x_offset = (center_offset - (2.0F * x) - w) / w;
+
+			const auto y_scale = 2.0F / (h * flip_sign);
+			const auto y_offset = (center_offset - (2.0F * y) - h) / (h * flip_sign);
+
+			const auto z_scale = (is_depth_enabled_ ? (has_gl_arb_clip_control_ ? 1.0F : 2.0F) : 0.0F);
+			const auto z_offset = (is_depth_enabled_ ? (has_gl_arb_clip_control_ ? 0.0F : -1.0F) : 0.0F);
+
+			matrix =
+			{
+				x_scale, 0.0F, 0.0F, 0.0F,
+				0.0F, y_scale, 0.0F, 0.0F,
+				0.0F, 0.0F, z_scale, 0.0F,
+				x_offset, y_offset, z_offset, 1.0F,
+			};
+		}
+		else
+		{
+			const auto y_scale = -flip_sign;
+			const auto x_offset = center_offset / w;
+			const auto y_offset = center_offset / (h * flip_sign);
+			const auto z_scale = (has_gl_arb_clip_control_ ? 1.0F : 2.0F);
+			const auto z_offset = (has_gl_arb_clip_control_ ? 0.0F : -1.0F);
+
+			const auto projection = ProjectionMatrix
+			{
+				1.0F, 0.0F, 0.0F, 0.0F,
+				0.0F, y_scale, 0.0F, 0.0F,
+				0.0F, 0.0F, z_scale, 0.0F,
+				x_offset, y_offset, z_offset, 1.0F,
+			};
+
+			matrix = multiply_matrices(projection, projection_matrix_);
+		}
+
+		::glUniformMatrix4fv(u_projection_, 1, GL_FALSE, matrix.data());
+	}
+
+	void set_default_world_matrices()
+	{
+		for (auto i = 0; i < max_world_matrices; ++i)
+		{
+			world_matrices_[i] = identity_matrix;
+		}
+
+		is_dirty_ = true;
+		are_u_model_views_dirty_.set();
+	}
+
+	void set_default_view_matrix()
+	{
+		view_matrix_ = identity_matrix;
+
+		is_dirty_ = true;
+		are_u_model_views_dirty_.set();
+	}
+
+	void set_default_projection_matrix()
+	{
+		projection_matrix_ = identity_matrix;
+
+		is_dirty_ = true;
+		is_u_projection_dirty_ = true;
+	}
+
+	void apply_u_view_model_changes(
+		const int index)
+	{
+		if (!are_u_model_views_dirty_.test(index))
+		{
+			return;
+		}
+
+		are_u_model_views_dirty_.reset(index);
+
+		set_u_model_view(index);
+	}
+
+	void apply_u_view_models_changes()
+	{
+		for (auto i = 0; i < max_world_matrices; ++i)
+		{
+			apply_u_view_model_changes(i);
+		}
+	}
+
+	void apply_u_projection_changes()
+	{
+		if (!is_u_projection_dirty_)
+		{
+			return;
+		}
+
+		is_u_projection_dirty_ = false;
+
+		set_u_projection();
+	}
+
+	void apply_changes()
+	{
+		if (!is_dirty_)
+		{
+			return;
+		}
+
+		is_dirty_ = false;
+
+		apply_u_view_models_changes();
+		apply_u_projection_changes();
+	}
+
+
+	static Matrix4F multiply_matrices(
+		const Matrix4F& lhs,
+		const Matrix4F& rhs)
+	{
+		return {
+			(lhs[0] * rhs[0]) + (lhs[4] * rhs[1]) + (lhs[8] * rhs[2]) + (lhs[12] * rhs[3]),
+			(lhs[1] * rhs[0]) + (lhs[5] * rhs[1]) + (lhs[9] * rhs[2]) + (lhs[13] * rhs[3]),
+			(lhs[2] * rhs[0]) + (lhs[6] * rhs[1]) + (lhs[10] * rhs[2]) + (lhs[14] * rhs[3]),
+			(lhs[3] * rhs[0]) + (lhs[7] * rhs[1]) + (lhs[11] * rhs[2]) + (lhs[15] * rhs[3]),
+			(lhs[0] * rhs[4]) + (lhs[4] * rhs[5]) + (lhs[8] * rhs[6]) + (lhs[12] * rhs[7]),
+			(lhs[1] * rhs[4]) + (lhs[5] * rhs[5]) + (lhs[9] * rhs[6]) + (lhs[13] * rhs[7]),
+			(lhs[2] * rhs[4]) + (lhs[6] * rhs[5]) + (lhs[10] * rhs[6]) + (lhs[14] * rhs[7]),
+			(lhs[3] * rhs[4]) + (lhs[7] * rhs[5]) + (lhs[11] * rhs[6]) + (lhs[15] * rhs[7]),
+			(lhs[0] * rhs[8]) + (lhs[4] * rhs[9]) + (lhs[8] * rhs[10]) + (lhs[12] * rhs[11]),
+			(lhs[1] * rhs[8]) + (lhs[5] * rhs[9]) + (lhs[9] * rhs[10]) + (lhs[13] * rhs[11]),
+			(lhs[2] * rhs[8]) + (lhs[6] * rhs[9]) + (lhs[10] * rhs[10]) + (lhs[14] * rhs[11]),
+			(lhs[3] * rhs[8]) + (lhs[7] * rhs[9]) + (lhs[11] * rhs[10]) + (lhs[15] * rhs[11]),
+			(lhs[0] * rhs[12]) + (lhs[4] * rhs[13]) + (lhs[8] * rhs[14]) + (lhs[12] * rhs[15]),
+			(lhs[1] * rhs[12]) + (lhs[5] * rhs[13]) + (lhs[9] * rhs[14]) + (lhs[13] * rhs[15]),
+			(lhs[2] * rhs[12]) + (lhs[6] * rhs[13]) + (lhs[10] * rhs[14]) + (lhs[14] * rhs[15]),
+			(lhs[3] * rhs[12]) + (lhs[7] * rhs[13]) + (lhs[11] * rhs[14]) + (lhs[15] * rhs[15]),
+		};
 	}
 }; // OglRendererImpl
 
@@ -1323,10 +1666,21 @@ const OglRendererImpl::DepthFunc OglRendererImpl::default_depth_func = OglRender
 
 const bool OglRendererImpl::default_has_diffuse = false;
 
+const OglRendererImpl::Matrix4F OglRendererImpl::identity_matrix =
+{
+	1.0F, 0.0F, 0.0F, 0.0F,
+	0.0F, 1.0F, 0.0F, 0.0F,
+	0.0F, 0.0F, 1.0F, 0.0F,
+	0.0F, 0.0F, 0.0F, 1.0F,
+};
+
 const std::string OglRendererImpl::vertex_shader_source = std::string{
 R"LTJS_VERTEX(
 
 #version 330 core
+
+// Maximum model-view matrix count.
+const int max_model_view_count = 4;
 
 // Maximum texture coordinate sets.
 const int max_tcs = 4;
@@ -1334,11 +1688,13 @@ const int max_tcs = 4;
 // Default diffuse color.
 const vec4 default_diffuse = vec4(1, 1, 1, 1);
 
+
 layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec4 a_bweights;
 layout(location = 2) in vec4 a_normal;
 layout(location = 3) in vec4 a_diffuse;
 layout(location = 4) in vec4 a_tcs[max_tcs];
+
 
 out vec4 v_diffuse;
 
@@ -1346,11 +1702,12 @@ out vec4 v_diffuse;
 // Has diffuse attribute?
 uniform bool u_has_diffuse = false;
 
-// Is position already transformed? (D3DFVF_XYZRHW)
-uniform bool u_is_position_transformed = false;
 
-// A matrix for transformed vertex (D3DFVF_XYZRHW).
-uniform mat4 u_xyzrhw_proj;
+// Model-view matrices.
+uniform mat4 u_model_views[max_model_view_count];
+
+// Projection matrix.
+uniform mat4 u_projection;
 
 
 void main()
@@ -1364,14 +1721,7 @@ void main()
 		v_diffuse = default_diffuse;
 	}
 
-	vec4 position = a_position;
-
-	if (u_is_position_transformed)
-	{
-		position = u_xyzrhw_proj * position;
-	}
-
-	gl_Position = position;
+	gl_Position = u_model_views[0] * u_projection * a_position;
 }
 
 )LTJS_VERTEX"
@@ -1610,6 +1960,7 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 
 	impl_.set_has_diffuse(vertex_format_.has_diffuse_);
 	impl_.set_is_position_transformed(vertex_format_.is_position_transformed_);
+	impl_.apply_changes();
 
 	if (impl_.current_vao_ != this)
 	{
@@ -2094,6 +2445,41 @@ void OglRenderer::set_depth_func(
 	const DepthFunc depth_func)
 {
 	do_set_depth_func(depth_func);
+}
+
+const float* OglRenderer::get_world_matrix(
+	const int index) const
+{
+	return do_get_world_matrix(index);
+}
+
+void OglRenderer::set_world_matrix(
+	const int index,
+	const float* const world_matrix_ptr)
+{
+	do_set_world_matrix(index, world_matrix_ptr);
+}
+
+const float* OglRenderer::get_view_matrix() const
+{
+	return do_get_view_matrix();
+}
+
+void OglRenderer::set_view_matrix(
+	const float* const view_matrix_ptr)
+{
+	do_set_view_matrix(view_matrix_ptr);
+}
+
+const float* OglRenderer::get_projection_matrix() const
+{
+	return do_get_projection_matrix();
+}
+
+void OglRenderer::set_projection_matrix(
+	const float* const projection_matrix_ptr)
+{
+	do_set_projection_matrix(projection_matrix_ptr);
 }
 
 OglRenderer::VertexArrayObjectPtr OglRenderer::add_vertex_array_object()

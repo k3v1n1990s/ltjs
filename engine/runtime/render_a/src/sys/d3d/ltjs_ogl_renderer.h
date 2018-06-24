@@ -266,6 +266,26 @@ public:
 		const DepthFunc depth_func);
 
 
+	const float* get_world_matrix(
+		const int index) const;
+
+	void set_world_matrix(
+		const int index,
+		const float* const world_matrix_ptr);
+
+
+	const float* get_view_matrix() const;
+
+	void set_view_matrix(
+		const float* const view_matrix_ptr);
+
+
+	const float* get_projection_matrix() const;
+
+	void set_projection_matrix(
+		const float* const projection_matrix_ptr);
+
+
 	VertexArrayObjectPtr add_vertex_array_object();
 
 	bool remove_vertex_array_object(
@@ -358,6 +378,28 @@ private:
 
 	virtual void do_set_depth_func(
 		const DepthFunc depth_func) = 0;
+
+	// Transformation matrices.
+	//
+
+	virtual const float* do_get_world_matrix(
+		const int index) const = 0;
+
+	virtual void do_set_world_matrix(
+		const int index,
+		const float* const world_matrix_ptr) = 0;
+
+
+	virtual const float* do_get_view_matrix() const = 0;
+
+	virtual void do_set_view_matrix(
+		const float* const view_matrix_ptr) = 0;
+
+
+	virtual const float* do_get_projection_matrix() const = 0;
+
+	virtual void do_set_projection_matrix(
+		const float* const projection_matrix_ptr) = 0;
 
 
 	// Vertex array objects.
