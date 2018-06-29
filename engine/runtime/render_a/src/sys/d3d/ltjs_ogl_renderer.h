@@ -288,13 +288,13 @@ public:
 
 	VertexArrayObjectPtr add_vertex_array_object();
 
-	bool remove_vertex_array_object(
+	void remove_vertex_array_object(
 		VertexArrayObjectPtr vertex_array_object);
 
 
-	void ogl_clear_error();
+	static void ogl_clear_error();
 
-	bool ogl_is_succeed();
+	static bool ogl_is_succeed();
 
 
 	static OglRenderer& get_instance();
@@ -406,7 +406,7 @@ private:
 	//
 	virtual VertexArrayObjectPtr do_add_vertex_array_object() = 0;
 
-	virtual bool do_remove_vertex_array_object(
+	virtual void do_remove_vertex_array_object(
 		VertexArrayObjectPtr vertex_array_object) = 0;
 }; // OglRenderer
 

@@ -424,13 +424,7 @@ private:
 			return;
 		}
 
-		const auto dc = (is_current ? ogl_dc_ : nullptr);
-		const auto rc = (is_current ? ogl_rc_ : nullptr);
-
-		const auto make_result = ::wglMakeCurrent(dc, rc);
-		assert(make_result);
-
-		is_context_current_ = is_current;
+		set_current_context_internal(is_current);
 	}
 
 	void do_set_clear_color(
@@ -607,11 +601,13 @@ private:
 		const auto ogl_viewport_y = screen_height_ - (viewport_.y_ + viewport_.height_);
 
 		::glViewport(viewport_.x_, ogl_viewport_y, viewport_.width_, viewport_.height_);
+		assert(ogl_is_succeed());
 	}
 
 	void set_viewport_depth_internal()
 	{
 		::glDepthRange(viewport_.depth_min_z_, viewport_.depth_max_z_);
+		assert(ogl_is_succeed());
 	}
 
 	bool do_is_depth_enabled() const override
@@ -805,12 +801,13 @@ private:
 		return vertex_array_objects_.back().get();
 	}
 
-	bool do_remove_vertex_array_object(
+	void do_remove_vertex_array_object(
 		VertexArrayObjectPtr vertex_array_object) override
 	{
 		if (vertex_array_objects_.empty())
 		{
-			return false;
+			assert(!"Empty list.");
+			return;
 		}
 
 		const auto size_before = vertex_array_objects_.size();
@@ -824,7 +821,7 @@ private:
 
 		const auto size_after = vertex_array_objects_.size();
 
-		return size_before == size_after;
+		assert(size_before > size_after);
 	}
 
 	//
@@ -866,6 +863,7 @@ private:
 
 		if (!ogl_is_succeed())
 		{
+			assert(!"Failed to get max viewport dimensions.");
 			return false;
 		}
 
@@ -899,6 +897,7 @@ private:
 		if (has_gl_arb_clip_control_)
 		{
 			::glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+			assert(ogl_is_succeed());
 		}
 
 		set_default_clear_color();
@@ -962,9 +961,14 @@ private:
 		if (program_)
 		{
 			::glUseProgram(0);
+			assert(ogl_is_succeed());
 			::glDetachShader(program_, vertex_shader_);
+			assert(ogl_is_succeed());
 			::glDetachShader(program_, fragment_shader_);
+			assert(ogl_is_succeed());
 			::glDeleteProgram(program_);
+			assert(ogl_is_succeed());
+
 			program_ = 0;
 		}
 
@@ -986,12 +990,16 @@ private:
 		if (vertex_shader_)
 		{
 			::glDeleteShader(vertex_shader_);
+			assert(ogl_is_succeed());
+
 			vertex_shader_ = 0;
 		}
 
 		if (fragment_shader_)
 		{
 			::glDeleteShader(fragment_shader_);
+			assert(ogl_is_succeed());
+
 			fragment_shader_ = 0;
 		}
 
@@ -1000,9 +1008,22 @@ private:
 		vertex_array_objects_.clear();
 	}
 
+	void set_current_context_internal(
+		const bool is_current)
+	{
+		const auto dc = (is_current ? ogl_dc_ : nullptr);
+		const auto rc = (is_current ? ogl_rc_ : nullptr);
+
+		const auto make_result = ::wglMakeCurrent(dc, rc);
+		assert(make_result);
+
+		is_context_current_ = is_current;
+	}
+
 	void set_default_cull_mode()
 	{
 		::glFrontFace(GL_CW);
+		assert(ogl_is_succeed());
 
 		cull_mode_ = default_cull_mode;
 		set_cull_mode_internal(true);
@@ -1020,10 +1041,12 @@ private:
 
 		case CullMode::clockwise:
 			::glCullFace(GL_FRONT);
+			assert(ogl_is_succeed());
 			break;
 
 		case CullMode::counterclockwise:
 			::glCullFace(GL_BACK);
+			assert(ogl_is_succeed());
 			break;
 
 		default:
@@ -1036,10 +1059,12 @@ private:
 			if (is_cull_face_enabled)
 			{
 				::glEnable(GL_CULL_FACE);
+				assert(ogl_is_succeed());
 			}
 			else
 			{
 				::glDisable(GL_CULL_FACE);
+				assert(ogl_is_succeed());
 			}
 		}
 	}
@@ -1060,6 +1085,7 @@ private:
 		const auto ogl_hint_value = (is_clipping_ ? GL_DONT_CARE : GL_FASTEST);
 
 		::glHint(GL_CLIP_VOLUME_CLIPPING_HINT_EXT, ogl_hint_value);
+		assert(ogl_is_succeed());
 	}
 
 	void set_default_clear_color()
@@ -1079,6 +1105,8 @@ private:
 			clear_color_g_ / 255.0F,
 			clear_color_b_ / 255.0F,
 			clear_color_a_ / 255.0F);
+
+		assert(ogl_is_succeed());
 	}
 
 	Viewport get_default_viewport()
@@ -1113,10 +1141,12 @@ private:
 		if (is_depth_enabled_)
 		{
 			::glEnable(GL_DEPTH_TEST);
+			assert(ogl_is_succeed());
 		}
 		else
 		{
 			::glDisable(GL_DEPTH_TEST);
+			assert(ogl_is_succeed());
 		}
 	}
 
@@ -1129,6 +1159,7 @@ private:
 	void set_is_depth_writable_internal()
 	{
 		::glDepthMask(is_depth_writable_);
+		assert(ogl_is_succeed());
 	}
 
 	void set_default_depth_func()
@@ -1177,6 +1208,7 @@ private:
 		}
 
 		::glDepthFunc(ogl_depth_func);
+		assert(ogl_is_succeed());
 	}
 
 	void set_uniform_defaults()
@@ -1317,10 +1349,17 @@ private:
 			break;
 
 		default:
-			return GL_NONE;
+			assert(!"Unsupported shader type.");
+			return false;
 		}
 
 		shader = ::glCreateShader(ogl_shader_type);
+		assert(ogl_is_succeed());
+
+		if (shader == 0)
+		{
+			return false;
+		}
 
 		const char* const source_lines[1] =
 		{
@@ -1333,7 +1372,9 @@ private:
 		}; // source_lines
 
 		::glShaderSource(shader, 1, source_lines, source_lines_lengths);
+		assert(ogl_is_succeed());
 		::glCompileShader(shader);
+		assert(ogl_is_succeed());
 
 		bool is_compiled;
 		std::string log;
@@ -1363,8 +1404,11 @@ private:
 		}
 
 		::glAttachShader(program_, vertex_shader_);
+		assert(ogl_is_succeed());
 		::glAttachShader(program_, fragment_shader_);
+		assert(ogl_is_succeed());
 		::glLinkProgram(program_);
+		assert(ogl_is_succeed());
 
 		bool is_linked;
 		std::string log;
@@ -1385,14 +1429,20 @@ private:
 	bool locate_uniforms()
 	{
 		u_has_diffuse_ = ::glGetUniformLocation(program_, "u_has_diffuse");
+		assert(ogl_is_succeed());
+		assert(u_has_diffuse_ >= 0);
 
 		for (auto i = 0; i < max_world_matrices; ++i)
 		{
 			const auto uniform_name = "u_model_views[" + std::to_string(i) + "]";
 			u_model_views_[i] = ::glGetUniformLocation(program_, uniform_name.c_str());
+			assert(ogl_is_succeed());
+			assert(u_model_views_[i] >= 0);
 		}
 
 		u_projection_ = ::glGetUniformLocation(program_, "u_projection");
+		assert(ogl_is_succeed());
+		assert(u_projection_ >= 0);
 
 		return ogl_is_succeed();
 	}
@@ -1418,6 +1468,7 @@ private:
 	void set_has_diffuse_internal()
 	{
 		::glUniform1i(u_has_diffuse_, has_diffuse_);
+		assert(ogl_is_succeed());
 	}
 
 	void set_is_position_transformed(
@@ -1455,6 +1506,7 @@ private:
 		}
 
 		::glUniformMatrix4fv(u_model_views_[index], 1, GL_FALSE, matrix.data());
+		assert(ogl_is_succeed());
 	}
 
 	void set_u_projection()
@@ -1486,6 +1538,7 @@ private:
 		}
 
 		::glUniformMatrix4fv(u_projection_, 1, GL_FALSE, matrix.data());
+		assert(ogl_is_succeed());
 	}
 
 	void set_default_world_matrices()
@@ -1736,21 +1789,14 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 	const InitializeParam& param)
 {
 	::glGenVertexArrays(1, &ogl_vao_);
+	assert(ogl_is_succeed());
 	::glGenBuffers(1, &ogl_vertex_buffer_);
-
-	if (!ogl_vao_ || !ogl_vertex_buffer_)
-	{
-		return false;
-	}
+	assert(ogl_is_succeed());
 
 	if (param.has_index_)
 	{
 		::glGenBuffers(1, &ogl_index_buffer_);
-
-		if (!ogl_index_buffer_)
-		{
-			return false;
-		}
+		assert(ogl_is_succeed());
 	}
 
 
@@ -1761,8 +1807,11 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 	const auto vertex_buffer_size = vertex_size * param.vertex_count_;
 
 	::glBindBuffer(GL_ARRAY_BUFFER, ogl_vertex_buffer_);
+	assert(ogl_is_succeed());
 	::glBufferData(GL_ARRAY_BUFFER, vertex_buffer_size, param.raw_vertex_data_, ogl_vertex_usage);
+	assert(ogl_is_succeed());
 	::glBindBuffer(GL_ARRAY_BUFFER, 0);
+	assert(ogl_is_succeed());
 
 
 	// Index buffer.
@@ -1773,8 +1822,11 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 		const auto index_buffer_size = index_element_size * param.index_count_;
 
 		::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ogl_index_buffer_);
+		assert(ogl_is_succeed());
 		::glBufferData(GL_ELEMENT_ARRAY_BUFFER, index_buffer_size, param.raw_index_data_, ogl_index_usage);
+		assert(ogl_is_succeed());
 		::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		assert(ogl_is_succeed());
 	}
 
 
@@ -1792,11 +1844,14 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 	}
 
 	::glBindVertexArray(ogl_vao_);
+	assert(ogl_is_succeed());
 	::glBindBuffer(GL_ARRAY_BUFFER, ogl_vertex_buffer_);
+	assert(ogl_is_succeed());
 
 	if (param.has_index_)
 	{
 		::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ogl_index_buffer_);
+		assert(ogl_is_succeed());
 	}
 
 	// Position
@@ -1806,7 +1861,9 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 		const auto position_size = position_item_count * float_size;
 
 		::glEnableVertexAttribArray(0);
+		assert(ogl_is_succeed());
 		::glVertexAttribPointer(0, position_item_count, GL_FLOAT, GL_FALSE, vertex_size, component_offset_ptr);
+		assert(ogl_is_succeed());
 
 		component_offset_ptr += position_size;
 	}
@@ -1820,7 +1877,9 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 		const auto blending_weights_size = blending_weights_item_count * float_size;
 
 		::glEnableVertexAttribArray(1);
+		assert(ogl_is_succeed());
 		::glVertexAttribPointer(1, blending_weights_item_count, GL_FLOAT, GL_FALSE, vertex_size, component_offset_ptr);
+		assert(ogl_is_succeed());
 
 		component_offset_ptr += blending_weights_size;
 	}
@@ -1833,7 +1892,9 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 		const auto normals_size = normal_item_count * float_size;
 
 		::glEnableVertexAttribArray(2);
+		assert(ogl_is_succeed());
 		::glVertexAttribPointer(2, normal_item_count, GL_FLOAT, GL_FALSE, vertex_size, component_offset_ptr);
+		assert(ogl_is_succeed());
 
 		component_offset_ptr += normals_size;
 	}
@@ -1843,7 +1904,9 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 		const auto diffuse_size = float_size;
 
 		::glEnableVertexAttribArray(3);
+		assert(ogl_is_succeed());
 		::glVertexAttribPointer(3, GL_BGRA, GL_UNSIGNED_BYTE, GL_TRUE, vertex_size, component_offset_ptr);
+		assert(ogl_is_succeed());
 
 		component_offset_ptr += diffuse_size;
 	}
@@ -1859,15 +1922,25 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 			const auto tex_coord_set_size = tex_coord_set_item_count * float_size;
 
 			::glEnableVertexAttribArray(array_index);
+			assert(ogl_is_succeed());
 			::glVertexAttribPointer(array_index, tex_coord_set_item_count, GL_FLOAT, GL_FALSE, vertex_size, component_offset_ptr);
+			assert(ogl_is_succeed());
 
 			component_offset_ptr += tex_coord_set_size;
 		}
 	}
 
 	::glBindVertexArray(0);
+	assert(ogl_is_succeed());
 	::glBindBuffer(GL_ARRAY_BUFFER, 0);
+	assert(ogl_is_succeed());
 	::glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	assert(ogl_is_succeed());
+
+	if (!ogl_is_succeed())
+	{
+		return false;
+	}
 
 
 	// Finalize.
@@ -1904,7 +1977,9 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 	if (impl_.current_vao_ != this)
 	{
 		impl_.current_vao_ = this;
+
 		::glBindVertexArray(ogl_vao_);
+		assert(ogl_is_succeed());
 	}
 
 	if (index_count_ > 0)
@@ -1915,10 +1990,13 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 			GL_UNSIGNED_SHORT,
 			reinterpret_cast<const char*>(static_cast<std::intptr_t>(index_base)),
 			vertex_base);
+
+		assert(ogl_is_succeed());
 	}
 	else
 	{
 		::glDrawArrays(GL_TRIANGLES, vertex_base * 3, triangle_count * 3);
+		assert(ogl_is_succeed());
 	}
 }
 
@@ -1936,22 +2014,30 @@ void OglRendererImpl::VertexArrayObjectImpl::uninitialize_internal()
 		if (impl_.current_vao_ == this)
 		{
 			impl_.current_vao_ = nullptr;
+
 			::glBindVertexArray(0);
+			assert(ogl_is_succeed());
 		}
 
 		::glDeleteVertexArrays(1, &ogl_vao_);
+		assert(ogl_is_succeed());
+
 		ogl_vao_ = 0;
 	}
 
 	if (ogl_vertex_buffer_)
 	{
 		::glDeleteBuffers(1, &ogl_vertex_buffer_);
+		assert(ogl_is_succeed());
+
 		ogl_vertex_buffer_ = 0;
 	}
 
 	if (ogl_index_buffer_)
 	{
 		::glDeleteBuffers(1, &ogl_index_buffer_);
+		assert(ogl_is_succeed());
+
 		ogl_index_buffer_ = 0;
 	}
 }
@@ -2099,7 +2185,7 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 
 	if (has_transformed && has_untransformed)
 	{
-		assert(!"Transformaed and untransformed are mutual exclusive.");
+		assert(!"Transformed and untransformed are mutual exclusive.");
 		return {};
 	}
 
@@ -2112,7 +2198,7 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 
 	if (has_transformed && has_normal)
 	{
-		assert(!"Transformaed and normal are prohibited.");
+		assert(!"Transformed and normal are prohibited.");
 		return {};
 	}
 
@@ -2310,6 +2396,7 @@ bool OglRenderer::initialize(
 
 void OglRenderer::uninitialize()
 {
+	do_set_current_context(true);
 	do_uninitialize();
 }
 
@@ -2440,10 +2527,10 @@ OglRenderer::VertexArrayObjectPtr OglRenderer::add_vertex_array_object()
 	return do_add_vertex_array_object();
 }
 
-bool OglRenderer::remove_vertex_array_object(
+void OglRenderer::remove_vertex_array_object(
 	VertexArrayObjectPtr vertex_array_object)
 {
-	return do_remove_vertex_array_object(vertex_array_object);
+	do_remove_vertex_array_object(vertex_array_object);
 }
 
 void OglRenderer::ogl_clear_error()
@@ -2453,11 +2540,28 @@ void OglRenderer::ogl_clear_error()
 
 bool OglRenderer::ogl_is_succeed()
 {
+	const auto max_error_flags = 5;
+
 	auto is_failed = false;
 
-	while (::glGetError() != GL_NO_ERROR)
+	for (auto i = 0; i < (max_error_flags + 1); ++i)
 	{
-		is_failed = true;
+		const auto ogl_error = ::glGetError();
+
+		if (ogl_error == GL_NO_ERROR)
+		{
+			break;
+		}
+		else
+		{
+			is_failed = true;
+		}
+
+		if (i == max_error_flags)
+		{
+			assert(!"No current context.");
+			break;
+		}
 	}
 
 	return !is_failed;

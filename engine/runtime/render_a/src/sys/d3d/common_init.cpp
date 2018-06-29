@@ -213,12 +213,9 @@ void ogl_uninitialize()
 	ogl_is_initialized_ = false;
 	ogl_window_dc_ = nullptr;
 
-	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+	ogl_test_vao_ = nullptr;
 
-	if (ogl_test_vao_)
-	{
-		ogl_renderer.remove_vertex_array_object(ogl_test_vao_);
-	}
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
 
 	ogl_renderer.uninitialize();
 
