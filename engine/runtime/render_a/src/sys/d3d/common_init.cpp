@@ -469,32 +469,43 @@ bool ogl_create_context_and_make_current()
 	return true;
 }
 
+//#define LTJS_TEST_OGL_RHW
+
 void ogl_set_test_data()
 {
+	const auto window_width = 800;
+	const auto window_height = 600;
+
 	struct Vertex
 	{
 		float x;
 		float y;
 		float z;
-#if 1
+#ifdef LTJS_TEST_OGL_RHW
 		float w;
-#endif
+#endif // LTJS_TEST_OGL_RHW
 		std::uint32_t diffuse;
 	}; // Vertex
 
-#if 0
+#ifndef LTJS_TEST_OGL_RHW
 	static const Vertex vertices[] =
 	{
+#if 0
 		{-1.0F, -1.0F, 0.0F, 0xFFFF0000},
 		{0.0F, 1.0F, 0.0F, 0xFF00FF00},
 		{1.0F, -1.0F, 0.0F, 0xFF0000FF},
+#else
+		{-1.0F, -1.0F, 0.0F, 0xFFFF0000},
+		{1.0F, -1.0F, 0.0F, 0xFF00FF00},
+		{0.0F, 1.0F, 0.0F, 0xFF0000FF},
+#endif
 	}; // vertices
 #else
 	static const Vertex vertices[] =
 	{
-		{0.0F, 0.0F, 0.0F, 1.0F, 0xFFFF0000},
-		{800.0F, 0.0F, 0.0F, 1.0F, 0xFF0000FF},
-		{400.0F, 600.0F, 0.0F, 1.0F, 0xFF00FF00},
+		{0.0F, window_height, 1000.0F, 1.0F, 0xFFFF0000},
+		{window_width, window_height, 1000.0F, 1.0F, 0xFF00FF00},
+		{window_width / 2.0F, 0.0F, 1000.0F, 1.0F, 0xFF0000FF},
 	}; // vertices
 #endif
 
@@ -503,9 +514,11 @@ void ogl_set_test_data()
 		0, 1, 2,
 	}; // indices
 
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+
 	auto param = ltjs::OglRenderer::VertexArrayObject::InitializeParam{};
 
-#if 0
+#ifndef LTJS_TEST_OGL_RHW
 	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZ | D3DFVF_DIFFUSE);
 #else
 	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
@@ -518,6 +531,58 @@ void ogl_set_test_data()
 	param.raw_index_data_ = indices;
 
 	const auto init_result = ogl_test_vao_->initialize(param);
+
+
+	// For our world matrix, we will just rotate the object about the y-axis.
+	DirectX::XMFLOAT4X4 matWorld;
+
+	// Set up the rotation matrix to generate 1 full rotation (2*PI radians) 
+	// every 1000 ms. To avoid the loss of precision inherent in very high 
+	// floating point numbers, the system time is modulated by the rotation 
+	// period before conversion to a radian angle.
+	//UINT iTime = timeGetTime() % 1000;
+	//FLOAT fAngle = iTime * ( 2.0f * 3.141592654F ) / 1000.0f;
+	FLOAT fAngle = (2.0f * 3.141592654F) * 0.15F;
+	DirectX::XMStoreFloat4x4(&matWorld, DirectX::XMMatrixRotationY(fAngle));
+	ogl_renderer.set_world_matrix(0, reinterpret_cast<const float*>(&matWorld));
+
+	// Set up our view matrix. A view matrix can be defined given an eye point,
+	// a point to lookat, and a direction for which way is up. Here, we set the
+	// eye five units back along the z-axis and up three units, look at the
+	// origin, and define "up" to be in the y-direction.
+	DirectX::XMFLOAT3 vEyePt(0.0f, 3.0f, -5.0f);
+	DirectX::XMFLOAT3 vLookatPt(0.0f, 0.0f, 0.0f);
+	DirectX::XMFLOAT3 vUpVec(0.0f, 1.0f, 0.0f);
+	DirectX::XMFLOAT4X4 matView;
+
+	DirectX::XMStoreFloat4x4(
+		&matView,
+		DirectX::XMMatrixLookAtLH(
+			DirectX::XMLoadFloat3(&vEyePt),
+			DirectX::XMLoadFloat3(&vLookatPt),
+			DirectX::XMLoadFloat3(&vUpVec))
+	);
+
+	ogl_renderer.set_view_matrix(reinterpret_cast<const float*>(&matView));
+
+	// For the projection matrix, we set up a perspective transform (which
+	// transforms geometry from 3D view space to 2D viewport space, with
+	// a perspective divide making objects smaller in the distance). To build
+	// a perpsective transform, we need the field of view (1/4 pi is common),
+	// the aspect ratio, and the near and far clipping planes (which define at
+	// what distances geometry should be no longer be rendered).
+	DirectX::XMFLOAT4X4 matProj;
+
+	DirectX::XMStoreFloat4x4(
+		&matProj,
+		DirectX::XMMatrixPerspectiveFovLH(
+			3.141592654F / 4,
+			1.0f, 1.0f, 100.0f)
+	);
+
+	ogl_renderer.set_projection_matrix(reinterpret_cast<const float*>(&matProj));
+
+	ogl_renderer.set_cull_mode(ltjs::OglRenderer::CullMode::disabled);
 }
 
 bool ogl_initialize_internal(

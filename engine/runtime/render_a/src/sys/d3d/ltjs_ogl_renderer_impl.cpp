@@ -217,7 +217,6 @@ public:
 
 
 private:
-	static constexpr auto is_offscreen = false;
 	static constexpr auto max_world_matrices = 4;
 	static constexpr auto max_texture_stages = 4;
 
@@ -899,7 +898,7 @@ private:
 		//
 		if (has_gl_arb_clip_control_)
 		{
-			::glClipControl(is_offscreen ? GL_UPPER_LEFT : GL_LOWER_LEFT, GL_ZERO_TO_ONE);
+			::glClipControl(GL_LOWER_LEFT, GL_ZERO_TO_ONE);
 		}
 
 		set_default_clear_color();
@@ -1460,87 +1459,30 @@ private:
 
 	void set_u_projection()
 	{
-		//
-		// Based on WineD3D.
-		//
-		// There are a couple of additional things we have to take into account
-		// here besides the projection transformation itself:
-		//   - We need to flip along the y-axis in case of offscreen rendering.
-		//   - OpenGL Z range is {-Wc,...,Wc} while D3D Z range is {0,...,Wc}.
-		//   - <= D3D9 coordinates refer to pixel centers while GL coordinates
-		//     refer to pixel corners.
-		//   - D3D has a top-left filling convention. We need to maintain this
-		//     even after the y-flip mentioned above.
-		// In order to handle the last two points, we translate by
-		// (63.0 / 128.0) / VPw and (63.0 / 128.0) / VPh. This is equivalent to
-		// translating slightly less than half a pixel. We want the difference to
-		// be large enough that it doesn't get lost due to rounding inside the
-		// driver, but small enough to prevent it from interfering with any
-		// anti-aliasing.
-		//
-
-		const auto is_pixel_center_integer = true; // Direct3D 9
-		const auto is_flip = (!has_gl_arb_clip_control_ && is_offscreen);
-
-		float center_offset;
-
-		if (!has_gl_arb_clip_control_ && is_pixel_center_integer)
-		{
-			center_offset = 63.0F / 64.0F;
-		}
-		else
-		{
-			center_offset = -1.0F / 64.0F;
-		}
-
-		const auto flip_sign = (is_flip ? 1.0F : -1.0F);
-
-		const auto x = viewport_.x_;
-		const auto y = viewport_.y_;
-		const auto w = viewport_.width_;
-		const auto h = viewport_.height_;
-
 		ProjectionMatrix matrix;
 
 		if (is_position_transformed_)
 		{
-			// Transform D3D RHW coordinates to OpenGL clip coordinates.
-			//
+			const auto m11 = 2.0F / viewport_.width_;
+			const auto m41 = -1.0F;
 
-			const auto x_scale = 2.0F / w;
-			const auto x_offset = (center_offset - (2.0F * x) - w) / w;
+			const auto m22 = -2.0F / viewport_.height_;
+			const auto m42 = 1.0F;
 
-			const auto y_scale = 2.0F / (h * flip_sign);
-			const auto y_offset = (center_offset - (2.0F * y) - h) / (h * flip_sign);
-
-			const auto z_scale = (is_depth_enabled_ ? (has_gl_arb_clip_control_ ? 1.0F : 2.0F) : 0.0F);
-			const auto z_offset = (is_depth_enabled_ ? (has_gl_arb_clip_control_ ? 0.0F : -1.0F) : 0.0F);
+			const auto m33 = 0.0F;
+			const auto m43 = 0.0F;
 
 			matrix =
 			{
-				x_scale, 0.0F, 0.0F, 0.0F,
-				0.0F, y_scale, 0.0F, 0.0F,
-				0.0F, 0.0F, z_scale, 0.0F,
-				x_offset, y_offset, z_offset, 1.0F,
+				m11, 0.0F, 0.0F, 0.0F,
+				0.0F, m22, 0.0F, 0.0F,
+				0.0F, 0.0F, m33, 0.0F,
+				m41, m42, m43, 1.0F,
 			};
 		}
 		else
 		{
-			const auto y_scale = -flip_sign;
-			const auto x_offset = center_offset / w;
-			const auto y_offset = center_offset / (h * flip_sign);
-			const auto z_scale = (has_gl_arb_clip_control_ ? 1.0F : 2.0F);
-			const auto z_offset = (has_gl_arb_clip_control_ ? 0.0F : -1.0F);
-
-			const auto projection = ProjectionMatrix
-			{
-				1.0F, 0.0F, 0.0F, 0.0F,
-				0.0F, y_scale, 0.0F, 0.0F,
-				0.0F, 0.0F, z_scale, 0.0F,
-				x_offset, y_offset, z_offset, 1.0F,
-			};
-
-			matrix = multiply_matrices(projection, projection_matrix_);
+			matrix = projection_matrix_;
 		}
 
 		::glUniformMatrix4fv(u_projection_, 1, GL_FALSE, matrix.data());
@@ -1548,10 +1490,7 @@ private:
 
 	void set_default_world_matrices()
 	{
-		for (auto i = 0; i < max_world_matrices; ++i)
-		{
-			world_matrices_[i] = identity_matrix;
-		}
+		world_matrices_.fill(identity_matrix);
 
 		is_dirty_ = true;
 		are_u_model_views_dirty_.set();
@@ -1625,22 +1564,22 @@ private:
 		const Matrix4F& rhs)
 	{
 		return {
-			(lhs[0] * rhs[0]) + (lhs[4] * rhs[1]) + (lhs[8] * rhs[2]) + (lhs[12] * rhs[3]),
-			(lhs[1] * rhs[0]) + (lhs[5] * rhs[1]) + (lhs[9] * rhs[2]) + (lhs[13] * rhs[3]),
-			(lhs[2] * rhs[0]) + (lhs[6] * rhs[1]) + (lhs[10] * rhs[2]) + (lhs[14] * rhs[3]),
-			(lhs[3] * rhs[0]) + (lhs[7] * rhs[1]) + (lhs[11] * rhs[2]) + (lhs[15] * rhs[3]),
-			(lhs[0] * rhs[4]) + (lhs[4] * rhs[5]) + (lhs[8] * rhs[6]) + (lhs[12] * rhs[7]),
-			(lhs[1] * rhs[4]) + (lhs[5] * rhs[5]) + (lhs[9] * rhs[6]) + (lhs[13] * rhs[7]),
-			(lhs[2] * rhs[4]) + (lhs[6] * rhs[5]) + (lhs[10] * rhs[6]) + (lhs[14] * rhs[7]),
-			(lhs[3] * rhs[4]) + (lhs[7] * rhs[5]) + (lhs[11] * rhs[6]) + (lhs[15] * rhs[7]),
-			(lhs[0] * rhs[8]) + (lhs[4] * rhs[9]) + (lhs[8] * rhs[10]) + (lhs[12] * rhs[11]),
-			(lhs[1] * rhs[8]) + (lhs[5] * rhs[9]) + (lhs[9] * rhs[10]) + (lhs[13] * rhs[11]),
-			(lhs[2] * rhs[8]) + (lhs[6] * rhs[9]) + (lhs[10] * rhs[10]) + (lhs[14] * rhs[11]),
-			(lhs[3] * rhs[8]) + (lhs[7] * rhs[9]) + (lhs[11] * rhs[10]) + (lhs[15] * rhs[11]),
-			(lhs[0] * rhs[12]) + (lhs[4] * rhs[13]) + (lhs[8] * rhs[14]) + (lhs[12] * rhs[15]),
-			(lhs[1] * rhs[12]) + (lhs[5] * rhs[13]) + (lhs[9] * rhs[14]) + (lhs[13] * rhs[15]),
-			(lhs[2] * rhs[12]) + (lhs[6] * rhs[13]) + (lhs[10] * rhs[14]) + (lhs[14] * rhs[15]),
-			(lhs[3] * rhs[12]) + (lhs[7] * rhs[13]) + (lhs[11] * rhs[14]) + (lhs[15] * rhs[15]),
+			(rhs[0] * lhs[0]) + (rhs[4] * lhs[1]) + (rhs[8] * lhs[2]) + (rhs[12] * lhs[3]),
+			(rhs[1] * lhs[0]) + (rhs[5] * lhs[1]) + (rhs[9] * lhs[2]) + (rhs[13] * lhs[3]),
+			(rhs[2] * lhs[0]) + (rhs[6] * lhs[1]) + (rhs[10] * lhs[2]) + (rhs[14] * lhs[3]),
+			(rhs[3] * lhs[0]) + (rhs[7] * lhs[1]) + (rhs[11] * lhs[2]) + (rhs[15] * lhs[3]),
+			(rhs[0] * lhs[4]) + (rhs[4] * lhs[5]) + (rhs[8] * lhs[6]) + (rhs[12] * lhs[7]),
+			(rhs[1] * lhs[4]) + (rhs[5] * lhs[5]) + (rhs[9] * lhs[6]) + (rhs[13] * lhs[7]),
+			(rhs[2] * lhs[4]) + (rhs[6] * lhs[5]) + (rhs[10] * lhs[6]) + (rhs[14] * lhs[7]),
+			(rhs[3] * lhs[4]) + (rhs[7] * lhs[5]) + (rhs[11] * lhs[6]) + (rhs[15] * lhs[7]),
+			(rhs[0] * lhs[8]) + (rhs[4] * lhs[9]) + (rhs[8] * lhs[10]) + (rhs[12] * lhs[11]),
+			(rhs[1] * lhs[8]) + (rhs[5] * lhs[9]) + (rhs[9] * lhs[10]) + (rhs[13] * lhs[11]),
+			(rhs[2] * lhs[8]) + (rhs[6] * lhs[9]) + (rhs[10] * lhs[10]) + (rhs[14] * lhs[11]),
+			(rhs[3] * lhs[8]) + (rhs[7] * lhs[9]) + (rhs[11] * lhs[10]) + (rhs[15] * lhs[11]),
+			(rhs[0] * lhs[12]) + (rhs[4] * lhs[13]) + (rhs[8] * lhs[14]) + (rhs[12] * lhs[15]),
+			(rhs[1] * lhs[12]) + (rhs[5] * lhs[13]) + (rhs[9] * lhs[14]) + (rhs[13] * lhs[15]),
+			(rhs[2] * lhs[12]) + (rhs[6] * lhs[13]) + (rhs[10] * lhs[14]) + (rhs[14] * lhs[15]),
+			(rhs[3] * lhs[12]) + (rhs[7] * lhs[13]) + (rhs[11] * lhs[14]) + (rhs[15] * lhs[15]),
 		};
 	}
 }; // OglRendererImpl
@@ -1721,7 +1660,7 @@ void main()
 		v_diffuse = default_diffuse;
 	}
 
-	gl_Position = u_model_views[0] * u_projection * a_position;
+	gl_Position = u_projection * u_model_views[0] * a_position;
 }
 
 )LTJS_VERTEX"
@@ -2160,6 +2099,20 @@ OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3
 
 	if (has_transformed && has_untransformed)
 	{
+		assert(!"Transformaed and untransformed are mutual exclusive.");
+		return {};
+	}
+
+	auto has_normal = false;
+
+	if ((d3d_fvf & d3dfvf_normal) == d3dfvf_normal)
+	{
+		has_normal = true;
+	}
+
+	if (has_transformed && has_normal)
+	{
+		assert(!"Transformaed and normal are prohibited.");
 		return {};
 	}
 
