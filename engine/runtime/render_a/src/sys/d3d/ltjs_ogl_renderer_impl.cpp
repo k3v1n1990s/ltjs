@@ -157,6 +157,56 @@ GLenum usage_flags_to_ogl_usage(
 	}
 }
 
+int calculate_vertex_count(
+	const OglRenderer::PrimitiveType primitive_type,
+	const int primitive_count)
+{
+	if (primitive_count <= 0)
+	{
+		assert(!"Invalid state.");
+		return 0;
+	}
+
+	if (primitive_count == 1)
+	{
+		return 3;
+	}
+
+	switch (primitive_type)
+	{
+	case OglRenderer::PrimitiveType::triangle_fan:
+	case OglRenderer::PrimitiveType::triangle_strip:
+		return 3 + (primitive_count - 1);
+
+	case OglRenderer::PrimitiveType::triangle_list:
+		return 3 * primitive_count;
+
+	default:
+		assert(!"Unsupported primitive type.");
+		return 0;
+	}
+}
+
+GLenum get_ogl_primitive_type(
+	const OglRenderer::PrimitiveType primitive_type)
+{
+	switch (primitive_type)
+	{
+	case OglRenderer::PrimitiveType::triangle_fan:
+		return GL_TRIANGLE_FAN;
+
+	case OglRenderer::PrimitiveType::triangle_strip:
+		return GL_TRIANGLE_STRIP;
+
+	case OglRenderer::PrimitiveType::triangle_list:
+		return GL_TRIANGLES;
+
+	default:
+		assert(!"Unsupported primitive type.");
+		return GL_NONE;
+	}
+}
+
 
 } // namespace
 
@@ -206,7 +256,8 @@ public:
 		u_model_views_{},
 		u_projection_{},
 		current_vao_{},
-		vertex_array_objects_{}
+		ui_vaos_{},
+		vaos_{}
 	{
 	}
 
@@ -219,6 +270,19 @@ public:
 private:
 	static constexpr auto max_world_matrices = 4;
 	static constexpr auto max_texture_stages = 4;
+
+	static constexpr auto max_ui_vao_vertices = 128;
+	static constexpr auto max_ui_vaos = 4;
+
+	using UiVaoD3dFvfs = std::array<std::uint32_t, max_ui_vaos>;
+
+	static constexpr auto ui_vao_d3d_fvfs = UiVaoD3dFvfs
+	{
+		d3dfvf_xyz | d3dfvf_diffuse,
+		d3dfvf_xyz | d3dfvf_diffuse | d3dfvf_tex1,
+		d3dfvf_xyzrhw | d3dfvf_diffuse,
+		d3dfvf_xyzrhw | d3dfvf_diffuse | d3dfvf_tex1,
+	};
 
 
 	using Matrix4F = std::array<float, 16>;
@@ -239,6 +303,25 @@ private:
 
 	using UModelViewMatrices = std::array<GLint, max_world_matrices>;
 	using UTextureMatrices = std::array<GLint, max_texture_stages>;
+
+	struct UiVao
+	{
+		std::uint32_t d3d_fvf_;
+		int vertex_offset_;
+		VertexArrayObjectPtr vao_;
+
+		UiVao()
+			:
+			d3d_fvf_{},
+			vertex_offset_{},
+			vao_{}
+		{
+		}
+	}; // UiVao
+
+	using UiVaoPtr = UiVao*;
+
+	using UiVaos = std::array<UiVao, max_ui_vaos>;
 
 
 	class VertexArrayObjectImpl final :
@@ -278,17 +361,23 @@ private:
 
 		void do_uninitialize() override;
 
+		void do_set_vertex_data(
+			const int vertex_index,
+			const int vertex_count,
+			const void* const raw_data) override;
+
 		void do_draw(
+			const PrimitiveType primitive_type,
 			const int index_base,
 			const int vertex_base,
-			const int triangle_count) override;
+			const int primitive_count) override;
 
 		void uninitialize_internal();
 	}; // VertexArrayObjectImpl
 
 
 	using VertexArrayObjectUPtr = std::unique_ptr<VertexArrayObjectImpl>;
-	using VertexArrayObjectList = std::list<VertexArrayObjectUPtr>;
+	using VertexArrayObjectUList = std::list<VertexArrayObjectUPtr>;
 
 	using ViewportSize = std::array<int, 2>;
 	using Extensions = std::vector<std::string>;
@@ -354,7 +443,8 @@ private:
 
 	VertexArrayObjectImpl* current_vao_;
 
-	VertexArrayObjectList vertex_array_objects_;
+	UiVaos ui_vaos_;
+	VertexArrayObjectUList vaos_;
 
 
 	static int default_viewport_x;
@@ -797,31 +887,89 @@ private:
 
 	VertexArrayObjectPtr do_add_vertex_array_object() override
 	{
-		vertex_array_objects_.emplace_back(std::make_unique<VertexArrayObjectImpl>(*this));
-		return vertex_array_objects_.back().get();
+		vaos_.emplace_back(std::make_unique<VertexArrayObjectImpl>(*this));
+		return vaos_.back().get();
 	}
 
 	void do_remove_vertex_array_object(
 		VertexArrayObjectPtr vertex_array_object) override
 	{
-		if (vertex_array_objects_.empty())
+		if (vaos_.empty())
 		{
 			assert(!"Empty list.");
 			return;
 		}
 
-		const auto size_before = vertex_array_objects_.size();
+		const auto size_before = vaos_.size();
 
-		vertex_array_objects_.remove_if(
+		vaos_.remove_if(
 			[&](const auto& item_uptr)
 			{
 				return item_uptr.get() == vertex_array_object;
 			}
 		);
 
-		const auto size_after = vertex_array_objects_.size();
+		const auto size_after = vaos_.size();
 
 		assert(size_before > size_after);
+	}
+
+	void do_draw(
+		const PrimitiveType primitive_type,
+		const std::uint32_t d3d_fvf,
+		const int primitive_count,
+		const void* const raw_data) override
+	{
+		if (!is_initialized_ || !is_context_current_ || !raw_data)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+
+		auto ui_vao_end_it = ui_vaos_.end();
+
+		auto ui_vao_it = std::find_if(
+			ui_vaos_.begin(),
+			ui_vao_end_it,
+			[&](const auto& item)
+			{
+				return item.d3d_fvf_ == d3d_fvf;
+			}
+		);
+
+		if (ui_vao_it == ui_vao_end_it)
+		{
+			return;
+		}
+
+		auto& ui_vao = *ui_vao_it;
+
+		auto vao = ui_vao.vao_;
+
+		if (!vao)
+		{
+			return;
+		}
+
+		const auto vertex_count = calculate_vertex_count(primitive_type, primitive_count);
+
+		if (vertex_count <= 0)
+		{
+			return;
+		}
+
+		const auto end_vertex_offset = ui_vao.vertex_offset_ + vertex_count;
+
+		if (end_vertex_offset >= max_ui_vao_vertices)
+		{
+			ui_vao.vertex_offset_ = 0;
+		}
+
+		vao->set_vertex_data(ui_vao.vertex_offset_, vertex_count, raw_data);
+		vao->draw(primitive_type, ui_vao.vertex_offset_, primitive_count);
+
+		ui_vao.vertex_offset_ += vertex_count;
 	}
 
 	//
@@ -921,6 +1069,8 @@ private:
 		is_initialized_ = true;
 		is_context_current_ = true;
 
+		add_ui_vaos();
+	
 		return true;
 	}
 
@@ -1005,7 +1155,8 @@ private:
 
 		current_vao_ = nullptr;
 
-		vertex_array_objects_.clear();
+		ui_vaos_.fill({});
+		vaos_.clear();
 	}
 
 	void set_current_context_internal(
@@ -1215,6 +1366,35 @@ private:
 	{
 		has_diffuse_ = default_has_diffuse;
 		set_has_diffuse_internal();
+	}
+
+	void add_ui_vaos()
+	{
+		auto param = VertexArrayObject::InitializeParam{};
+		param.vertex_count_ = max_ui_vao_vertices;
+		param.vertex_usage_flags_ = VertexArrayObject::UsageFlags::is_dynamic;
+
+		for (auto i = 0; i < max_ui_vaos; ++i)
+		{
+			auto vao = add_vertex_array_object();
+
+			if (vao)
+			{
+				ui_vaos_[i].vao_ = vao;
+
+				param.vertex_format_ = ui_vao_d3d_fvfs[i];
+
+				if (vao->initialize(param))
+				{
+					ui_vaos_[i].d3d_fvf_ = ui_vao_d3d_fvfs[i];
+				}
+				else
+				{
+					remove_vertex_array_object(vao);
+					ui_vaos_[i].vao_ = nullptr;
+				}
+			}
+		}
 	}
 
 	void get_extensions()
@@ -1960,12 +2140,40 @@ void OglRendererImpl::VertexArrayObjectImpl::do_uninitialize()
 	uninitialize_internal();
 }
 
+void OglRendererImpl::VertexArrayObjectImpl::do_set_vertex_data(
+	const int vertex_index,
+	const int vertex_count,
+	const void* const raw_data)
+{
+	if (!is_initialized_ || vertex_index < 0 || vertex_count <= 0 || !raw_data)
+	{
+		return;
+	}
+
+	if ((vertex_index + vertex_count) > vertex_count_)
+	{
+		assert(!"Vertex window out of range.");
+		return;
+	}
+
+	const auto data_offset = vertex_index * vertex_format_.vertex_size_;
+	const auto data_size = vertex_count * vertex_format_.vertex_size_;
+
+	::glBindBuffer(GL_ARRAY_BUFFER, ogl_vertex_buffer_);
+	assert(ogl_is_succeed());
+	::glBufferSubData(GL_ARRAY_BUFFER, data_offset, data_size, raw_data);
+	assert(ogl_is_succeed());
+	::glBindBuffer(GL_ARRAY_BUFFER, 0);
+	assert(ogl_is_succeed());
+}
+
 void OglRendererImpl::VertexArrayObjectImpl::do_draw(
+	const PrimitiveType primitive_type,
 	const int index_base,
 	const int vertex_base,
-	const int triangle_count)
+	const int primitive_count)
 {
-	if (!is_initialized_ || index_base < 0 || vertex_base < 0 || triangle_count <= 0)
+	if (!is_initialized_ || index_base < 0 || vertex_base < 0 || primitive_count <= 0)
 	{
 		return;
 	}
@@ -1982,11 +2190,19 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 		assert(ogl_is_succeed());
 	}
 
+	const auto vertex_count = calculate_vertex_count(primitive_type, primitive_count);
+	const auto ogl_primitive_type = get_ogl_primitive_type(primitive_type);
+
+	if (vertex_count <= 0 || ogl_primitive_type == GL_NONE)
+	{
+		return;
+	}
+
 	if (index_count_ > 0)
 	{
 		::glDrawElementsBaseVertex(
-			GL_TRIANGLES,
-			triangle_count * 3,
+			ogl_primitive_type,
+			vertex_count,
 			GL_UNSIGNED_SHORT,
 			reinterpret_cast<const char*>(static_cast<std::intptr_t>(index_base)),
 			vertex_base);
@@ -1995,7 +2211,7 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 	}
 	else
 	{
-		::glDrawArrays(GL_TRIANGLES, vertex_base * 3, triangle_count * 3);
+		::glDrawArrays(ogl_primitive_type, vertex_base, vertex_count);
 		assert(ogl_is_succeed());
 	}
 }
@@ -2062,25 +2278,43 @@ void OglRendererImpl::VertexArrayObject::uninitialize()
 	return do_uninitialize();
 }
 
-void OglRendererImpl::VertexArrayObject::draw(
-	const int triangle_count)
+void OglRendererImpl::VertexArrayObject::set_vertex_data(
+	const int vertex_count,
+	const void* const raw_data)
 {
-	do_draw(0, 0, triangle_count);
+	do_set_vertex_data(0, vertex_count, raw_data);
+}
+
+void OglRendererImpl::VertexArrayObject::set_vertex_data(
+	const int vertex_index,
+	const int vertex_count,
+	const void* const raw_data)
+{
+	do_set_vertex_data(vertex_index, vertex_count, raw_data);
 }
 
 void OglRendererImpl::VertexArrayObject::draw(
+	const PrimitiveType primitive_type,
+	const int primitive_count)
+{
+	do_draw(primitive_type, 0, 0, primitive_count);
+}
+
+void OglRendererImpl::VertexArrayObject::draw(
+	const PrimitiveType primitive_type,
 	const int vertex_base,
-	const int triangle_count)
+	const int primitive_count)
 {
-	do_draw(0, vertex_base, triangle_count);
+	do_draw(primitive_type, 0, vertex_base, primitive_count);
 }
 
 void OglRendererImpl::VertexArrayObject::draw(
+	const PrimitiveType primitive_type,
 	const int index_base,
 	const int vertex_base,
-	const int triangle_count)
+	const int primitive_count)
 {
-	do_draw(index_base, vertex_base, triangle_count);
+	do_draw(primitive_type, index_base, vertex_base, primitive_count);
 }
 
 //
@@ -2330,7 +2564,7 @@ bool OglRenderer::VertexArrayObject::InitializeParam::is_valid() const
 
 	const auto ogl_vertex_usage = usage_flags_to_ogl_usage(vertex_usage_flags_);
 
-	if (!ogl_vertex_usage || vertex_count_ <= 0 || !raw_vertex_data_)
+	if (!ogl_vertex_usage || vertex_count_ <= 0)
 	{
 		return false;
 	}
@@ -2531,6 +2765,15 @@ void OglRenderer::remove_vertex_array_object(
 	VertexArrayObjectPtr vertex_array_object)
 {
 	do_remove_vertex_array_object(vertex_array_object);
+}
+
+void OglRenderer::draw(
+	const PrimitiveType primitive_type,
+	const std::uint32_t d3d_fvf,
+	const int primitive_count,
+	const void* const raw_data)
+{
+	do_draw(primitive_type, d3d_fvf, primitive_count, raw_data);
 }
 
 void OglRenderer::ogl_clear_error()

@@ -55,6 +55,14 @@ public:
 		not_equal,
 	}; // DepthFunc
 
+	enum class PrimitiveType
+	{
+		none,
+		triangle_strip,
+		triangle_fan,
+		triangle_list,
+	}; // PrimitiveType
+
 
 	struct Viewport
 	{
@@ -167,17 +175,29 @@ public:
 		void uninitialize();
 
 
-		void draw(
-			const int triangle_count);
+		void set_vertex_data(
+			const int vertex_count,
+			const void* const raw_data);
+
+		void set_vertex_data(
+			const int vertex_index,
+			const int vertex_count,
+			const void* const raw_data);
 
 		void draw(
+			const PrimitiveType primitive_type,
+			const int primitive_count);
+
+		void draw(
+			const PrimitiveType primitive_type,
 			const int vertex_base,
-			const int triangle_count);
+			const int primitive_count);
 
 		void draw(
+			const PrimitiveType primitive_type,
 			const int index_base,
 			const int vertex_base,
-			const int triangle_count);
+			const int primitive_count);
 
 
 	protected:
@@ -192,10 +212,16 @@ public:
 
 		virtual void do_uninitialize() = 0;
 
+		virtual void do_set_vertex_data(
+			const int vertex_index,
+			const int vertex_count,
+			const void* const raw_data) = 0;
+
 		virtual void do_draw(
+			const PrimitiveType primitive_type,
 			const int index_base,
 			const int vertex_base,
-			const int triangle_count) = 0;
+			const int primitive_count) = 0;
 	}; // VertexArrayObject
 
 	using VertexArrayObjectPtr = VertexArrayObject*;
@@ -290,6 +316,13 @@ public:
 
 	void remove_vertex_array_object(
 		VertexArrayObjectPtr vertex_array_object);
+
+
+	void draw(
+		const PrimitiveType primitive_type,
+		const std::uint32_t d3d_fvf,
+		const int primitive_count,
+		const void* const raw_data);
 
 
 	static void ogl_clear_error();
@@ -408,6 +441,15 @@ private:
 
 	virtual void do_remove_vertex_array_object(
 		VertexArrayObjectPtr vertex_array_object) = 0;
+
+
+	// Primitive drawing.
+	//
+	virtual void do_draw(
+		const PrimitiveType primitive_type,
+		const std::uint32_t d3d_fvf,
+		const int primitive_count,
+		const void* const raw_data) = 0;
 }; // OglRenderer
 
 

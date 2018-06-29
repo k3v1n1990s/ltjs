@@ -665,7 +665,7 @@ void ogl_test_draw()
 		return;
 	}
 
-	ogl_test_vao_->draw(1);
+	ogl_test_vao_->draw(ltjs::OglRenderer::PrimitiveType::triangle_list, 1);
 }
 #endif // LTJS_WIP_OGL
 
