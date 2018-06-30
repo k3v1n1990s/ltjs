@@ -238,6 +238,7 @@ public:
 		viewport_{},
 		max_viewport_size_{},
 		cull_mode_{},
+		fill_mode_{},
 		is_clipping_{},
 		is_depth_enabled_{},
 		is_depth_writable_{},
@@ -415,6 +416,7 @@ private:
 	ViewportSize max_viewport_size_;
 
 	CullMode cull_mode_;
+	FillMode fill_mode_;
 
 	bool is_clipping_;
 
@@ -458,6 +460,7 @@ private:
 	static std::uint8_t default_clear_color_a;
 
 	static const CullMode default_cull_mode;
+	static const FillMode default_fill_mode;
 
 	static const bool default_is_clipping;
 
@@ -659,6 +662,31 @@ private:
 		cull_mode_ = cull_mode;
 
 		set_cull_mode_internal(is_old_enabled != is_new_enabled);
+	}
+
+	FillMode do_get_fill_mode() const override
+	{
+		assert(is_initialized_);
+		return fill_mode_;
+	}
+
+	void do_set_fill_mode(
+		const FillMode fill_mode) override
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (fill_mode == fill_mode_)
+		{
+			return;
+		}
+
+		fill_mode_ = fill_mode;
+
+		set_fill_mode_internal();
 	}
 
 	bool do_get_is_clipping() const override
@@ -1051,6 +1079,7 @@ private:
 		set_default_clear_color();
 		set_default_viewport();
 		set_default_cull_mode();
+		set_default_fill_mode();
 		set_default_is_clipping();
 		set_default_is_depth_enabled();
 		set_default_is_depth_writable();
@@ -1101,6 +1130,7 @@ private:
 		max_viewport_size_ = {};
 
 		cull_mode_ = CullMode::none;
+		fill_mode_ = FillMode::none;
 
 		is_clipping_ = false;
 
@@ -1201,7 +1231,7 @@ private:
 			break;
 
 		default:
-			assert(!"Invalid culling mode.");
+			assert(!"Unsupported cull mode.");
 			return;
 		}
 
@@ -1218,6 +1248,35 @@ private:
 				assert(ogl_is_succeed());
 			}
 		}
+	}
+
+	void set_default_fill_mode()
+	{
+		fill_mode_ = default_fill_mode;
+		set_fill_mode_internal();
+	}
+
+	void set_fill_mode_internal()
+	{
+		GLenum ogl_mode;
+
+		switch (fill_mode_)
+		{
+		case FillMode::wireframe:
+			ogl_mode = GL_LINE;
+			break;
+
+		case FillMode::solid:
+			ogl_mode = GL_FILL;
+			break;
+
+		default:
+			assert(!"Unsupported fill mode.");
+			return;
+		}
+
+		::glPolygonMode(GL_FRONT_AND_BACK, ogl_mode);
+		assert(ogl_is_succeed());
 	}
 
 	void set_default_is_clipping()
@@ -1829,6 +1888,7 @@ std::uint8_t OglRendererImpl::default_clear_color_b = 0;
 std::uint8_t OglRendererImpl::default_clear_color_a = 0;
 
 const OglRenderer::CullMode OglRendererImpl::default_cull_mode = OglRenderer::CullMode::counterclockwise;
+const OglRenderer::FillMode OglRendererImpl::default_fill_mode = OglRenderer::FillMode::solid;
 
 const bool OglRendererImpl::default_is_clipping = true;
 
@@ -2675,6 +2735,17 @@ void OglRenderer::set_cull_mode(
 	const CullMode cull_mode)
 {
 	do_set_cull_mode(cull_mode);
+}
+
+OglRenderer::FillMode OglRenderer::get_fill_mode() const
+{
+	return do_get_fill_mode();
+}
+
+void OglRenderer::set_fill_mode(
+	const FillMode fill_mode)
+{
+	do_set_fill_mode(fill_mode);
 }
 
 bool OglRenderer::get_is_clipping() const

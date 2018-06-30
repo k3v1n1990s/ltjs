@@ -580,6 +580,7 @@ void ogl_set_test_data()
 	ogl_renderer.set_projection_matrix(reinterpret_cast<const float*>(&matProj));
 
 	ogl_renderer.set_cull_mode(ltjs::OglRenderer::CullMode::disabled);
+	ogl_renderer.set_fill_mode(ltjs::OglRenderer::FillMode::solid);
 }
 
 bool ogl_initialize_internal(

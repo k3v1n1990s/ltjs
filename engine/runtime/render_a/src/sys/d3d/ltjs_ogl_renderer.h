@@ -43,6 +43,13 @@ public:
 		counterclockwise,
 	}; // CullMode
 
+	enum class FillMode
+	{
+		none,
+		wireframe,
+		solid,
+	}; // FillMode
+
 	enum class DepthFunc
 	{
 		none,
@@ -268,6 +275,12 @@ public:
 		const CullMode cull_mode);
 
 
+	FillMode get_fill_mode() const;
+
+	void set_fill_mode(
+		const FillMode fill_mode);
+
+
 	bool get_is_clipping() const;
 
 	void set_is_clipping(
@@ -385,6 +398,14 @@ private:
 
 	virtual void do_set_cull_mode(
 		const CullMode cull_mode) = 0;
+
+	// Fill mode.
+	//
+
+	virtual FillMode do_get_fill_mode() const = 0;
+
+	virtual void do_set_fill_mode(
+		const FillMode fill_mode) = 0;
 
 	// Clipping.
 	//
