@@ -297,7 +297,6 @@ public:
 
 private:
 	static constexpr auto max_world_matrices = 4;
-	static constexpr auto max_texture_stages = 4;
 
 	static constexpr auto max_ui_vao_vertices = 128;
 	static constexpr auto max_ui_vaos = 4;
@@ -321,16 +320,10 @@ private:
 	using ModelViewMatrixDirtyFlags = std::bitset<max_world_matrices>;
 
 	using ViewMatrix = Matrix4F;
-
 	using ModelViewMatrix = Matrix4F;
-
 	using ProjectionMatrix = Matrix4F;
 
-	using TextureMatrix = Matrix4F;
-	using TextureMatrices = std::array<TextureMatrix, max_texture_stages>;
-
 	using UModelViewMatrices = std::array<GLint, max_world_matrices>;
-	using UTextureMatrices = std::array<GLint, max_texture_stages>;
 
 	struct UiVao
 	{
@@ -840,7 +833,7 @@ private:
 	{
 		assert(is_initialized_);
 
-		if (index < 0 || index >= Fvf::max_tex_coord_sets)
+		if (index < 0 || index >= max_world_matrices)
 		{
 			assert(!"Invalid state.");
 			return nullptr;
@@ -860,7 +853,7 @@ private:
 		}
 
 		if (index < 0 ||
-			index >= Fvf::max_tex_coord_sets ||
+			index >= max_world_matrices ||
 			!world_matrix_ptr)
 		{
 			assert(!"Invalid state.");

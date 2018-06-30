@@ -17,6 +17,9 @@ namespace ul = bibendovsky::spul;
 class OglRenderer
 {
 public:
+	static constexpr auto max_samplers = 4;
+
+
 	struct ClearFlags :
 		public ul::EnumFlags
 	{
@@ -88,9 +91,7 @@ public:
 	// Flexible vertex format.
 	struct Fvf
 	{
-		static constexpr auto max_tex_coord_sets = 4;
-
-		using TexCoordItemCounts = std::array<int, max_tex_coord_sets>;
+		using TexCoordItemCounts = std::array<int, max_samplers>;
 
 
 		// Has position? (D3DFVF_XYZ or D3DFVF_XYZRHW)
