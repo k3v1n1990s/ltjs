@@ -516,9 +516,9 @@ void ogl_set_test_data()
 	auto param = ltjs::OglRenderer::VertexArrayObject::InitializeParam{};
 
 #ifndef LTJS_TEST_OGL_RHW
-	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZ | D3DFVF_DIFFUSE);
+	param.vertex_format_ = ltjs::OglRenderer::Fvf::from_d3d(D3DFVF_XYZ | D3DFVF_DIFFUSE);
 #else
-	param.vertex_format_ = ltjs::OglRenderer::VertexArrayObject::Fvf::from_d3d(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
+	param.vertex_format_ = ltjs::OglRenderer::Fvf::from_d3d(D3DFVF_XYZRHW | D3DFVF_DIFFUSE);
 #endif
 
 	param.vertex_count_ = 3;

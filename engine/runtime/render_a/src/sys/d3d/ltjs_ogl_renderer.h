@@ -85,6 +85,59 @@ public:
 		Viewport();
 	}; // Viewport
 
+	// Flexible vertex format.
+	struct Fvf
+	{
+		static constexpr auto max_tex_coord_sets = 4;
+
+		using TexCoordItemCounts = std::array<int, max_tex_coord_sets>;
+
+
+		// Has position? (D3DFVF_XYZ or D3DFVF_XYZRHW)
+		bool has_position_;
+
+		// Is position already transformed? (D3DFVF_XYZRHW)
+		bool is_position_transformed_;
+
+
+		// Geometry blending weight count.
+		int blending_weight_count_;
+
+		// Has normals? (D3DFVF_NORMAL)
+		bool has_normal_;
+
+		// Has diffuse color? (D3DFVF_DIFFUSE)
+		bool has_diffuse_;
+
+		// Texture coordinate set count.
+		int tex_coord_set_count_;
+
+		// Component count per texture coordinate set.
+		TexCoordItemCounts tex_coord_item_counts_;
+
+		// Total vertex size.
+		int vertex_size_;
+
+
+		Fvf();
+
+		Fvf(
+			const std::uint32_t d3d_fvf);
+
+		// Has geometry blending weights? (D3DFVF_XYZB#)
+		bool has_blending_weights() const;
+
+		// Has texture coordinate set? (D3DFVF_TEX#)
+		bool has_tex_coord_sets() const;
+
+
+		bool is_valid() const;
+
+
+		static Fvf from_d3d(
+			const std::uint32_t d3d_fvf);
+	}; // Fvf
+
 	class VertexArrayObject
 	{
 	public:
@@ -104,59 +157,6 @@ public:
 				is_readable = 1 << 1,
 			}; // enum
 		}; // VertexFormatFlags
-
-		// Flexible vertex format.
-		struct Fvf
-		{
-			static constexpr auto max_tex_coord_sets = 4;
-
-			using TexCoordItemCounts = std::array<int, max_tex_coord_sets>;
-
-
-			// Has position? (D3DFVF_XYZ or D3DFVF_XYZRHW)
-			bool has_position_;
-
-			// Is position already transformed? (D3DFVF_XYZRHW)
-			bool is_position_transformed_;
-
-
-			// Geometry blending weight count.
-			int blending_weight_count_;
-
-			// Has normals? (D3DFVF_NORMAL)
-			bool has_normal_;
-
-			// Has diffuse color? (D3DFVF_DIFFUSE)
-			bool has_diffuse_;
-
-			// Texture coordinate set count.
-			int tex_coord_set_count_;
-
-			// Component count per texture coordinate set.
-			TexCoordItemCounts tex_coord_item_counts_;
-
-			// Total vertex size.
-			int vertex_size_;
-
-
-			Fvf();
-
-			Fvf(
-				const std::uint32_t d3d_fvf);
-
-			// Has geometry blending weights? (D3DFVF_XYZB#)
-			bool has_blending_weights() const;
-
-			// Has texture coordinate set? (D3DFVF_TEX#)
-			bool has_tex_coord_sets() const;
-
-
-			bool is_valid() const;
-
-
-			static Fvf from_d3d(
-				const std::uint32_t d3d_fvf);
-		}; // Fvf
 
 		struct InitializeParam
 		{

@@ -840,7 +840,7 @@ private:
 	{
 		assert(is_initialized_);
 
-		if (index < 0 || index >= VertexArrayObject::Fvf::max_tex_coord_sets)
+		if (index < 0 || index >= Fvf::max_tex_coord_sets)
 		{
 			assert(!"Invalid state.");
 			return nullptr;
@@ -860,7 +860,7 @@ private:
 		}
 
 		if (index < 0 ||
-			index >= VertexArrayObject::Fvf::max_tex_coord_sets ||
+			index >= Fvf::max_tex_coord_sets ||
 			!world_matrix_ptr)
 		{
 			assert(!"Invalid state.");
@@ -2454,7 +2454,7 @@ OglRenderer::Viewport::Viewport()
 // OglRenderer::VertexArrayObject::Fvf
 //
 
-OglRenderer::VertexArrayObject::Fvf::Fvf()
+OglRenderer::Fvf::Fvf()
 	:
 	has_position_{},
 	is_position_transformed_{},
@@ -2467,28 +2467,28 @@ OglRenderer::VertexArrayObject::Fvf::Fvf()
 {
 }
 
-OglRenderer::VertexArrayObject::Fvf::Fvf(
+OglRenderer::Fvf::Fvf(
 	const std::uint32_t d3d_fvf)
 {
 	*this = from_d3d(d3d_fvf);
 }
 
-bool OglRenderer::VertexArrayObject::Fvf::has_blending_weights() const
+bool OglRenderer::Fvf::has_blending_weights() const
 {
 	return blending_weight_count_ > 0;
 }
 
-bool OglRenderer::VertexArrayObject::Fvf::has_tex_coord_sets() const
+bool OglRenderer::Fvf::has_tex_coord_sets() const
 {
 	return tex_coord_set_count_ > 0;
 }
 
-bool OglRenderer::VertexArrayObject::Fvf::is_valid() const
+bool OglRenderer::Fvf::is_valid() const
 {
 	return has_position_ && vertex_size_ > 0;
 }
 
-OglRenderer::VertexArrayObject::Fvf OglRenderer::VertexArrayObject::Fvf::from_d3d(
+OglRenderer::Fvf OglRenderer::Fvf::from_d3d(
 	const std::uint32_t d3d_fvf)
 {
 	auto is_zero = false;
