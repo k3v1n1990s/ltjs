@@ -235,6 +235,121 @@ public:
 	using VertexArrayObjectPtr = VertexArrayObject*;
 
 
+	class SamplerState
+	{
+	public:
+		enum class AddressMode
+		{
+			none,
+			clamp,
+			wrap,
+		}; // AddressMode
+
+		enum class Filter
+		{
+			none,
+			disabled,
+			point,
+			linear,
+			anisotropic,
+		}; // Filter
+
+
+		AddressMode get_address_mode_u() const;
+
+		void set_address_mode_u(
+			const AddressMode address_mode_u);
+
+
+		AddressMode get_address_mode_v() const;
+
+		void set_address_mode_v(
+			const AddressMode address_mode_v);
+
+
+		Filter get_mag_filter() const;
+
+		void set_mag_filter(
+			const Filter mag_filter);
+
+
+		Filter get_min_filter() const;
+
+		void set_min_filter(
+			const Filter min_filter);
+
+
+		Filter get_mip_filter() const;
+
+		void set_mip_filter(
+			const Filter mip_filter);
+
+
+		float get_mipmap_lod_bias() const;
+
+		void set_mipmap_lod_bias(
+			const float mipmap_lod_bias);
+
+
+		int get_max_anisotropy() const;
+
+		void set_max_anisotropy(
+			const int max_anisotropy);
+
+
+	protected:
+		SamplerState();
+
+		virtual ~SamplerState();
+
+
+	private:
+		virtual AddressMode do_get_address_mode_u() const = 0;
+
+		virtual void do_set_address_mode_u(
+			const AddressMode address_mode_u) = 0;
+
+
+		virtual AddressMode do_get_address_mode_v() const = 0;
+
+		virtual void do_set_address_mode_v(
+			const AddressMode address_mode_v) = 0;
+
+
+		virtual Filter do_get_mag_filter() const = 0;
+
+		virtual void do_set_mag_filter(
+			const Filter mag_filter) = 0;
+
+
+		virtual Filter do_get_min_filter() const = 0;
+
+		virtual void do_set_min_filter(
+			const Filter min_filter) = 0;
+
+
+		virtual Filter do_get_mip_filter() const = 0;
+
+		virtual void do_set_mip_filter(
+			const Filter mip_filter) = 0;
+
+
+		virtual float do_get_mipmap_lod_bias() const = 0;
+
+		virtual void do_set_mipmap_lod_bias(
+			const float mipmap_lod_bias) = 0;
+
+
+		virtual int do_get_max_anisotropy() const = 0;
+
+		virtual void do_set_max_anisotropy(
+			const int max_anisotropy) = 0;
+	}; // SamplerState
+
+	using SamplerStatePtr = SamplerState*;
+
+
+
 	bool is_initialized() const;
 
 	bool initialize(
@@ -324,6 +439,10 @@ public:
 
 	void set_projection_matrix(
 		const float* const projection_matrix_ptr);
+
+
+	SamplerStatePtr get_sampler_state(
+		const int index);
 
 
 	VertexArrayObjectPtr add_vertex_array_object();
@@ -456,6 +575,12 @@ private:
 	virtual void do_set_projection_matrix(
 		const float* const projection_matrix_ptr) = 0;
 
+
+	// Sampler state.
+	//
+
+	virtual SamplerStatePtr do_get_sampler_state(
+		const int index) = 0;
 
 	// Vertex array objects.
 	//

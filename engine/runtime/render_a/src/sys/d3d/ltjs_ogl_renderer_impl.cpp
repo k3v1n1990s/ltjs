@@ -304,7 +304,9 @@ public:
 		u_projection_{},
 		current_vao_{},
 		ui_vaos_{},
-		vaos_{}
+		vaos_{},
+		sampler_states_{},
+		max_texture_lod_bias_{}
 	{
 	}
 
@@ -415,9 +417,99 @@ private:
 		void uninitialize_internal();
 	}; // VertexArrayObjectImpl
 
-
 	using VertexArrayObjectUPtr = std::unique_ptr<VertexArrayObjectImpl>;
 	using VertexArrayObjectUList = std::list<VertexArrayObjectUPtr>;
+
+
+	class SamplerStateImpl :
+		public SamplerState
+	{
+	public:
+		SamplerStateImpl();
+
+		~SamplerStateImpl() override;
+
+
+		void set_defaults();
+
+
+	private:
+		static constexpr auto default_address_mode_u = AddressMode::wrap;
+		static constexpr auto default_address_mode_v = AddressMode::wrap;
+
+		static constexpr auto default_mag_filter = Filter::point;
+		static constexpr auto default_min_filter = Filter::point;
+		static constexpr auto default_mip_filter = Filter::disabled;
+
+		static constexpr auto default_mipmap_lod_bias = 0.0F;
+
+		static constexpr auto default_max_anisotropy = 1.0F;
+
+
+		AddressMode address_mode_u_;
+		AddressMode address_mode_v_;
+
+		Filter mag_filter_;
+		Filter min_filter_;
+		Filter mip_filter_;
+
+		float mipmap_lod_bias_;
+
+		int max_anisotropy_;
+
+
+		// ========================================================================
+		// API
+		//
+
+		AddressMode do_get_address_mode_u() const override;
+
+		void do_set_address_mode_u(
+			const AddressMode address_mode_u) override;
+
+
+		AddressMode do_get_address_mode_v() const override;
+
+		void do_set_address_mode_v(
+			const AddressMode address_mode_v) override;
+
+
+		Filter do_get_mag_filter() const override;
+
+		void do_set_mag_filter(
+			const Filter mag_filter) override;
+
+
+		Filter do_get_min_filter() const override;
+
+		void do_set_min_filter(
+			const Filter min_filter) override;
+
+
+		Filter do_get_mip_filter() const override;
+
+		void do_set_mip_filter(
+			const Filter mip_filter) override;
+
+
+		float do_get_mipmap_lod_bias() const override;
+
+		void do_set_mipmap_lod_bias(
+			const float mipmap_lod_bias) override;
+
+
+		int do_get_max_anisotropy() const override;
+
+		void do_set_max_anisotropy(
+			const int max_anisotropy) override;
+
+		//
+		// API
+		// ========================================================================
+	}; // SamplerStateImpl
+
+	using SamplerStates = std::array<SamplerStateImpl, max_samplers>;
+
 
 	using ViewportSize = std::array<int, 2>;
 	using Extensions = std::vector<std::string>;
@@ -491,6 +583,9 @@ private:
 
 	UiVaos ui_vaos_;
 	VertexArrayObjectUList vaos_;
+
+	SamplerStates sampler_states_;
+	float max_texture_lod_bias_;
 
 
 	static int default_viewport_x;
@@ -957,6 +1052,12 @@ private:
 		is_u_projection_dirty_ = true;
 	}
 
+	SamplerStatePtr do_get_sampler_state(
+		const int index) override
+	{
+		return &sampler_states_[index];
+	}
+
 	VertexArrayObjectPtr do_add_vertex_array_object() override
 	{
 		vaos_.emplace_back(std::make_unique<VertexArrayObjectImpl>(*this));
@@ -1073,30 +1174,9 @@ private:
 			return false;
 		}
 
-		// Detect extensions.
-		//
 		detect_extensions();
+		get_impl_defined_values();
 
-		// Get implementation defined values.
-		//
-		::glGetIntegerv(GL_MAX_VIEWPORT_DIMS, max_viewport_size_.data());
-
-		if (!ogl_is_succeed())
-		{
-			assert(!"Failed to get max viewport dimensions.");
-			return false;
-		}
-
-		if (max_viewport_size_[0] <= 0 ||
-			max_viewport_size_[1] <= 0 ||
-			screen_width_ > max_viewport_size_[0] ||
-			screen_height_ > max_viewport_size_[1])
-		{
-			return false;
-		}
-
-		// Load default program.
-		//
 		if (!load_program())
 		{
 			return false;
@@ -1131,6 +1211,7 @@ private:
 		set_default_world_matrices();
 		set_default_view_matrix();
 		set_default_projection_matrix();
+		set_default_sampler_states();
 		set_uniform_defaults();
 
 		if (!ogl_is_succeed())
@@ -1236,6 +1317,9 @@ private:
 
 		ui_vaos_.fill({});
 		vaos_.clear();
+
+		sampler_states_.fill({});
+		max_texture_lod_bias_ = 0.0F;
 	}
 
 	void set_current_context_internal(
@@ -1618,6 +1702,56 @@ private:
 		return has_gl_arb_texture_compression_ && has_gl_ext_texture_compression_s3tc_;
 	}
 
+	bool get_impl_defined_viewport_values()
+	{
+		::glGetIntegerv(GL_MAX_VIEWPORT_DIMS, max_viewport_size_.data());
+
+		if (!ogl_is_succeed())
+		{
+			assert(!"Failed to get max viewport dimensions.");
+			return false;
+		}
+
+		if (max_viewport_size_[0] <= 0 ||
+			max_viewport_size_[1] <= 0 ||
+			screen_width_ > max_viewport_size_[0] ||
+			screen_height_ > max_viewport_size_[1])
+		{
+			assert(!"Viewport size out of range.");
+			return false;
+		}
+
+		return true;
+	}
+
+	bool get_impl_defined_texture_lod_bias_values()
+	{
+		::glGetFloatv(GL_MAX_TEXTURE_LOD_BIAS, &max_texture_lod_bias_);
+
+		if (!ogl_is_succeed())
+		{
+			assert(!"Failed to get max texture LOD bias.");
+			return false;
+		}
+
+		return true;
+	}
+
+	bool get_impl_defined_values()
+	{
+		if (!get_impl_defined_viewport_values())
+		{
+			return false;
+		}
+
+		if (!get_impl_defined_texture_lod_bias_values())
+		{
+			return false;
+		}
+
+		return true;
+	}
+
 	void get_shader_build_status(
 		const GLenum object_status,
 		void (APIENTRYP ogl_get_parameter)(GLuint object, GLenum pname, GLint* params),
@@ -1944,7 +2078,6 @@ private:
 		apply_u_projection_changes();
 	}
 
-
 	static Matrix4F multiply_matrices(
 		const Matrix4F& lhs,
 		const Matrix4F& rhs)
@@ -1967,6 +2100,14 @@ private:
 			(rhs[2] * lhs[12]) + (rhs[6] * lhs[13]) + (rhs[10] * lhs[14]) + (rhs[14] * lhs[15]),
 			(rhs[3] * lhs[12]) + (rhs[7] * lhs[13]) + (rhs[11] * lhs[14]) + (rhs[15] * lhs[15]),
 		};
+	}
+
+	void set_default_sampler_states()
+	{
+		for (auto& sampler_state : sampler_states_)
+		{
+			sampler_state.set_defaults();
+		}
 	}
 }; // OglRendererImpl
 
@@ -2472,7 +2613,279 @@ void OglRendererImpl::VertexArrayObject::draw(
 }
 
 //
-// OglRendererImpl::VertexArrayObjectImpl
+// OglRendererImpl::VertexArrayObject
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRendererImpl::SamplerStateImpl
+//
+
+OglRendererImpl::SamplerStateImpl::SamplerStateImpl()
+	:
+	address_mode_u_{},
+	address_mode_v_{},
+	mag_filter_{},
+	min_filter_{},
+	mip_filter_{},
+	mipmap_lod_bias_{},
+	max_anisotropy_{}
+{
+}
+
+OglRendererImpl::SamplerStateImpl::~SamplerStateImpl()
+{
+}
+
+OglRendererImpl::SamplerStateImpl::AddressMode OglRendererImpl::SamplerStateImpl::do_get_address_mode_u() const
+{
+	return address_mode_u_;
+}
+
+void OglRendererImpl::SamplerStateImpl::do_set_address_mode_u(
+	const AddressMode address_mode_u)
+{
+	switch (address_mode_u)
+	{
+	case AddressMode::clamp:
+	case AddressMode::wrap:
+		break;
+
+	default:
+		assert(!"Unsupported address mode.");
+		return;
+	}
+
+	address_mode_u_ = address_mode_u;
+}
+
+OglRendererImpl::SamplerStateImpl::AddressMode OglRendererImpl::SamplerStateImpl::do_get_address_mode_v() const
+{
+	return address_mode_v_;
+}
+
+void OglRendererImpl::SamplerStateImpl::do_set_address_mode_v(
+	const AddressMode address_mode_v)
+{
+	switch (address_mode_v)
+	{
+	case AddressMode::clamp:
+	case AddressMode::wrap:
+		break;
+
+	default:
+		assert(!"Unsupported address mode.");
+		return;
+	}
+
+	address_mode_v_ = address_mode_v;
+}
+
+OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_mag_filter() const
+{
+	return mag_filter_;
+}
+
+void OglRendererImpl::SamplerStateImpl::do_set_mag_filter(
+	const Filter mag_filter)
+{
+	switch (mag_filter)
+	{
+	case Filter::disabled:
+	case Filter::point:
+	case Filter::linear:
+	case Filter::anisotropic:
+		break;
+
+	default:
+		assert(!"Unsupported magnification filter.");
+		return;
+	}
+
+	mag_filter_ = mag_filter;
+}
+
+OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_min_filter() const
+{
+	return min_filter_;
+}
+
+void OglRendererImpl::SamplerStateImpl::do_set_min_filter(
+	const Filter min_filter)
+{
+	switch (min_filter)
+	{
+	case Filter::disabled:
+	case Filter::point:
+	case Filter::linear:
+	case Filter::anisotropic:
+		break;
+
+	default:
+		assert(!"Unsupported minification filter.");
+		return;
+	}
+
+	min_filter_ = min_filter;
+}
+
+OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_mip_filter() const
+{
+	return mip_filter_;
+}
+
+void OglRendererImpl::SamplerStateImpl::do_set_mip_filter(
+	const Filter mip_filter)
+{
+	switch (mip_filter)
+	{
+	case Filter::disabled:
+	case Filter::point:
+		break;
+
+	default:
+		assert(!"Unsupported mipmap filter.");
+		return;
+	}
+
+	mip_filter_ = mip_filter;
+}
+
+float OglRendererImpl::SamplerStateImpl::do_get_mipmap_lod_bias() const
+{
+	return mipmap_lod_bias_;
+}
+
+void OglRendererImpl::SamplerStateImpl::do_set_mipmap_lod_bias(
+	const float mipmap_lod_bias)
+{
+	mipmap_lod_bias_ = mipmap_lod_bias;
+}
+
+int OglRendererImpl::SamplerStateImpl::do_get_max_anisotropy() const
+{
+	return max_anisotropy_;
+}
+
+void OglRendererImpl::SamplerStateImpl::do_set_max_anisotropy(
+	const int max_anisotropy)
+{
+	if (max_anisotropy < 0)
+	{
+		assert(!"Negative max anisotropy.");
+		return;
+	}
+
+	max_anisotropy_ = max_anisotropy;
+}
+
+void OglRendererImpl::SamplerStateImpl::set_defaults()
+{
+	address_mode_u_ = default_address_mode_u;
+	address_mode_v_ = default_address_mode_v;
+	mag_filter_ = default_mag_filter;
+	min_filter_ = default_min_filter;
+	mip_filter_ = default_mip_filter;
+	mipmap_lod_bias_ = default_mipmap_lod_bias;
+	max_anisotropy_ = default_max_anisotropy;
+}
+
+//
+// OglRendererImpl::SamplerStateImpl
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRenderer::SamplerState
+//
+
+OglRenderer::SamplerState::SamplerState()
+{
+}
+
+OglRenderer::SamplerState::~SamplerState()
+{
+}
+
+OglRenderer::SamplerState::AddressMode OglRenderer::SamplerState::get_address_mode_u() const
+{
+	return do_get_address_mode_u();
+}
+
+void OglRenderer::SamplerState::set_address_mode_u(
+	const AddressMode address_mode_u)
+{
+	do_set_address_mode_u(address_mode_u);
+}
+
+OglRenderer::SamplerState::AddressMode OglRenderer::SamplerState::get_address_mode_v() const
+{
+	return do_get_address_mode_v();
+}
+
+void OglRenderer::SamplerState::set_address_mode_v(
+	const AddressMode address_mode_v)
+{
+	do_set_address_mode_v(address_mode_v);
+}
+
+OglRenderer::SamplerState::Filter OglRenderer::SamplerState::get_mag_filter() const
+{
+	return do_get_mag_filter();
+}
+
+void OglRenderer::SamplerState::set_mag_filter(
+	const Filter mag_filter)
+{
+	do_set_mag_filter(mag_filter);
+}
+
+OglRenderer::SamplerState::Filter OglRenderer::SamplerState::get_min_filter() const
+{
+	return do_get_min_filter();
+}
+
+void OglRenderer::SamplerState::set_min_filter(
+	const Filter min_filter)
+{
+	do_set_min_filter(min_filter);
+}
+
+OglRenderer::SamplerState::Filter OglRenderer::SamplerState::get_mip_filter() const
+{
+	return do_get_mip_filter();
+}
+
+void OglRenderer::SamplerState::set_mip_filter(
+	const Filter mip_filter)
+{
+	do_set_mip_filter(mip_filter);
+}
+
+float OglRenderer::SamplerState::get_mipmap_lod_bias() const
+{
+	return do_get_mipmap_lod_bias();
+}
+
+void OglRenderer::SamplerState::set_mipmap_lod_bias(
+	const float mipmap_lod_bias)
+{
+	do_set_mipmap_lod_bias(mipmap_lod_bias);
+}
+
+int OglRenderer::SamplerState::get_max_anisotropy() const
+{
+	return do_get_max_anisotropy();
+}
+
+void OglRenderer::SamplerState::set_max_anisotropy(
+	const int max_anisotropy)
+{
+	do_set_max_anisotropy(max_anisotropy);
+}
+
+//
+// OglRenderer::SamplerState
 // ==========================================================================
 
 
@@ -2497,7 +2910,7 @@ OglRenderer::Viewport::Viewport()
 
 
 // ==========================================================================
-// OglRenderer::VertexArrayObject::Fvf
+// OglRenderer::Fvf
 //
 
 OglRenderer::Fvf::Fvf()
@@ -2688,7 +3101,7 @@ OglRenderer::Fvf OglRenderer::Fvf::from_d3d(
 }
 
 //
-// OglRenderer::VertexArrayObject::Fvf
+// OglRenderer::Fvf
 // ==========================================================================
 
 
@@ -2919,6 +3332,12 @@ void OglRenderer::set_projection_matrix(
 	const float* const projection_matrix_ptr)
 {
 	do_set_projection_matrix(projection_matrix_ptr);
+}
+
+OglRenderer::SamplerStatePtr OglRenderer::get_sampler_state(
+	const int index)
+{
+	return do_get_sampler_state(index);
 }
 
 OglRenderer::VertexArrayObjectPtr OglRenderer::add_vertex_array_object()
