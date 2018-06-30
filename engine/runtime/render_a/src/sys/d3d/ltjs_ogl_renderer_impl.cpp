@@ -21,7 +21,7 @@
 
 #ifndef GL_CLIP_VOLUME_CLIPPING_HINT_EXT
 #define GL_CLIP_VOLUME_CLIPPING_HINT_EXT (0x80F0)
-#endif // GL_CLIP_VOLUME_CLIPPING_HINT_EXT
+#endif // !GL_CLIP_VOLUME_CLIPPING_HINT_EXT
 
 //
 // GL_CLIP_VOLUME_CLIPPING_HINT_EXT
@@ -34,19 +34,19 @@
 
 #ifndef GL_CLIP_ORIGIN
 #define GL_CLIP_ORIGIN (0x935C)
-#endif // GL_CLIP_ORIGIN
+#endif // !GL_CLIP_ORIGIN
 
 #ifndef GL_CLIP_DEPTH_MODE
 #define GL_CLIP_DEPTH_MODE (0x935D)
-#endif // GL_CLIP_DEPTH_MODE
+#endif // !GL_CLIP_DEPTH_MODE
 
 #ifndef GL_NEGATIVE_ONE_TO_ONE
 #define GL_NEGATIVE_ONE_TO_ONE (0x935E)
-#endif // GL_NEGATIVE_ONE_TO_ONE
+#endif // !GL_NEGATIVE_ONE_TO_ONE
 
 #ifndef GL_ZERO_TO_ONE
 #define GL_ZERO_TO_ONE (0x935F)
-#endif // GL_ZERO_TO_ONE
+#endif // !GL_ZERO_TO_ONE
 
 using PFNGLCLIPCONTROLPROC = void (APIENTRYP)(GLenum origin, GLenum depth);
 static PFNGLCLIPCONTROLPROC glClipControl = nullptr;
@@ -62,22 +62,39 @@ static PFNGLCLIPCONTROLPROC glClipControl = nullptr;
 
 #ifndef GL_COMPRESSED_RGB_S3TC_DXT1_EXT
 #define GL_COMPRESSED_RGB_S3TC_DXT1_EXT (0x83F0)
-#endif // GL_COMPRESSED_RGB_S3TC_DXT1_EXT
+#endif // !GL_COMPRESSED_RGB_S3TC_DXT1_EXT
 
 #ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
 #define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT (0x83F1)
-#endif // GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+#endif // !GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
 
 #ifndef GL_COMPRESSED_RGBA_S3TC_DXT3_EXT
 #define GL_COMPRESSED_RGBA_S3TC_DXT3_EXT (0x83F2)
-#endif // GL_COMPRESSED_RGBA_S3TC_DXT3_EXT
+#endif // !GL_COMPRESSED_RGBA_S3TC_DXT3_EXT
 
 #ifndef GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
 #define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT (0x83F3)
-#endif // GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+#endif // !GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
 
 //
 // GL_EXT_texture_compression_s3tc
+// --------------------------------------------------------------------------
+
+
+// --------------------------------------------------------------------------
+// GL_EXT_texture_filter_anisotropic
+//
+
+#ifndef GL_TEXTURE_MAX_ANISOTROPY_EXT
+#define GL_TEXTURE_MAX_ANISOTROPY_EXT (0x84FE)
+#endif // !GL_TEXTURE_MAX_ANISOTROPY_EXT
+
+#ifndef GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
+#define GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT (0x84FF)
+#endif // !GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT
+
+//
+// GL_EXT_texture_filter_anisotropic
 // --------------------------------------------------------------------------
 
 
@@ -255,6 +272,8 @@ public:
 		has_gl_ext_clip_volume_hint_{},
 		has_gl_arb_texture_compression_{},
 		has_gl_ext_texture_compression_s3tc_{},
+		has_gl_ext_texture_filter_anisotropic_{},
+		max_anisotropy_{},
 		screen_width_{},
 		screen_height_{},
 		is_dirty_{},
@@ -423,6 +442,9 @@ private:
 	bool has_gl_ext_clip_volume_hint_;
 	bool has_gl_arb_texture_compression_;
 	bool has_gl_ext_texture_compression_s3tc_;
+
+	bool has_gl_ext_texture_filter_anisotropic_;
+	float max_anisotropy_;
 
 	int screen_width_;
 	int screen_height_;
@@ -1140,6 +1162,9 @@ private:
 		has_gl_arb_texture_compression_ = false;
 		has_gl_ext_texture_compression_s3tc_ = false;
 
+		has_gl_ext_texture_filter_anisotropic_ = false;
+		max_anisotropy_ = 0.0F;
+
 		screen_width_ = 0;
 		screen_height_ = 0;
 
@@ -1545,10 +1570,37 @@ private:
 		has_gl_arb_texture_compression_ = has_extension("GL_ARB_texture_compression");
 	}
 
-	void detect_gl_ext_texture_compression_s3tc()
+	void detect_gl_ext_texture_compression_s3tc_extension()
 	{
 		has_gl_ext_texture_compression_s3tc_ = has_extension("GL_EXT_texture_compression_s3tc");
 	}
+
+	void detect_gl_ext_texture_filter_anisotropic_extension()
+	{
+		auto is_succeed = false;
+
+		has_gl_ext_texture_filter_anisotropic_ = has_extension("GL_EXT_texture_filter_anisotropic");
+
+		if (has_gl_ext_texture_filter_anisotropic_)
+		{
+			::glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &max_anisotropy_);
+
+			if (ogl_is_succeed())
+			{
+				if (max_anisotropy_ > 1.0F)
+				{
+					is_succeed = true;
+				}
+			}
+		}
+
+		if (!is_succeed)
+		{
+			has_gl_ext_texture_filter_anisotropic_ = false;
+			max_anisotropy_ = 0.0F;
+		}
+	}
+
 
 	void detect_extensions()
 	{
@@ -1557,7 +1609,8 @@ private:
 		detect_gl_arb_clip_control_extension();
 		detect_gl_ext_clip_volume_hint_extension();
 		detect_gl_arb_texture_compression_extension();
-		detect_gl_ext_texture_compression_s3tc();
+		detect_gl_ext_texture_compression_s3tc_extension();
+		detect_gl_ext_texture_filter_anisotropic_extension();
 	}
 
 	bool supports_dxtc() const
