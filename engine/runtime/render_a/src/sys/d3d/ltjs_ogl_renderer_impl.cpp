@@ -56,6 +56,31 @@ static PFNGLCLIPCONTROLPROC glClipControl = nullptr;
 // --------------------------------------------------------------------------
 
 
+// --------------------------------------------------------------------------
+// GL_EXT_texture_compression_s3tc
+//
+
+#ifndef GL_COMPRESSED_RGB_S3TC_DXT1_EXT
+#define GL_COMPRESSED_RGB_S3TC_DXT1_EXT (0x83F0)
+#endif // GL_COMPRESSED_RGB_S3TC_DXT1_EXT
+
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT (0x83F1)
+#endif // GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
+
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT3_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT3_EXT (0x83F2)
+#endif // GL_COMPRESSED_RGBA_S3TC_DXT3_EXT
+
+#ifndef GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+#define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT (0x83F3)
+#endif // GL_COMPRESSED_RGBA_S3TC_DXT5_EXT
+
+//
+// GL_EXT_texture_compression_s3tc
+// --------------------------------------------------------------------------
+
+
 namespace ltjs
 {
 
@@ -228,6 +253,8 @@ public:
 		extensions_{},
 		has_gl_arb_clip_control_{},
 		has_gl_ext_clip_volume_hint_{},
+		has_gl_arb_texture_compression_{},
+		has_gl_ext_texture_compression_s3tc_{},
 		screen_width_{},
 		screen_height_{},
 		is_dirty_{},
@@ -401,6 +428,8 @@ private:
 
 	bool has_gl_arb_clip_control_;
 	bool has_gl_ext_clip_volume_hint_;
+	bool has_gl_arb_texture_compression_;
+	bool has_gl_ext_texture_compression_s3tc_;
 
 	int screen_width_;
 	int screen_height_;
@@ -1115,6 +1144,8 @@ private:
 
 		has_gl_arb_clip_control_ = false;
 		has_gl_ext_clip_volume_hint_ = false;
+		has_gl_arb_texture_compression_ = false;
+		has_gl_ext_texture_compression_s3tc_ = false;
 
 		screen_width_ = 0;
 		screen_height_ = 0;
@@ -1516,12 +1547,29 @@ private:
 		has_gl_ext_clip_volume_hint_ = has_extension("GL_EXT_clip_volume_hint");
 	}
 
+	void detect_gl_arb_texture_compression_extension()
+	{
+		has_gl_arb_texture_compression_ = has_extension("GL_ARB_texture_compression");
+	}
+
+	void detect_gl_ext_texture_compression_s3tc()
+	{
+		has_gl_ext_texture_compression_s3tc_ = has_extension("GL_EXT_texture_compression_s3tc");
+	}
+
 	void detect_extensions()
 	{
 		get_extensions();
 
 		detect_gl_arb_clip_control_extension();
 		detect_gl_ext_clip_volume_hint_extension();
+		detect_gl_arb_texture_compression_extension();
+		detect_gl_ext_texture_compression_s3tc();
+	}
+
+	bool supports_dxtc() const
+	{
+		return has_gl_arb_texture_compression_ && has_gl_ext_texture_compression_s3tc_;
 	}
 
 	void get_shader_build_status(
