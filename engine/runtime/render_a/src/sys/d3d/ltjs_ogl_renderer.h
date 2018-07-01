@@ -45,11 +45,12 @@ public:
 		ccw = 3,
 	}; // CullMode
 
-	enum class FillMode
+	enum class FillMode :
+		std::uint32_t
 	{
-		none,
-		wireframe,
-		solid,
+		none = 0,
+		wireframe = 2,
+		solid = 3,
 	}; // FillMode
 
 	enum class DepthFunc

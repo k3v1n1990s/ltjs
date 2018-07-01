@@ -1547,24 +1547,9 @@ private:
 
 	void set_fill_mode_internal()
 	{
-		GLenum ogl_mode;
+		const auto ogl_fill_mode = get_ogl_fill_mode(fill_mode_);
 
-		switch (fill_mode_)
-		{
-		case FillMode::wireframe:
-			ogl_mode = GL_LINE;
-			break;
-
-		case FillMode::solid:
-			ogl_mode = GL_FILL;
-			break;
-
-		default:
-			assert(!"Unsupported fill mode.");
-			return;
-		}
-
-		::glPolygonMode(GL_FRONT_AND_BACK, ogl_mode);
+		::glPolygonMode(GL_FRONT_AND_BACK, ogl_fill_mode);
 		assert(ogl_is_succeed());
 	}
 
@@ -2340,6 +2325,23 @@ private:
 		}
 
 		return ogl_clear_flags;
+	}
+
+	static GLenum get_ogl_fill_mode(
+		const FillMode d3d_fill_mode)
+	{
+		switch (d3d_fill_mode)
+		{
+		case FillMode::wireframe:
+			return GL_LINE;
+
+		case FillMode::solid:
+			return GL_FILL;
+
+		default:
+			assert(!"Unsupported fill mode.");
+			return invalid_ogl_enum;
+		}
 	}
 }; // OglRendererImpl
 
