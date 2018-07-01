@@ -260,6 +260,9 @@ public:
 		current_vao_{},
 		ui_vaos_{},
 		vaos_{},
+		current_2d_texture_{},
+		current_cube_map_texture_{},
+		textures_{},
 		sampler_states_{},
 		max_texture_lod_bias_{}
 	{
@@ -328,16 +331,16 @@ private:
 	{
 	public:
 		VertexArrayObjectImpl(
-			OglRendererImpl& impl);
+			OglRendererImpl& ogl_renderer);
 
-		virtual ~VertexArrayObjectImpl();
+		~VertexArrayObjectImpl() override;
 
 
 	private:
 		static constexpr auto index_element_size = 2;
 
 
-		OglRendererImpl& impl_;
+		OglRendererImpl& ogl_renderer_;
 
 		bool is_initialized_;
 
@@ -523,6 +526,77 @@ private:
 	using SamplerStates = std::array<SamplerStateImpl, max_samplers>;
 
 
+	class TextureImpl :
+		public Texture
+	{
+	public:
+		TextureImpl(
+			OglRendererImpl& ogl_renderer);
+
+		~TextureImpl() override;
+
+
+	private:
+		OglRendererImpl& ogl_renderer_;
+
+		bool is_initialized_;
+
+		GLuint ogl_texture_;
+
+		Type type_;
+		bool is_compressed_;
+		SurfaceFormat surface_format_;
+
+		int width_;
+		int height_;
+		int level_count_;
+
+
+		// ==================================================================
+		// API
+		//
+
+		bool do_initialize(
+			const Type type,
+			const SurfaceFormat surface_format,
+			const int width,
+			const int height,
+			const int level_count) override;
+
+		void do_uninitialize() override;
+
+
+		Type do_get_type() const override;
+
+		SurfaceFormat do_get_surface_format() const override;
+
+		bool do_is_compressed() const override;
+
+		int do_get_width() const override;
+
+		int do_get_height() const override;
+
+		int do_get_level_count() const override;
+
+		//
+		// API
+		// ==================================================================
+
+
+		bool initialize_internal(
+			const Type type,
+			const SurfaceFormat surface_format,
+			const int width,
+			const int height,
+			const int level_count);
+
+		void uninitialize_internal();
+	}; // TextureImpl
+
+	using TextureUPtr = std::unique_ptr<TextureImpl>;
+	using TextureUList = std::list<TextureUPtr>;
+
+
 	using ViewportSize = std::array<int, 2>;
 	using Extensions = std::vector<std::string>;
 
@@ -600,6 +674,11 @@ private:
 
 	UiVaos ui_vaos_;
 	VertexArrayObjectUList vaos_;
+
+	TextureImpl* current_2d_texture_;
+	TextureImpl* current_cube_map_texture_;
+
+	TextureUList textures_;
 
 	SamplerStates sampler_states_;
 	float max_texture_lod_bias_;
@@ -1149,6 +1228,35 @@ private:
 		assert(size_before > size_after);
 	}
 
+	TexturePtr do_add_texture() override
+	{
+		textures_.emplace_back(std::make_unique<TextureImpl>(*this));
+		return textures_.back().get();
+	}
+
+	void do_remove_texture(
+		TexturePtr texture) override
+	{
+		if (textures_.empty())
+		{
+			assert(!"Empty list.");
+			return;
+		}
+
+		const auto size_before = textures_.size();
+
+		textures_.remove_if(
+			[&](const auto& item_uptr)
+			{
+				return item_uptr.get() == texture;
+			}
+		);
+
+		const auto size_after = textures_.size();
+
+		assert(size_before > size_after);
+	}
+
 	void do_draw(
 		const PrimitiveType primitive_type,
 		const std::uint32_t d3d_fvf,
@@ -1388,6 +1496,11 @@ private:
 
 		ui_vaos_.fill({});
 		vaos_.clear();
+
+		current_2d_texture_ = nullptr;
+		current_cube_map_texture_ = nullptr;
+
+		textures_.clear();
 
 		uninitialize_samplers();
 		max_texture_lod_bias_ = 0.0F;
@@ -2458,7 +2571,7 @@ void main()
 OglRendererImpl::VertexArrayObjectImpl::VertexArrayObjectImpl(
 	OglRendererImpl& impl)
 	:
-	impl_{impl},
+	ogl_renderer_{impl},
 	is_initialized_{},
 	vertex_format_{},
 	vertex_usage_flags_{},
@@ -2548,9 +2661,9 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 
 	auto component_offset_ptr = static_cast<const char*>(nullptr);
 
-	if (impl_.current_vao_ != this)
+	if (ogl_renderer_.current_vao_ != this)
 	{
-		impl_.current_vao_ = nullptr;
+		ogl_renderer_.current_vao_ = nullptr;
 	}
 
 	::glBindVertexArray(ogl_vao_);
@@ -2708,13 +2821,13 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 		return;
 	}
 
-	impl_.set_has_diffuse(vertex_format_.has_diffuse_);
-	impl_.set_is_position_transformed(vertex_format_.is_position_transformed_);
-	impl_.apply_changes();
+	ogl_renderer_.set_has_diffuse(vertex_format_.has_diffuse_);
+	ogl_renderer_.set_is_position_transformed(vertex_format_.is_position_transformed_);
+	ogl_renderer_.apply_changes();
 
-	if (impl_.current_vao_ != this)
+	if (ogl_renderer_.current_vao_ != this)
 	{
-		impl_.current_vao_ = this;
+		ogl_renderer_.current_vao_ = this;
 
 		::glBindVertexArray(ogl_vao_);
 		assert(ogl_is_succeed());
@@ -2757,9 +2870,9 @@ void OglRendererImpl::VertexArrayObjectImpl::uninitialize_internal()
 
 	if (ogl_vao_)
 	{
-		if (impl_.current_vao_ == this)
+		if (ogl_renderer_.current_vao_ == this)
 		{
-			impl_.current_vao_ = nullptr;
+			ogl_renderer_.current_vao_ = nullptr;
 
 			::glBindVertexArray(0);
 			assert(ogl_is_succeed());
@@ -2794,8 +2907,65 @@ void OglRendererImpl::VertexArrayObjectImpl::uninitialize_internal()
 
 
 // ==========================================================================
+// OglRenderer::VertexArrayObject::InitializeParam
+//
+
+OglRenderer::VertexArrayObject::InitializeParam::InitializeParam()
+	:
+	has_index_{},
+	vertex_format_{},
+	vertex_usage_flags_{},
+	vertex_count_{},
+	raw_vertex_data_{},
+	index_usage_flags_{},
+	index_count_{},
+	raw_index_data_{}
+{
+}
+
+bool OglRenderer::VertexArrayObject::InitializeParam::is_valid() const
+{
+	if (!vertex_format_.is_valid())
+	{
+		return false;
+	}
+
+	const auto ogl_vertex_usage = usage_flags_to_ogl_usage(vertex_usage_flags_);
+
+	if (!ogl_vertex_usage || vertex_count_ <= 0)
+	{
+		return false;
+	}
+
+	if (has_index_)
+	{
+		const auto ogl_index_usage = usage_flags_to_ogl_usage(index_usage_flags_);
+
+		if (!ogl_index_usage || index_count_ <= 0 || !raw_index_data_)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+//
+// OglRenderer::VertexArrayObject::InitializeParam
+// ==========================================================================
+
+
+// ==========================================================================
 // OglRendererImpl::VertexArrayObject
 //
+
+OglRenderer::VertexArrayObject::VertexArrayObject()
+{
+}
+
+OglRenderer::VertexArrayObject::~VertexArrayObject()
+{
+}
 
 bool OglRendererImpl::VertexArrayObject::initialize(
 	const InitializeParam& param)
@@ -3635,68 +3805,287 @@ OglRenderer::Fvf OglRenderer::Fvf::from_d3d(
 
 
 // ==========================================================================
-// OglRenderer::VertexArrayObject::InitializeParam
+// OglRenderer::TextureImpl
 //
 
-OglRenderer::VertexArrayObject::InitializeParam::InitializeParam()
+OglRendererImpl::TextureImpl::TextureImpl(
+	OglRendererImpl& ogl_renderer)
 	:
-	has_index_{},
-	vertex_format_{},
-	vertex_usage_flags_{},
-	vertex_count_{},
-	raw_vertex_data_{},
-	index_usage_flags_{},
-	index_count_{},
-	raw_index_data_{}
+	ogl_renderer_{ogl_renderer},
+	is_initialized_{},
+	ogl_texture_{},
+	type_{},
+	is_compressed_{},
+	surface_format_{},
+	width_{},
+	height_{},
+	level_count_{}
 {
 }
 
-bool OglRenderer::VertexArrayObject::InitializeParam::is_valid() const
+OglRendererImpl::TextureImpl::~TextureImpl()
 {
-	if (!vertex_format_.is_valid())
+	uninitialize_internal();
+}
+
+bool OglRendererImpl::TextureImpl::do_initialize(
+	const Type type,
+	const SurfaceFormat surface_format,
+	const int width,
+	const int height,
+	const int level_count)
+{
+	uninitialize_internal();
+
+	if (!initialize_internal(type, surface_format, width, height, level_count))
 	{
+		uninitialize_internal();
 		return false;
-	}
-
-	const auto ogl_vertex_usage = usage_flags_to_ogl_usage(vertex_usage_flags_);
-
-	if (!ogl_vertex_usage || vertex_count_ <= 0)
-	{
-		return false;
-	}
-
-	if (has_index_)
-	{
-		const auto ogl_index_usage = usage_flags_to_ogl_usage(index_usage_flags_);
-
-		if (!ogl_index_usage || index_count_ <= 0 || !raw_index_data_)
-		{
-			return false;
-		}
 	}
 
 	return true;
 }
 
+void OglRendererImpl::TextureImpl::do_uninitialize()
+{
+	uninitialize_internal();
+}
+
+OglRenderer::Texture::Type OglRendererImpl::TextureImpl::do_get_type() const
+{
+	assert(is_initialized_);
+	return type_;
+}
+
+OglRenderer::SurfaceFormat OglRendererImpl::TextureImpl::do_get_surface_format() const
+{
+	assert(is_initialized_);
+	return surface_format_;
+}
+
+bool OglRendererImpl::TextureImpl::do_is_compressed() const
+{
+	assert(is_initialized_);
+	return is_compressed_;
+}
+
+int OglRendererImpl::TextureImpl::do_get_width() const
+{
+	assert(is_initialized_);
+	return width_;
+}
+
+int OglRendererImpl::TextureImpl::do_get_height() const
+{
+	assert(is_initialized_);
+	return height_;
+}
+
+int OglRendererImpl::TextureImpl::do_get_level_count() const
+{
+	assert(is_initialized_);
+	return level_count_;
+}
+
+bool OglRendererImpl::TextureImpl::initialize_internal(
+	const Type type,
+	const SurfaceFormat surface_format,
+	const int width,
+	const int height,
+	const int level_count)
+{
+	auto is_2d = false;
+	auto is_cube_map = false;
+
+	switch (type)
+	{
+	case Type::two_d:
+		is_2d = true;
+		break;
+
+	case Type::cube_map:
+		is_cube_map = true;
+		break;
+
+	default:
+		assert(!"Unsupported texture type.");
+		return false;
+	}
+
+	bool is_compressed;
+
+	switch (surface_format)
+	{
+	case SurfaceFormat::a4r4g4b4:
+	case SurfaceFormat::a8r8g8b8:
+	case SurfaceFormat::v8u8:
+		is_compressed = false;
+		break;
+
+	case SurfaceFormat::dxt1:
+	case SurfaceFormat::dxt3:
+	case SurfaceFormat::dxt5:
+		is_compressed = true;
+		break;
+
+	default:
+		assert(!"Unsupported surface format.");
+		return false;
+	}
+
+	if (width <= 0 || height <= 0)
+	{
+		assert(!"Unsupported texture size.");
+		return false;
+	}
+
+	if (level_count < 0)
+	{
+		assert(!"Negative level count.");
+		return false;
+	}
+
+	::glGenTextures(1, &ogl_texture_);
+
+	if (!ogl_is_succeed())
+	{
+		return false;
+	}
+
+	is_initialized_ = true;
+	type_ = type;
+	is_compressed_ = is_compressed;
+	surface_format_ = surface_format;
+	width_ = width;
+	height_ = height;
+	level_count_ = level_count;
+
+	return true;
+}
+
+void OglRendererImpl::TextureImpl::uninitialize_internal()
+{
+	is_initialized_ = false;
+
+	if (ogl_texture_)
+	{
+		auto is_current_2d = false;
+		auto is_current_cube_map = false;
+
+		GLenum ogl_target;
+
+		switch (type_)
+		{
+		case Type::two_d:
+			ogl_target = GL_TEXTURE_2D;
+			is_current_2d = (ogl_renderer_.current_2d_texture_ == this);
+			break;
+
+		case Type::cube_map:
+			ogl_target = GL_TEXTURE_CUBE_MAP;
+			is_current_cube_map = (ogl_renderer_.current_cube_map_texture_ == this);
+			break;
+
+		default:
+			assert(!"Unsupported texture target.");
+			ogl_target = invalid_ogl_enum;
+			break;
+		}
+
+		if (is_current_2d)
+		{
+			ogl_renderer_.current_2d_texture_ = nullptr;
+
+			::glBindTexture(GL_TEXTURE_2D, 0);
+			assert(ogl_is_succeed());
+		}
+
+		if (is_current_cube_map)
+		{
+			ogl_renderer_.current_cube_map_texture_ = nullptr;
+
+			::glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+			assert(ogl_is_succeed());
+		}
+
+		::glDeleteTextures(1, &ogl_texture_);
+		assert(ogl_is_succeed());
+
+		ogl_texture_ = 0;
+	}
+
+	type_ = Type::none;
+	is_compressed_ = false;
+	surface_format_ = SurfaceFormat::none;
+	width_ = 0;
+	height_ = 0;
+	level_count_ = 0;
+}
+
 //
-// OglRenderer::VertexArrayObject::InitializeParam
+// OglRenderer::TextureImpl
 // ==========================================================================
 
 
 // ==========================================================================
-// OglRenderer::VertexArrayObject
+// OglRenderer::Texture
 //
 
-OglRenderer::VertexArrayObject::VertexArrayObject()
+OglRenderer::Texture::Texture()
 {
 }
 
-OglRenderer::VertexArrayObject::~VertexArrayObject()
+OglRenderer::Texture::~Texture()
 {
 }
 
+bool OglRenderer::Texture::initialize(
+	const Type type,
+	const SurfaceFormat surface_format,
+	const int width,
+	const int height,
+	const int level_count)
+{
+	return do_initialize(type, surface_format, width, height, level_count);
+}
+
+void OglRenderer::Texture::uninitialize()
+{
+	do_uninitialize();
+}
+
+OglRenderer::Texture::Type OglRenderer::Texture::get_type() const
+{
+	return do_get_type();
+}
+
+OglRenderer::SurfaceFormat OglRenderer::Texture::get_surface_format() const
+{
+	return do_get_surface_format();
+}
+
+bool OglRenderer::Texture::is_compressed() const
+{
+	return do_is_compressed();
+}
+
+int OglRenderer::Texture::get_width() const
+{
+	return do_get_width();
+}
+
+int OglRenderer::Texture::get_height() const
+{
+	return do_get_height();
+}
+
+int OglRenderer::Texture::get_level_count() const
+{
+	return do_get_level_count();
+}
+
 //
-// OglRenderer::VertexArrayObject
+// OglRenderer::Texture
 // ==========================================================================
 
 
@@ -3906,6 +4295,17 @@ void OglRenderer::remove_vertex_array_object(
 	VertexArrayObjectPtr vertex_array_object)
 {
 	do_remove_vertex_array_object(vertex_array_object);
+}
+
+OglRenderer::TexturePtr OglRenderer::add_texture()
+{
+	return do_add_texture();
+}
+
+void OglRenderer::remove_texture(
+	TexturePtr texture)
+{
+	do_remove_texture(texture);
 }
 
 void OglRenderer::draw(

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <array>
 #include "bibendovsky_spul_enum_flags.h"
+#include "bibendovsky_spul_four_cc.h"
 
 
 namespace ltjs
@@ -104,6 +105,18 @@ public:
 		linear = 2,
 		anisotropic = 3,
 	}; // TextureFilterType
+
+	enum class SurfaceFormat :
+		std::uint32_t
+	{
+		none = 0,
+		a4r4g4b4 = 26,
+		a8r8g8b8 = 21,
+		v8u8 = 60,
+		dxt1 = ul::FourCc{"DXT1"},
+		dxt3 = ul::FourCc{"DXT3"},
+		dxt5 = ul::FourCc{"DXT5"},
+	}; // SurfaceFormat
 
 
 	struct Viewport
@@ -364,6 +377,71 @@ public:
 	using SamplerStatePtr = SamplerState*;
 
 
+	class Texture
+	{
+	public:
+		enum class Type
+		{
+			none,
+			two_d,
+			cube_map,
+		}; // Type
+
+		bool initialize(
+			const Type type,
+			const SurfaceFormat surface_format,
+			const int width,
+			const int height,
+			const int level_count);
+
+		void uninitialize();
+
+
+		Type get_type() const;
+
+		SurfaceFormat get_surface_format() const;
+
+		bool is_compressed() const;
+
+		int get_width() const;
+
+		int get_height() const;
+
+		int get_level_count() const;
+
+
+	protected:
+		Texture();
+
+		virtual ~Texture();
+
+
+	private:
+		virtual bool do_initialize(
+			const Type type,
+			const SurfaceFormat surface_format,
+			const int width,
+			const int height,
+			const int level_count) = 0;
+
+		virtual void do_uninitialize() = 0;
+
+
+		virtual Type do_get_type() const = 0;
+
+		virtual SurfaceFormat do_get_surface_format() const = 0;
+
+		virtual bool do_is_compressed() const = 0;
+
+		virtual int do_get_width() const = 0;
+
+		virtual int do_get_height() const = 0;
+
+		virtual int do_get_level_count() const = 0;
+	}; // Texture
+
+	using TexturePtr = Texture*;
+
 
 	bool is_initialized() const;
 
@@ -479,6 +557,12 @@ public:
 
 	void remove_vertex_array_object(
 		VertexArrayObjectPtr vertex_array_object);
+
+
+	TexturePtr add_texture();
+
+	void remove_texture(
+		TexturePtr texture);
 
 
 	void draw(
@@ -635,6 +719,13 @@ private:
 
 	virtual void do_remove_vertex_array_object(
 		VertexArrayObjectPtr vertex_array_object) = 0;
+
+	// Textures.
+	//
+	virtual TexturePtr do_add_texture() = 0;
+
+	virtual void do_remove_texture(
+		TexturePtr texture) = 0;
 
 
 	// Primitive drawing.
