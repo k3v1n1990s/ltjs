@@ -886,8 +886,8 @@ private:
 			return;
 		}
 
-		const auto is_old_enabled = (cull_mode_ != CullMode::disabled);
-		const auto is_new_enabled = (cull_mode != CullMode::disabled);
+		const auto is_old_enabled = (cull_mode_ != CullMode::none);
+		const auto is_new_enabled = (cull_mode != CullMode::none);
 
 		cull_mode_ = cull_mode;
 
@@ -1502,25 +1502,25 @@ private:
 	void set_cull_mode_internal(
 		const bool enforce_cull_face)
 	{
-		const auto is_cull_face_enabled = (cull_mode_ != CullMode::disabled);
+		const auto is_cull_face_enabled = (cull_mode_ != CullMode::none);
 
 		switch (cull_mode_)
 		{
-		case CullMode::disabled:
+		case CullMode::none:
 			break;
 
-		case CullMode::clockwise:
+		case CullMode::cw:
 			::glCullFace(GL_FRONT);
 			assert(ogl_is_succeed());
 			break;
 
-		case CullMode::counterclockwise:
+		case CullMode::ccw:
 			::glCullFace(GL_BACK);
 			assert(ogl_is_succeed());
 			break;
 
 		default:
-			assert(!"Unsupported cull mode.");
+			assert(!"Unsupported culling mode.");
 			return;
 		}
 
@@ -2354,7 +2354,7 @@ std::uint8_t OglRendererImpl::default_clear_color_g = 0;
 std::uint8_t OglRendererImpl::default_clear_color_b = 0;
 std::uint8_t OglRendererImpl::default_clear_color_a = 0;
 
-const OglRenderer::CullMode OglRendererImpl::default_cull_mode = OglRenderer::CullMode::counterclockwise;
+const OglRenderer::CullMode OglRendererImpl::default_cull_mode = OglRenderer::CullMode::ccw;
 const OglRenderer::FillMode OglRendererImpl::default_fill_mode = OglRenderer::FillMode::solid;
 
 const bool OglRendererImpl::default_is_clipping = true;

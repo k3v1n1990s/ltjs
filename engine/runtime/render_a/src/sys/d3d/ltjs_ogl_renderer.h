@@ -40,10 +40,9 @@ public:
 
 	enum class CullMode
 	{
-		none,
-		disabled,
-		clockwise,
-		counterclockwise,
+		none = 1,
+		cw = 2,
+		ccw = 3,
 	}; // CullMode
 
 	enum class FillMode
