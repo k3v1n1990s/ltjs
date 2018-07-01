@@ -393,12 +393,12 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 
 		if ((flags & CLEARSCREEN_SCREEN) != 0)
 		{
-			clear_bits |= ltjs::OglRenderer::ClearFlags::color;
+			clear_bits |= ltjs::OglRenderer::ClearFlags::target;
 		}
 
 		if ((flags & CLEARSCREEN_RENDER) != 0)
 		{
-			clear_bits |= ltjs::OglRenderer::ClearFlags::depth | ltjs::OglRenderer::ClearFlags::stencil;
+			clear_bits |= ltjs::OglRenderer::ClearFlags::zbuffer | ltjs::OglRenderer::ClearFlags::stencil;
 		}
 
 		ogl_renderer.clear(clear_bits);

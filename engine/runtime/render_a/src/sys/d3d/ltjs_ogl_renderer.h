@@ -32,9 +32,9 @@ public:
 
 		enum : Value
 		{
-			color = 1 << 0,
-			depth = 1 << 1,
-			stencil = 1 << 2,
+			target = 1,
+			zbuffer = 2,
+			stencil = 4,
 		}; // enum
 	}; // ClearFlags
 

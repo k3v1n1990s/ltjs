@@ -796,28 +796,13 @@ private:
 	void do_clear(
 		const ClearFlags clear_flags) override
 	{
-		if (!is_initialized_ || !is_context_current_ || clear_flags == ClearFlags::none)
+		if (!is_initialized_ || !is_context_current_)
 		{
 			assert(!"Invalid state.");
 			return;
 		}
 
-		auto ogl_clear_flags = GLbitfield{};
-
-		if ((clear_flags & ClearFlags::color) != 0)
-		{
-			ogl_clear_flags |= GL_COLOR_BUFFER_BIT;
-		}
-
-		if ((clear_flags & ClearFlags::depth) != 0)
-		{
-			ogl_clear_flags |= GL_DEPTH_BUFFER_BIT;
-		}
-
-		if ((clear_flags & ClearFlags::stencil) != 0)
-		{
-			ogl_clear_flags |= GL_STENCIL_BUFFER_BIT;
-		}
+		const auto ogl_clear_flags = get_ogl_clear_flags(clear_flags);
 
 		::glClear(ogl_clear_flags);
 		assert(ogl_is_succeed());
@@ -2332,6 +2317,29 @@ private:
 		{
 			sampler_state.uninitialize();
 		}
+	}
+
+	static GLbitfield get_ogl_clear_flags(
+		const ClearFlags d3d_clear_flags)
+	{
+		auto ogl_clear_flags = GLbitfield{};
+
+		if ((d3d_clear_flags & ClearFlags::target) != 0)
+		{
+			ogl_clear_flags |= GL_COLOR_BUFFER_BIT;
+		}
+
+		if ((d3d_clear_flags & ClearFlags::zbuffer) != 0)
+		{
+			ogl_clear_flags |= GL_DEPTH_BUFFER_BIT;
+		}
+
+		if ((d3d_clear_flags & ClearFlags::stencil) != 0)
+		{
+			ogl_clear_flags |= GL_STENCIL_BUFFER_BIT;
+		}
+
+		return ogl_clear_flags;
 	}
 }; // OglRendererImpl
 
