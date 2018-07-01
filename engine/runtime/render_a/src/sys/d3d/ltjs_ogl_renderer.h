@@ -86,6 +86,14 @@ public:
 		triangle_list,
 	}; // PrimitiveType
 
+	enum class TextureAddressingMode :
+		std::uint32_t
+	{
+		none = 0,
+		clamp = 3,
+		wrap = 1,
+	}; // TextureAddresingsMode
+
 
 	struct Viewport
 	{
@@ -251,13 +259,6 @@ public:
 	class SamplerState
 	{
 	public:
-		enum class AddressMode
-		{
-			none,
-			clamp,
-			wrap,
-		}; // AddressMode
-
 		enum class Filter
 		{
 			none,
@@ -268,16 +269,16 @@ public:
 		}; // Filter
 
 
-		AddressMode get_address_mode_u() const;
+		TextureAddressingMode get_addressing_mode_u() const;
 
-		void set_address_mode_u(
-			const AddressMode address_mode_u);
+		void set_addressing_mode_u(
+			const TextureAddressingMode addressing_mode_u);
 
 
-		AddressMode get_address_mode_v() const;
+		TextureAddressingMode get_addressing_mode_v() const;
 
-		void set_address_mode_v(
-			const AddressMode address_mode_v);
+		void set_addressing_mode_v(
+			const TextureAddressingMode addressing_mode_v);
 
 
 		Filter get_mag_filter() const;
@@ -317,16 +318,16 @@ public:
 
 
 	private:
-		virtual AddressMode do_get_address_mode_u() const = 0;
+		virtual TextureAddressingMode do_get_addressing_mode_u() const = 0;
 
-		virtual void do_set_address_mode_u(
-			const AddressMode address_mode_u) = 0;
+		virtual void do_set_addressing_mode_u(
+			const TextureAddressingMode address_mode_u) = 0;
 
 
-		virtual AddressMode do_get_address_mode_v() const = 0;
+		virtual TextureAddressingMode do_get_addressing_mode_v() const = 0;
 
-		virtual void do_set_address_mode_v(
-			const AddressMode address_mode_v) = 0;
+		virtual void do_set_addressing_mode_v(
+			const TextureAddressingMode address_mode_v) = 0;
 
 
 		virtual Filter do_get_mag_filter() const = 0;

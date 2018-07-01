@@ -266,23 +266,6 @@ GLenum get_ogl_blending_factor(
 	}
 }
 
-GLenum get_ogl_address_mode(
-	const OglRenderer::SamplerState::AddressMode address_mode)
-{
-	switch (address_mode)
-	{
-	case OglRenderer::SamplerState::AddressMode::clamp:
-		return GL_CLAMP_TO_EDGE;
-
-	case OglRenderer::SamplerState::AddressMode::wrap:
-		return GL_REPEAT;
-
-	default:
-		assert(!"Unsupported texture address mode.");
-		return invalid_ogl_enum;
-	}
-}
-
 GLenum get_ogl_mag_filter(
 	const OglRenderer::SamplerState::Filter mag_filter)
 {
@@ -584,9 +567,13 @@ private:
 		void uninitialize();
 
 
+		static GLenum get_ogl_addressing_mode(
+			const TextureAddressingMode d3d_addressing_mode);
+
+
 	private:
-		static constexpr auto default_address_mode_u = AddressMode::wrap;
-		static constexpr auto default_address_mode_v = AddressMode::wrap;
+		static constexpr auto default_addressing_mode_u = TextureAddressingMode::wrap;
+		static constexpr auto default_addressing_mode_v = TextureAddressingMode::wrap;
 
 		static constexpr auto default_mag_filter = Filter::point;
 		static constexpr auto default_min_filter = Filter::point;
@@ -602,8 +589,8 @@ private:
 		int unit_index_;
 		GLuint ogl_sampler_;
 
-		AddressMode address_mode_u_;
-		AddressMode address_mode_v_;
+		TextureAddressingMode addressing_mode_u_;
+		TextureAddressingMode addressing_mode_v_;
 
 		Filter mag_filter_;
 		Filter min_filter_;
@@ -621,16 +608,16 @@ private:
 		// API
 		//
 
-		AddressMode do_get_address_mode_u() const override;
+		TextureAddressingMode do_get_addressing_mode_u() const override;
 
-		void do_set_address_mode_u(
-			const AddressMode address_mode_u) override;
+		void do_set_addressing_mode_u(
+			const TextureAddressingMode addressing_mode_u) override;
 
 
-		AddressMode do_get_address_mode_v() const override;
+		TextureAddressingMode do_get_addressing_mode_v() const override;
 
-		void do_set_address_mode_v(
-			const AddressMode address_mode_v) override;
+		void do_set_addressing_mode_v(
+			const TextureAddressingMode addressing_mode_v) override;
 
 
 		Filter do_get_mag_filter() const override;
@@ -667,9 +654,9 @@ private:
 		// ========================================================================
 
 
-		void set_address_mode_u_internal();
+		void set_addressing_mode_u_internal();
 
-		void set_address_mode_v_internal();
+		void set_addressing_mode_v_internal();
 
 		void set_mag_filter_internal();
 
@@ -2976,8 +2963,8 @@ OglRendererImpl::SamplerStateImpl::SamplerStateImpl()
 	is_initialized_{},
 	unit_index_{},
 	ogl_sampler_{},
-	address_mode_u_{},
-	address_mode_v_{},
+	addressing_mode_u_{},
+	addressing_mode_v_{},
 	mag_filter_{},
 	min_filter_{},
 	mip_filter_{},
@@ -3045,8 +3032,8 @@ void OglRendererImpl::SamplerStateImpl::uninitialize()
 		ogl_sampler_ = 0;
 	}
 
-	address_mode_u_ = AddressMode::none;
-	address_mode_v_ = AddressMode::none;
+	addressing_mode_u_ = TextureAddressingMode::none;
+	addressing_mode_v_ = TextureAddressingMode::none;
 	mag_filter_ = Filter::none;
 	min_filter_ = Filter::none;
 	mip_filter_ = Filter::none;
@@ -3057,52 +3044,69 @@ void OglRendererImpl::SamplerStateImpl::uninitialize()
 	max_anisotropy_ = 0;
 }
 
-OglRendererImpl::SamplerStateImpl::AddressMode OglRendererImpl::SamplerStateImpl::do_get_address_mode_u() const
+GLenum OglRendererImpl::SamplerStateImpl::get_ogl_addressing_mode(
+	const TextureAddressingMode d3d_addressing_mode)
 {
-	assert(is_initialized_);
-	return address_mode_u_;
+	switch (d3d_addressing_mode)
+	{
+	case OglRenderer::TextureAddressingMode::clamp:
+		return GL_CLAMP_TO_EDGE;
+
+	case OglRenderer::TextureAddressingMode::wrap:
+		return GL_REPEAT;
+
+	default:
+		assert(!"Unsupported texture addressing mode.");
+		return invalid_ogl_enum;
+	}
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_address_mode_u(
-	const AddressMode address_mode_u)
+OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerStateImpl::do_get_addressing_mode_u() const
 {
-	switch (address_mode_u)
+	assert(is_initialized_);
+	return addressing_mode_u_;
+}
+
+void OglRendererImpl::SamplerStateImpl::do_set_addressing_mode_u(
+	const TextureAddressingMode addressing_mode_u)
+{
+	switch (addressing_mode_u)
 	{
-	case AddressMode::clamp:
-	case AddressMode::wrap:
+	case TextureAddressingMode::clamp:
+	case TextureAddressingMode::wrap:
 		break;
 
 	default:
-		assert(!"Unsupported address mode.");
+		assert(!"Unsupported texture addressing mode.");
 		return;
 	}
 
-	address_mode_u_ = address_mode_u;
-	set_address_mode_u_internal();
+	addressing_mode_u_ = addressing_mode_u;
+	set_addressing_mode_u_internal();
 }
 
-OglRendererImpl::SamplerStateImpl::AddressMode OglRendererImpl::SamplerStateImpl::do_get_address_mode_v() const
+OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerStateImpl::do_get_addressing_mode_v() const
 {
 	assert(is_initialized_);
-	return address_mode_v_;
+	return addressing_mode_v_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_address_mode_v(
-	const AddressMode address_mode_v)
+void OglRendererImpl::SamplerStateImpl::do_set_addressing_mode_v(
+	const TextureAddressingMode addressing_mode_v)
 {
-	switch (address_mode_v)
+	switch (addressing_mode_v)
 	{
-	case AddressMode::clamp:
-	case AddressMode::wrap:
+	case TextureAddressingMode::clamp:
+	case TextureAddressingMode::wrap:
 		break;
 
 	default:
-		assert(!"Unsupported address mode.");
+		assert(!"Unsupported texture addressing mode.");
 		return;
 	}
 
-	address_mode_v_ = address_mode_v;
-	set_address_mode_v_internal();
+	addressing_mode_v_ = addressing_mode_v;
+	set_addressing_mode_v_internal();
 }
 
 OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_mag_filter() const
@@ -3222,17 +3226,17 @@ void OglRendererImpl::SamplerStateImpl::do_set_anisotropy(
 	set_anisotropy_internal();
 }
 
-void OglRendererImpl::SamplerStateImpl::set_address_mode_u_internal()
+void OglRendererImpl::SamplerStateImpl::set_addressing_mode_u_internal()
 {
-	const auto ogl_address_mode_u = get_ogl_address_mode(address_mode_u_);
-	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_WRAP_S, ogl_address_mode_u);
+	const auto ogl_addressing_mode_u = get_ogl_addressing_mode(addressing_mode_u_);
+	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_WRAP_S, ogl_addressing_mode_u);
 	assert(ogl_is_succeed());
 }
 
-void OglRendererImpl::SamplerStateImpl::set_address_mode_v_internal()
+void OglRendererImpl::SamplerStateImpl::set_addressing_mode_v_internal()
 {
-	const auto ogl_address_mode_v = get_ogl_address_mode(address_mode_v_);
-	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_WRAP_T, ogl_address_mode_v);
+	const auto ogl_addressing_mode_v = get_ogl_addressing_mode(addressing_mode_v_);
+	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_WRAP_T, ogl_addressing_mode_v);
 	assert(ogl_is_succeed());
 }
 
@@ -3302,11 +3306,11 @@ void OglRendererImpl::SamplerStateImpl::set_anisotropy_internal()
 
 void OglRendererImpl::SamplerStateImpl::set_defaults()
 {
-	address_mode_u_ = default_address_mode_u;
-	set_address_mode_u_internal();
+	addressing_mode_u_ = default_addressing_mode_u;
+	set_addressing_mode_u_internal();
 
-	address_mode_v_ = default_address_mode_v;
-	set_address_mode_v_internal();
+	addressing_mode_v_ = default_addressing_mode_v;
+	set_addressing_mode_v_internal();
 
 	mag_filter_ = default_mag_filter;
 	set_mag_filter_internal();
@@ -3339,26 +3343,26 @@ OglRenderer::SamplerState::~SamplerState()
 {
 }
 
-OglRenderer::SamplerState::AddressMode OglRenderer::SamplerState::get_address_mode_u() const
+OglRenderer::TextureAddressingMode OglRenderer::SamplerState::get_addressing_mode_u() const
 {
-	return do_get_address_mode_u();
+	return do_get_addressing_mode_u();
 }
 
-void OglRenderer::SamplerState::set_address_mode_u(
-	const AddressMode address_mode_u)
+void OglRenderer::SamplerState::set_addressing_mode_u(
+	const TextureAddressingMode addressing_mode_u)
 {
-	do_set_address_mode_u(address_mode_u);
+	do_set_addressing_mode_u(addressing_mode_u);
 }
 
-OglRenderer::SamplerState::AddressMode OglRenderer::SamplerState::get_address_mode_v() const
+OglRenderer::TextureAddressingMode OglRenderer::SamplerState::get_addressing_mode_v() const
 {
-	return do_get_address_mode_v();
+	return do_get_addressing_mode_v();
 }
 
-void OglRenderer::SamplerState::set_address_mode_v(
-	const AddressMode address_mode_v)
+void OglRenderer::SamplerState::set_addressing_mode_v(
+	const TextureAddressingMode addressing_mode_v)
 {
-	do_set_address_mode_v(address_mode_v);
+	do_set_addressing_mode_v(addressing_mode_v);
 }
 
 OglRenderer::SamplerState::Filter OglRenderer::SamplerState::get_mag_filter() const
