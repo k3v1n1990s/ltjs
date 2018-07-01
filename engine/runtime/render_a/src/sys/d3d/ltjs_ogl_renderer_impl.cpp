@@ -229,6 +229,41 @@ int calculate_vertex_count(
 	}
 }
 
+GLenum get_ogl_blending_factor(
+	const OglRenderer::BlendingFactor blending_factor)
+{
+	switch (blending_factor)
+	{
+		case OglRenderer::BlendingFactor::zero:
+			return GL_ZERO;
+
+		case OglRenderer::BlendingFactor::one:
+			return GL_ONE;
+
+		case OglRenderer::BlendingFactor::src_alpha:
+			return GL_SRC_ALPHA;
+
+		case OglRenderer::BlendingFactor::src_color:
+			return GL_SRC_COLOR;
+
+		case OglRenderer::BlendingFactor::inv_src_alpha:
+			return GL_ONE_MINUS_SRC_ALPHA;
+
+		case OglRenderer::BlendingFactor::inv_src_color:
+			return GL_ONE_MINUS_SRC_COLOR;
+
+		case OglRenderer::BlendingFactor::dst_color:
+			return GL_DST_COLOR;
+
+		case OglRenderer::BlendingFactor::inv_dst_color:
+			return GL_ONE_MINUS_DST_COLOR;
+
+	default:
+		assert(!"Unsupported blending factor.");
+		return 0x10000;
+	}
+}
+
 GLenum get_ogl_primitive_type(
 	const OglRenderer::PrimitiveType primitive_type)
 {
@@ -289,6 +324,9 @@ public:
 		is_depth_enabled_{},
 		is_depth_writable_{},
 		depth_func_{},
+		is_blending_enabled_{},
+		src_blending_factor_{},
+		dst_blending_factor_{},
 		vertex_shader_{},
 		fragment_shader_{},
 		program_{},
@@ -560,6 +598,11 @@ private:
 	bool is_depth_writable_;
 	DepthFunc depth_func_;
 
+	bool is_blending_enabled_;
+	BlendingFactor src_blending_factor_;
+	BlendingFactor dst_blending_factor_;
+
+
 	GLuint vertex_shader_;
 	GLuint fragment_shader_;
 	GLuint program_;
@@ -606,6 +649,10 @@ private:
 	static const bool default_is_depth_enabled;
 	static const bool default_is_depth_writable;
 	static const DepthFunc default_depth_func;
+
+	static const bool default_is_blending_enabled;
+	static const BlendingFactor default_src_blending_factor;
+	static const BlendingFactor default_dst_blending_factor;
 
 	static const bool default_has_diffuse;
 
@@ -945,6 +992,62 @@ private:
 		set_depth_func_internal();
 	}
 
+	bool do_get_is_blending_enabled() const override
+	{
+		assert(is_initialized_);
+		return is_blending_enabled_;
+	}
+
+	void do_set_is_blending_enabled(
+		const bool is_blending_enabled) override
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (is_blending_enabled_ == is_blending_enabled)
+		{
+			return;
+		}
+
+		set_is_blending_enabled_internal();
+	}
+
+	BlendingFactor do_get_src_blending_factor() const override
+	{
+		assert(is_initialized_);
+		return src_blending_factor_;
+	}
+
+	BlendingFactor do_get_dst_blending_factor() const override
+	{
+		assert(is_initialized_);
+		return dst_blending_factor_;
+	}
+
+	void do_set_blending_factors(
+		const BlendingFactor src_factor,
+		const BlendingFactor dst_factor) override
+	{
+		if (!is_initialized_ || !is_context_current_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (src_blending_factor_ == src_factor && dst_blending_factor_ == dst_factor)
+		{
+			return;
+		}
+
+		src_blending_factor_ = src_factor;
+		dst_blending_factor_ = dst_factor;
+
+		set_blending_factors_internal();
+	}
+
 	const float* do_get_world_matrix(
 		const int index) const override
 	{
@@ -1208,6 +1311,7 @@ private:
 		set_default_is_depth_enabled();
 		set_default_is_depth_writable();
 		set_default_depth_func();
+		set_default_blending();
 		set_default_world_matrices();
 		set_default_view_matrix();
 		set_default_projection_matrix();
@@ -1267,6 +1371,10 @@ private:
 		is_depth_enabled_ = false;
 		is_depth_writable_ = false;
 		depth_func_ = DepthFunc::none;
+
+		is_blending_enabled_ = false;
+		src_blending_factor_ = BlendingFactor::none;
+		dst_blending_factor_ = BlendingFactor::none;
 
 		if (program_)
 		{
@@ -1537,7 +1645,7 @@ private:
 			ogl_depth_func = GL_LESS;
 			break;
 
-		case DepthFunc::lees_or_equal:
+		case DepthFunc::less_or_equal:
 			ogl_depth_func = GL_LEQUAL;
 			break;
 
@@ -1552,6 +1660,39 @@ private:
 
 		::glDepthFunc(ogl_depth_func);
 		assert(ogl_is_succeed());
+	}
+
+	void set_is_blending_enabled_internal()
+	{
+		if (is_blending_enabled_)
+		{
+			::glEnable(GL_BLEND);
+			assert(ogl_is_succeed());
+		}
+		else
+		{
+			::glDisable(GL_BLEND);
+			assert(ogl_is_succeed());
+		}
+	}
+
+	void set_blending_factors_internal()
+	{
+		const auto ogl_src_factor = get_ogl_blending_factor(src_blending_factor_);
+		const auto ogl_dst_factor = get_ogl_blending_factor(dst_blending_factor_);
+
+		::glBlendFunc(ogl_src_factor, ogl_dst_factor);
+		assert(ogl_is_succeed());
+	}
+
+	void set_default_blending()
+	{
+		is_blending_enabled_ = default_is_blending_enabled;
+		set_is_blending_enabled_internal();
+
+		src_blending_factor_ = default_src_blending_factor;
+		dst_blending_factor_ = default_dst_blending_factor;
+		set_blending_factors_internal();
 	}
 
 	void set_uniform_defaults()
@@ -2129,7 +2270,11 @@ const bool OglRendererImpl::default_is_clipping = true;
 
 const bool OglRendererImpl::default_is_depth_enabled = true;
 const bool OglRendererImpl::default_is_depth_writable = true;
-const OglRendererImpl::DepthFunc OglRendererImpl::default_depth_func = OglRendererImpl::DepthFunc::lees_or_equal;
+const OglRendererImpl::DepthFunc OglRendererImpl::default_depth_func = OglRenderer::DepthFunc::less_or_equal;
+
+const bool OglRendererImpl::default_is_blending_enabled = false;
+const OglRenderer::BlendingFactor OglRendererImpl::default_src_blending_factor = OglRenderer::BlendingFactor::one;
+const OglRenderer::BlendingFactor OglRendererImpl::default_dst_blending_factor = OglRenderer::BlendingFactor::zero;
 
 const bool OglRendererImpl::default_has_diffuse = false;
 
@@ -3297,6 +3442,34 @@ void OglRenderer::set_depth_func(
 	const DepthFunc depth_func)
 {
 	do_set_depth_func(depth_func);
+}
+
+bool OglRenderer::get_is_blending_enabled() const
+{
+	return do_get_is_blending_enabled();
+}
+
+void OglRenderer::set_is_blending_enabled(
+	const bool is_blending_enabled)
+{
+	do_set_is_blending_enabled(is_blending_enabled);
+}
+
+OglRenderer::BlendingFactor OglRenderer::get_src_blending_factor() const
+{
+	return do_get_src_blending_factor();
+}
+
+OglRenderer::BlendingFactor OglRenderer::get_dst_blending_factor() const
+{
+	return do_get_dst_blending_factor();
+}
+
+void OglRenderer::set_blending_factors(
+	const BlendingFactor src_blending_function,
+	const BlendingFactor dst_blending_function)
+{
+	do_set_blending_factors(src_blending_function, dst_blending_function);
 }
 
 const float* OglRenderer::get_world_matrix(

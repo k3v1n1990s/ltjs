@@ -61,9 +61,22 @@ public:
 		greater,
 		greater_or_equal,
 		less,
-		lees_or_equal,
+		less_or_equal,
 		not_equal,
 	}; // DepthFunc
+
+	enum class BlendingFactor
+	{
+		none,
+		zero,
+		one,
+		src_alpha,
+		src_color,
+		inv_src_alpha,
+		inv_src_color,
+		dst_color,
+		inv_dst_color,
+	}; // BlendingFactor
 
 	enum class PrimitiveType
 	{
@@ -421,6 +434,21 @@ public:
 		const DepthFunc depth_func);
 
 
+	bool get_is_blending_enabled() const;
+
+	void set_is_blending_enabled(
+		const bool is_blending_enabled);
+
+
+	BlendingFactor get_src_blending_factor() const;
+
+	BlendingFactor get_dst_blending_factor() const;
+
+	void set_blending_factors(
+		const BlendingFactor src_factor,
+		const BlendingFactor dst_factor);
+
+
 	const float* get_world_matrix(
 		const int index) const;
 
@@ -552,6 +580,23 @@ private:
 
 	virtual void do_set_depth_func(
 		const DepthFunc depth_func) = 0;
+
+	// Alpha blending.
+	//
+
+	virtual bool do_get_is_blending_enabled() const = 0;
+
+	virtual void do_set_is_blending_enabled(
+		const bool is_blending_enabled) = 0;
+
+
+	virtual BlendingFactor do_get_src_blending_factor() const = 0;
+
+	virtual BlendingFactor do_get_dst_blending_factor() const = 0;
+
+	virtual void do_set_blending_factors(
+		const BlendingFactor src_factor,
+		const BlendingFactor dst_factor) = 0;
 
 	// Transformation matrices.
 	//
