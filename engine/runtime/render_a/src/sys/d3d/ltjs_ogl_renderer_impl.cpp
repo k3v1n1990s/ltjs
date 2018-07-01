@@ -655,7 +655,7 @@ private:
 
 	bool is_depth_enabled_;
 	bool is_depth_writable_;
-	DepthFunc depth_func_;
+	CompareFunc depth_func_;
 
 	bool is_blending_enabled_;
 	BlendingFactor src_blending_factor_;
@@ -707,7 +707,7 @@ private:
 
 	static const bool default_is_depth_enabled;
 	static const bool default_is_depth_writable;
-	static const DepthFunc default_depth_func;
+	static const CompareFunc default_depth_func;
 
 	static const bool default_is_blending_enabled;
 	static const BlendingFactor default_src_blending_factor;
@@ -1011,14 +1011,14 @@ private:
 		set_is_depth_writable_internal();
 	}
 
-	DepthFunc do_get_depth_func() const override
+	CompareFunc do_get_depth_func() const override
 	{
 		assert(is_initialized_);
 		return depth_func_;
 	}
 
 	void do_set_depth_func(
-		const DepthFunc depth_func) override
+		const CompareFunc depth_func) override
 	{
 		if (!is_initialized_ || !is_context_current_)
 		{
@@ -1418,7 +1418,7 @@ private:
 
 		is_depth_enabled_ = false;
 		is_depth_writable_ = false;
-		depth_func_ = DepthFunc::none;
+		depth_func_ = CompareFunc::none;
 
 		is_blending_enabled_ = false;
 		src_blending_factor_ = BlendingFactor::none;
@@ -1654,42 +1654,7 @@ private:
 
 	void set_depth_func_internal()
 	{
-		auto ogl_depth_func = GLenum{};
-
-		switch (depth_func_)
-		{
-		case DepthFunc::always:
-			ogl_depth_func = GL_ALWAYS;
-			break;
-
-		case DepthFunc::equal:
-			ogl_depth_func = GL_EQUAL;
-			break;
-
-		case DepthFunc::greater:
-			ogl_depth_func = GL_GREATER;
-			break;
-
-		case DepthFunc::greater_or_equal:
-			ogl_depth_func = GL_GEQUAL;
-			break;
-
-		case DepthFunc::less:
-			ogl_depth_func = GL_LESS;
-			break;
-
-		case DepthFunc::less_or_equal:
-			ogl_depth_func = GL_LEQUAL;
-			break;
-
-		case DepthFunc::not_equal:
-			ogl_depth_func = GL_NOTEQUAL;
-			break;
-
-		default:
-			assert(!"Invalid depth func.");
-			return;
-		}
+		const auto ogl_depth_func = get_ogl_compare_func(depth_func_);
 
 		::glDepthFunc(ogl_depth_func);
 		assert(ogl_is_succeed());
@@ -2343,6 +2308,38 @@ private:
 			return invalid_ogl_enum;
 		}
 	}
+
+	static GLenum get_ogl_compare_func(
+		const CompareFunc d3d_depth_func)
+	{
+		switch (d3d_depth_func)
+		{
+		case CompareFunc::always:
+			return GL_ALWAYS;
+
+		case CompareFunc::equal:
+			return GL_EQUAL;
+
+		case CompareFunc::greater:
+			return GL_GREATER;
+
+		case CompareFunc::greater_or_equal:
+			return GL_GEQUAL;
+
+		case CompareFunc::less:
+			return GL_LESS;
+
+		case CompareFunc::less_or_equal:
+			return GL_LEQUAL;
+
+		case CompareFunc::not_equal:
+			return GL_NOTEQUAL;
+
+		default:
+			assert(!"Invalid compare function.");
+			return invalid_ogl_enum;
+		}
+	}
 }; // OglRendererImpl
 
 
@@ -2363,7 +2360,7 @@ const bool OglRendererImpl::default_is_clipping = true;
 
 const bool OglRendererImpl::default_is_depth_enabled = true;
 const bool OglRendererImpl::default_is_depth_writable = true;
-const OglRendererImpl::DepthFunc OglRendererImpl::default_depth_func = OglRenderer::DepthFunc::less_or_equal;
+const OglRendererImpl::CompareFunc OglRendererImpl::default_depth_func = OglRenderer::CompareFunc::less_or_equal;
 
 const bool OglRendererImpl::default_is_blending_enabled = false;
 const OglRenderer::BlendingFactor OglRendererImpl::default_src_blending_factor = OglRenderer::BlendingFactor::one;
@@ -3820,13 +3817,13 @@ void OglRenderer::set_is_depth_writable(
 	do_set_is_depth_writable(is_writable);
 }
 
-OglRenderer::DepthFunc OglRenderer::get_depth_func() const
+OglRenderer::CompareFunc OglRenderer::get_depth_func() const
 {
 	return do_get_depth_func();
 }
 
 void OglRenderer::set_depth_func(
-	const DepthFunc depth_func)
+	const CompareFunc depth_func)
 {
 	do_set_depth_func(depth_func);
 }

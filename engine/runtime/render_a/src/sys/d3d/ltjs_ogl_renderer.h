@@ -53,17 +53,18 @@ public:
 		solid = 3,
 	}; // FillMode
 
-	enum class DepthFunc
+	enum class CompareFunc :
+		std::uint32_t
 	{
-		none,
-		always,
-		equal,
-		greater,
-		greater_or_equal,
-		less,
-		less_or_equal,
-		not_equal,
-	}; // DepthFunc
+		none = 0,
+		always = 8,
+		equal = 3,
+		greater = 5,
+		greater_or_equal = 7,
+		less = 2,
+		less_or_equal = 4,
+		not_equal = 6,
+	}; // CompareFunc
 
 	enum class BlendingFactor
 	{
@@ -428,10 +429,10 @@ public:
 		const bool is_writable);
 
 
-	DepthFunc get_depth_func() const;
+	CompareFunc get_depth_func() const;
 
 	void set_depth_func(
-		const DepthFunc depth_func);
+		const CompareFunc depth_func);
 
 
 	bool get_is_blending_enabled() const;
@@ -576,10 +577,10 @@ private:
 	virtual void do_set_is_depth_writable(
 		const bool is_writable) = 0;
 
-	virtual DepthFunc do_get_depth_func() const = 0;
+	virtual CompareFunc do_get_depth_func() const = 0;
 
 	virtual void do_set_depth_func(
-		const DepthFunc depth_func) = 0;
+		const CompareFunc depth_func) = 0;
 
 	// Alpha blending.
 	//
