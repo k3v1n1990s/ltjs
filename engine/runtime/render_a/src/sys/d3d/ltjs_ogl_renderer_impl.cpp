@@ -266,81 +266,6 @@ GLenum get_ogl_blending_factor(
 	}
 }
 
-GLenum get_ogl_mag_filter(
-	const OglRenderer::SamplerState::Filter mag_filter)
-{
-	switch (mag_filter)
-	{
-	case OglRenderer::SamplerState::Filter::point:
-		return GL_NEAREST;
-
-	case OglRenderer::SamplerState::Filter::linear:
-	case OglRenderer::SamplerState::Filter::anisotropic:
-		return GL_LINEAR;
-
-	default:
-		assert(!"Unsupported magnification texture filter.");
-		return invalid_ogl_enum;
-	}
-}
-
-GLenum get_ogl_min_filter(
-	const OglRenderer::SamplerState::Filter min_filter,
-	const OglRenderer::SamplerState::Filter mip_filter)
-{
-	switch (min_filter)
-	{
-	case OglRenderer::SamplerState::Filter::point:
-		switch (mip_filter)
-		{
-		case OglRenderer::SamplerState::Filter::disabled:
-			return GL_NEAREST;
-
-		case OglRenderer::SamplerState::Filter::point:
-			return GL_NEAREST_MIPMAP_NEAREST;
-
-		default:
-			assert(!"Unsupported mipmap texture filter.");
-			return invalid_ogl_enum;
-		}
-		break;
-
-	case OglRenderer::SamplerState::Filter::linear:
-		switch (mip_filter)
-		{
-		case OglRenderer::SamplerState::Filter::disabled:
-			return GL_LINEAR;
-
-		case OglRenderer::SamplerState::Filter::point:
-			return GL_LINEAR_MIPMAP_NEAREST;
-
-		default:
-			assert(!"Unsupported mipmap texture filter.");
-			return invalid_ogl_enum;
-		}
-		break;
-
-	case OglRenderer::SamplerState::Filter::anisotropic:
-		switch (mip_filter)
-		{
-		case OglRenderer::SamplerState::Filter::disabled:
-			return GL_LINEAR;
-
-		case OglRenderer::SamplerState::Filter::point:
-			return GL_LINEAR_MIPMAP_LINEAR;
-
-		default:
-			assert(!"Unsupported mipmap texture filter.");
-			return invalid_ogl_enum;
-		}
-		break;
-
-	default:
-		assert(!"Unsupported minification texture filter.");
-		return invalid_ogl_enum;
-	}
-}
-
 GLenum get_ogl_primitive_type(
 	const OglRenderer::PrimitiveType primitive_type)
 {
@@ -567,17 +492,13 @@ private:
 		void uninitialize();
 
 
-		static GLenum get_ogl_addressing_mode(
-			const TextureAddressingMode d3d_addressing_mode);
-
-
 	private:
 		static constexpr auto default_addressing_mode_u = TextureAddressingMode::wrap;
 		static constexpr auto default_addressing_mode_v = TextureAddressingMode::wrap;
 
-		static constexpr auto default_mag_filter = Filter::point;
-		static constexpr auto default_min_filter = Filter::point;
-		static constexpr auto default_mip_filter = Filter::disabled;
+		static constexpr auto default_mag_filter = TextureFilterType::point;
+		static constexpr auto default_min_filter = TextureFilterType::point;
+		static constexpr auto default_mip_filter = TextureFilterType::none;
 
 		static constexpr auto default_lod_bias = 0.0F;
 
@@ -592,9 +513,9 @@ private:
 		TextureAddressingMode addressing_mode_u_;
 		TextureAddressingMode addressing_mode_v_;
 
-		Filter mag_filter_;
-		Filter min_filter_;
-		Filter mip_filter_;
+		TextureFilterType mag_filter_;
+		TextureFilterType min_filter_;
+		TextureFilterType mip_filter_;
 
 		float lod_bias_;
 		float max_lod_bias_;
@@ -620,22 +541,22 @@ private:
 			const TextureAddressingMode addressing_mode_v) override;
 
 
-		Filter do_get_mag_filter() const override;
+		TextureFilterType do_get_mag_filter() const override;
 
 		void do_set_mag_filter(
-			const Filter mag_filter) override;
+			const TextureFilterType mag_filter) override;
 
 
-		Filter do_get_min_filter() const override;
+		TextureFilterType do_get_min_filter() const override;
 
 		void do_set_min_filter(
-			const Filter min_filter) override;
+			const TextureFilterType min_filter) override;
 
 
-		Filter do_get_mip_filter() const override;
+		TextureFilterType do_get_mip_filter() const override;
 
 		void do_set_mip_filter(
-			const Filter mip_filter) override;
+			const TextureFilterType mip_filter) override;
 
 
 		float do_get_lod_bias() const override;
@@ -671,6 +592,17 @@ private:
 		void set_anisotropy_internal();
 
 		void set_defaults();
+
+
+		static GLenum get_ogl_addressing_mode(
+			const TextureAddressingMode d3d_addressing_mode);
+
+		static GLenum get_ogl_mag_filter(
+			const TextureFilterType d3d_mag_filter);
+
+		static GLenum get_ogl_min_filter(
+			const TextureFilterType d3d_min_filter,
+			const TextureFilterType d3d_mip_filter);
 	}; // SamplerStateImpl
 
 	using SamplerStates = std::array<SamplerStateImpl, max_samplers>;
@@ -3034,31 +2966,14 @@ void OglRendererImpl::SamplerStateImpl::uninitialize()
 
 	addressing_mode_u_ = TextureAddressingMode::none;
 	addressing_mode_v_ = TextureAddressingMode::none;
-	mag_filter_ = Filter::none;
-	min_filter_ = Filter::none;
-	mip_filter_ = Filter::none;
+	mag_filter_ = TextureFilterType::none;
+	min_filter_ = TextureFilterType::none;
+	mip_filter_ = TextureFilterType::none;
 	lod_bias_ = 0.0F;
 	max_lod_bias_ = 0.0F;
 	has_anisotropy_ = false;
 	anisotropy_ = 0;
 	max_anisotropy_ = 0;
-}
-
-GLenum OglRendererImpl::SamplerStateImpl::get_ogl_addressing_mode(
-	const TextureAddressingMode d3d_addressing_mode)
-{
-	switch (d3d_addressing_mode)
-	{
-	case OglRenderer::TextureAddressingMode::clamp:
-		return GL_CLAMP_TO_EDGE;
-
-	case OglRenderer::TextureAddressingMode::wrap:
-		return GL_REPEAT;
-
-	default:
-		assert(!"Unsupported texture addressing mode.");
-		return invalid_ogl_enum;
-	}
 }
 
 OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerStateImpl::do_get_addressing_mode_u() const
@@ -3109,24 +3024,17 @@ void OglRendererImpl::SamplerStateImpl::do_set_addressing_mode_v(
 	set_addressing_mode_v_internal();
 }
 
-OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_mag_filter() const
+OglRendererImpl::TextureFilterType OglRendererImpl::SamplerStateImpl::do_get_mag_filter() const
 {
 	assert(is_initialized_);
 	return mag_filter_;
 }
 
 void OglRendererImpl::SamplerStateImpl::do_set_mag_filter(
-	const Filter mag_filter)
+	const TextureFilterType mag_filter)
 {
-	switch (mag_filter)
+	if (mag_filter_ == mag_filter)
 	{
-	case Filter::point:
-	case Filter::linear:
-	case Filter::anisotropic:
-		break;
-
-	default:
-		assert(!"Unsupported magnification texture filter.");
 		return;
 	}
 
@@ -3134,25 +3042,17 @@ void OglRendererImpl::SamplerStateImpl::do_set_mag_filter(
 	set_mag_filter_internal();
 }
 
-OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_min_filter() const
+OglRendererImpl::TextureFilterType OglRendererImpl::SamplerStateImpl::do_get_min_filter() const
 {
 	assert(is_initialized_);
 	return min_filter_;
 }
 
 void OglRendererImpl::SamplerStateImpl::do_set_min_filter(
-	const Filter min_filter)
+	const TextureFilterType min_filter)
 {
-	switch (min_filter)
+	if (min_filter_ == min_filter)
 	{
-	case Filter::disabled:
-	case Filter::point:
-	case Filter::linear:
-	case Filter::anisotropic:
-		break;
-
-	default:
-		assert(!"Unsupported minification texture filter.");
 		return;
 	}
 
@@ -3160,23 +3060,17 @@ void OglRendererImpl::SamplerStateImpl::do_set_min_filter(
 	set_min_filter_internal();
 }
 
-OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_mip_filter() const
+OglRendererImpl::TextureFilterType OglRendererImpl::SamplerStateImpl::do_get_mip_filter() const
 {
 	assert(is_initialized_);
 	return mip_filter_;
 }
 
 void OglRendererImpl::SamplerStateImpl::do_set_mip_filter(
-	const Filter mip_filter)
+	const TextureFilterType mip_filter)
 {
-	switch (mip_filter)
+	if (mip_filter_ == mip_filter)
 	{
-	case Filter::disabled:
-	case Filter::point:
-		break;
-
-	default:
-		assert(!"Unsupported mipmap texture filter.");
 		return;
 	}
 
@@ -3326,6 +3220,98 @@ void OglRendererImpl::SamplerStateImpl::set_defaults()
 	set_anisotropy_internal();
 }
 
+GLenum OglRendererImpl::SamplerStateImpl::get_ogl_addressing_mode(
+	const TextureAddressingMode d3d_addressing_mode)
+{
+	switch (d3d_addressing_mode)
+	{
+	case OglRenderer::TextureAddressingMode::clamp:
+		return GL_CLAMP_TO_EDGE;
+
+	case OglRenderer::TextureAddressingMode::wrap:
+		return GL_REPEAT;
+
+	default:
+		assert(!"Unsupported texture addressing mode.");
+		return invalid_ogl_enum;
+	}
+}
+
+GLenum OglRendererImpl::SamplerStateImpl::get_ogl_mag_filter(
+	const TextureFilterType d3d_mag_filter)
+{
+	switch (d3d_mag_filter)
+	{
+	case TextureFilterType::point:
+		return GL_NEAREST;
+
+	case TextureFilterType::linear:
+	case TextureFilterType::anisotropic:
+		return GL_LINEAR;
+
+	default:
+		assert(!"Unsupported magnification texture filter.");
+		return invalid_ogl_enum;
+	}
+}
+
+GLenum OglRendererImpl::SamplerStateImpl::get_ogl_min_filter(
+	const TextureFilterType d3d_min_filter,
+	const TextureFilterType d3d_mip_filter)
+{
+	switch (d3d_min_filter)
+	{
+	case TextureFilterType::point:
+		switch (d3d_mip_filter)
+		{
+		case TextureFilterType::none:
+			return GL_NEAREST;
+
+		case TextureFilterType::point:
+			return GL_NEAREST_MIPMAP_NEAREST;
+
+		default:
+			assert(!"Unsupported mipmap texture filter.");
+			return invalid_ogl_enum;
+		}
+		break;
+
+	case TextureFilterType::linear:
+		switch (d3d_mip_filter)
+		{
+		case TextureFilterType::none:
+			return GL_LINEAR;
+
+		case TextureFilterType::point:
+			return GL_LINEAR_MIPMAP_NEAREST;
+
+		default:
+			assert(!"Unsupported mipmap texture filter.");
+			return invalid_ogl_enum;
+		}
+		break;
+
+	case TextureFilterType::anisotropic:
+		switch (d3d_mip_filter)
+		{
+		case TextureFilterType::none:
+			return GL_LINEAR;
+
+		case TextureFilterType::point:
+			return GL_LINEAR_MIPMAP_LINEAR;
+
+		default:
+			assert(!"Unsupported mipmap texture filter.");
+			return invalid_ogl_enum;
+		}
+		break;
+
+	default:
+		assert(!"Unsupported minification texture filter.");
+		return invalid_ogl_enum;
+	}
+}
+
 //
 // OglRendererImpl::SamplerStateImpl
 // ==========================================================================
@@ -3365,35 +3351,35 @@ void OglRenderer::SamplerState::set_addressing_mode_v(
 	do_set_addressing_mode_v(addressing_mode_v);
 }
 
-OglRenderer::SamplerState::Filter OglRenderer::SamplerState::get_mag_filter() const
+OglRenderer::TextureFilterType OglRenderer::SamplerState::get_mag_filter() const
 {
 	return do_get_mag_filter();
 }
 
 void OglRenderer::SamplerState::set_mag_filter(
-	const Filter mag_filter)
+	const TextureFilterType mag_filter)
 {
 	do_set_mag_filter(mag_filter);
 }
 
-OglRenderer::SamplerState::Filter OglRenderer::SamplerState::get_min_filter() const
+OglRenderer::TextureFilterType OglRenderer::SamplerState::get_min_filter() const
 {
 	return do_get_min_filter();
 }
 
 void OglRenderer::SamplerState::set_min_filter(
-	const Filter min_filter)
+	const TextureFilterType min_filter)
 {
 	do_set_min_filter(min_filter);
 }
 
-OglRenderer::SamplerState::Filter OglRenderer::SamplerState::get_mip_filter() const
+OglRenderer::TextureFilterType OglRenderer::SamplerState::get_mip_filter() const
 {
 	return do_get_mip_filter();
 }
 
 void OglRenderer::SamplerState::set_mip_filter(
-	const Filter mip_filter)
+	const TextureFilterType mip_filter)
 {
 	do_set_mip_filter(mip_filter);
 }

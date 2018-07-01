@@ -94,6 +94,15 @@ public:
 		wrap = 1,
 	}; // TextureAddresingsMode
 
+	enum class TextureFilterType :
+		std::uint32_t
+	{
+		none = 0,
+		point = 1,
+		linear = 2,
+		anisotropic = 3,
+	}; // TextureFilterType
+
 
 	struct Viewport
 	{
@@ -259,16 +268,6 @@ public:
 	class SamplerState
 	{
 	public:
-		enum class Filter
-		{
-			none,
-			disabled,
-			point,
-			linear,
-			anisotropic,
-		}; // Filter
-
-
 		TextureAddressingMode get_addressing_mode_u() const;
 
 		void set_addressing_mode_u(
@@ -281,22 +280,22 @@ public:
 			const TextureAddressingMode addressing_mode_v);
 
 
-		Filter get_mag_filter() const;
+		TextureFilterType get_mag_filter() const;
 
 		void set_mag_filter(
-			const Filter mag_filter);
+			const TextureFilterType mag_filter);
 
 
-		Filter get_min_filter() const;
+		TextureFilterType get_min_filter() const;
 
 		void set_min_filter(
-			const Filter min_filter);
+			const TextureFilterType min_filter);
 
 
-		Filter get_mip_filter() const;
+		TextureFilterType get_mip_filter() const;
 
 		void set_mip_filter(
-			const Filter mip_filter);
+			const TextureFilterType mip_filter);
 
 
 		float get_lod_bias() const;
@@ -330,22 +329,22 @@ public:
 			const TextureAddressingMode address_mode_v) = 0;
 
 
-		virtual Filter do_get_mag_filter() const = 0;
+		virtual TextureFilterType do_get_mag_filter() const = 0;
 
 		virtual void do_set_mag_filter(
-			const Filter mag_filter) = 0;
+			const TextureFilterType mag_filter) = 0;
 
 
-		virtual Filter do_get_min_filter() const = 0;
+		virtual TextureFilterType do_get_min_filter() const = 0;
 
 		virtual void do_set_min_filter(
-			const Filter min_filter) = 0;
+			const TextureFilterType min_filter) = 0;
 
 
-		virtual Filter do_get_mip_filter() const = 0;
+		virtual TextureFilterType do_get_mip_filter() const = 0;
 
 		virtual void do_set_mip_filter(
-			const Filter mip_filter) = 0;
+			const TextureFilterType mip_filter) = 0;
 
 
 		virtual float do_get_lod_bias() const = 0;
