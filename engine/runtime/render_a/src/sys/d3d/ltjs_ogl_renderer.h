@@ -66,17 +66,18 @@ public:
 		not_equal = 6,
 	}; // CompareFunc
 
-	enum class BlendingFactor
+	enum class BlendingFactor :
+		std::uint32_t
 	{
-		none,
-		zero,
-		one,
-		src_alpha,
-		src_color,
-		inv_src_alpha,
-		inv_src_color,
-		dst_color,
-		inv_dst_color,
+		none = 0,
+		zero = 1,
+		one = 2,
+		src_alpha = 5,
+		src_color = 3,
+		inv_src_alpha = 6,
+		inv_src_color = 4,
+		dst_color = 9,
+		inv_dst_color = 10,
 	}; // BlendingFactor
 
 	enum class PrimitiveType

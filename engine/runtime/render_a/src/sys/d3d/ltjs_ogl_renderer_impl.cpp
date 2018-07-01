@@ -231,41 +231,6 @@ int calculate_vertex_count(
 	}
 }
 
-GLenum get_ogl_blending_factor(
-	const OglRenderer::BlendingFactor blending_factor)
-{
-	switch (blending_factor)
-	{
-		case OglRenderer::BlendingFactor::zero:
-			return GL_ZERO;
-
-		case OglRenderer::BlendingFactor::one:
-			return GL_ONE;
-
-		case OglRenderer::BlendingFactor::src_alpha:
-			return GL_SRC_ALPHA;
-
-		case OglRenderer::BlendingFactor::src_color:
-			return GL_SRC_COLOR;
-
-		case OglRenderer::BlendingFactor::inv_src_alpha:
-			return GL_ONE_MINUS_SRC_ALPHA;
-
-		case OglRenderer::BlendingFactor::inv_src_color:
-			return GL_ONE_MINUS_SRC_COLOR;
-
-		case OglRenderer::BlendingFactor::dst_color:
-			return GL_DST_COLOR;
-
-		case OglRenderer::BlendingFactor::inv_dst_color:
-			return GL_ONE_MINUS_DST_COLOR;
-
-	default:
-		assert(!"Unsupported blending factor.");
-		return invalid_ogl_enum;
-	}
-}
-
 GLenum get_ogl_primitive_type(
 	const OglRenderer::PrimitiveType primitive_type)
 {
@@ -2337,6 +2302,41 @@ private:
 
 		default:
 			assert(!"Invalid compare function.");
+			return invalid_ogl_enum;
+		}
+	}
+
+	static GLenum get_ogl_blending_factor(
+		const BlendingFactor blending_factor)
+	{
+		switch (blending_factor)
+		{
+			case OglRenderer::BlendingFactor::zero:
+				return GL_ZERO;
+
+			case OglRenderer::BlendingFactor::one:
+				return GL_ONE;
+
+			case OglRenderer::BlendingFactor::src_alpha:
+				return GL_SRC_ALPHA;
+
+			case OglRenderer::BlendingFactor::src_color:
+				return GL_SRC_COLOR;
+
+			case OglRenderer::BlendingFactor::inv_src_alpha:
+				return GL_ONE_MINUS_SRC_ALPHA;
+
+			case OglRenderer::BlendingFactor::inv_src_color:
+				return GL_ONE_MINUS_SRC_COLOR;
+
+			case OglRenderer::BlendingFactor::dst_color:
+				return GL_DST_COLOR;
+
+			case OglRenderer::BlendingFactor::inv_dst_color:
+				return GL_ONE_MINUS_DST_COLOR;
+
+		default:
+			assert(!"Unsupported blending factor.");
 			return invalid_ogl_enum;
 		}
 	}
