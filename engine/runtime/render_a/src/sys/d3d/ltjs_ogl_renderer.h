@@ -298,16 +298,16 @@ public:
 			const Filter mip_filter);
 
 
-		float get_mipmap_lod_bias() const;
+		float get_lod_bias() const;
 
-		void set_mipmap_lod_bias(
+		void set_lod_bias(
 			const float mipmap_lod_bias);
 
 
-		int get_max_anisotropy() const;
+		float get_anisotropy() const;
 
-		void set_max_anisotropy(
-			const int max_anisotropy);
+		void set_anisotropy(
+			const float anisotropy);
 
 
 	protected:
@@ -347,16 +347,16 @@ public:
 			const Filter mip_filter) = 0;
 
 
-		virtual float do_get_mipmap_lod_bias() const = 0;
+		virtual float do_get_lod_bias() const = 0;
 
-		virtual void do_set_mipmap_lod_bias(
-			const float mipmap_lod_bias) = 0;
+		virtual void do_set_lod_bias(
+			const float lod_bias) = 0;
 
 
-		virtual int do_get_max_anisotropy() const = 0;
+		virtual float do_get_anisotropy() const = 0;
 
-		virtual void do_set_max_anisotropy(
-			const int max_anisotropy) = 0;
+		virtual void do_set_anisotropy(
+			const float anisotropy) = 0;
 	}; // SamplerState
 
 	using SamplerStatePtr = SamplerState*;

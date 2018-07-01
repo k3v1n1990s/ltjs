@@ -171,6 +171,8 @@ constexpr auto d3dfvf_valid_flags =
 	d3dfvf_texcoordsize4(3) |
 	0;
 
+constexpr auto invalid_ogl_enum = GLenum{0xFFFFFFFF};
+
 
 GLenum usage_flags_to_ogl_usage(
 	const OglRenderer::VertexArrayObject::UsageFlags usage_flags)
@@ -260,7 +262,99 @@ GLenum get_ogl_blending_factor(
 
 	default:
 		assert(!"Unsupported blending factor.");
-		return 0x10000;
+		return invalid_ogl_enum;
+	}
+}
+
+GLenum get_ogl_address_mode(
+	const OglRenderer::SamplerState::AddressMode address_mode)
+{
+	switch (address_mode)
+	{
+	case OglRenderer::SamplerState::AddressMode::clamp:
+		return GL_CLAMP_TO_EDGE;
+
+	case OglRenderer::SamplerState::AddressMode::wrap:
+		return GL_REPEAT;
+
+	default:
+		assert(!"Unsupported texture address mode.");
+		return invalid_ogl_enum;
+	}
+}
+
+GLenum get_ogl_mag_filter(
+	const OglRenderer::SamplerState::Filter mag_filter)
+{
+	switch (mag_filter)
+	{
+	case OglRenderer::SamplerState::Filter::point:
+		return GL_NEAREST;
+
+	case OglRenderer::SamplerState::Filter::linear:
+	case OglRenderer::SamplerState::Filter::anisotropic:
+		return GL_LINEAR;
+
+	default:
+		assert(!"Unsupported magnification texture filter.");
+		return invalid_ogl_enum;
+	}
+}
+
+GLenum get_ogl_min_filter(
+	const OglRenderer::SamplerState::Filter min_filter,
+	const OglRenderer::SamplerState::Filter mip_filter)
+{
+	switch (min_filter)
+	{
+	case OglRenderer::SamplerState::Filter::point:
+		switch (mip_filter)
+		{
+		case OglRenderer::SamplerState::Filter::disabled:
+			return GL_NEAREST;
+
+		case OglRenderer::SamplerState::Filter::point:
+			return GL_NEAREST_MIPMAP_NEAREST;
+
+		default:
+			assert(!"Unsupported mipmap texture filter.");
+			return invalid_ogl_enum;
+		}
+		break;
+
+	case OglRenderer::SamplerState::Filter::linear:
+		switch (mip_filter)
+		{
+		case OglRenderer::SamplerState::Filter::disabled:
+			return GL_LINEAR;
+
+		case OglRenderer::SamplerState::Filter::point:
+			return GL_LINEAR_MIPMAP_NEAREST;
+
+		default:
+			assert(!"Unsupported mipmap texture filter.");
+			return invalid_ogl_enum;
+		}
+		break;
+
+	case OglRenderer::SamplerState::Filter::anisotropic:
+		switch (mip_filter)
+		{
+		case OglRenderer::SamplerState::Filter::disabled:
+			return GL_LINEAR;
+
+		case OglRenderer::SamplerState::Filter::point:
+			return GL_LINEAR_MIPMAP_LINEAR;
+
+		default:
+			assert(!"Unsupported mipmap texture filter.");
+			return invalid_ogl_enum;
+		}
+		break;
+
+	default:
+		assert(!"Unsupported minification texture filter.");
+		return invalid_ogl_enum;
 	}
 }
 
@@ -280,7 +374,7 @@ GLenum get_ogl_primitive_type(
 
 	default:
 		assert(!"Unsupported primitive type.");
-		return GL_NONE;
+		return invalid_ogl_enum;
 	}
 }
 
@@ -355,6 +449,8 @@ public:
 
 
 private:
+	static constexpr auto min_anisotropy = 1.0F;
+
 	static constexpr auto max_world_matrices = 4;
 
 	static constexpr auto max_ui_vao_vertices = 128;
@@ -463,12 +559,29 @@ private:
 		public SamplerState
 	{
 	public:
+		struct InitializeParam
+		{
+			int unit_index_;
+			float max_lod_bias_;
+			bool has_anisotropy_;
+			float max_anisotropy_;
+
+
+			InitializeParam();
+
+			bool is_valid() const;
+		}; // InitializeParam
+
+
 		SamplerStateImpl();
 
 		~SamplerStateImpl() override;
 
 
-		void set_defaults();
+		bool initialize(
+			const InitializeParam& param);
+
+		void uninitialize();
 
 
 	private:
@@ -479,10 +592,15 @@ private:
 		static constexpr auto default_min_filter = Filter::point;
 		static constexpr auto default_mip_filter = Filter::disabled;
 
-		static constexpr auto default_mipmap_lod_bias = 0.0F;
+		static constexpr auto default_lod_bias = 0.0F;
 
-		static constexpr auto default_max_anisotropy = 1.0F;
+		static constexpr auto default_max_anisotropy = min_anisotropy;
 
+
+		bool is_initialized_;
+
+		int unit_index_;
+		GLuint ogl_sampler_;
 
 		AddressMode address_mode_u_;
 		AddressMode address_mode_v_;
@@ -491,9 +609,12 @@ private:
 		Filter min_filter_;
 		Filter mip_filter_;
 
-		float mipmap_lod_bias_;
+		float lod_bias_;
+		float max_lod_bias_;
 
-		int max_anisotropy_;
+		bool has_anisotropy_;
+		float anisotropy_;
+		float max_anisotropy_;
 
 
 		// ========================================================================
@@ -530,20 +651,39 @@ private:
 			const Filter mip_filter) override;
 
 
-		float do_get_mipmap_lod_bias() const override;
+		float do_get_lod_bias() const override;
 
-		void do_set_mipmap_lod_bias(
-			const float mipmap_lod_bias) override;
+		void do_set_lod_bias(
+			const float lod_bias) override;
 
 
-		int do_get_max_anisotropy() const override;
+		float do_get_anisotropy() const override;
 
-		void do_set_max_anisotropy(
-			const int max_anisotropy) override;
+		void do_set_anisotropy(
+			const float anisotropy) override;
 
 		//
 		// API
 		// ========================================================================
+
+
+		void set_address_mode_u_internal();
+
+		void set_address_mode_v_internal();
+
+		void set_mag_filter_internal();
+
+		void set_minmip_filter_internal();
+
+		void set_min_filter_internal();
+
+		void set_mip_filter_internal();
+
+		void set_lod_bias_internal();
+
+		void set_anisotropy_internal();
+
+		void set_defaults();
 	}; // SamplerStateImpl
 
 	using SamplerStates = std::array<SamplerStateImpl, max_samplers>;
@@ -1295,6 +1435,11 @@ private:
 			return false;
 		}
 
+		if (!initialize_samplers())
+		{
+			return false;
+		}
+
 		// Set defaults.
 		//
 		if (has_gl_arb_clip_control_)
@@ -1315,7 +1460,6 @@ private:
 		set_default_world_matrices();
 		set_default_view_matrix();
 		set_default_projection_matrix();
-		set_default_sampler_states();
 		set_uniform_defaults();
 
 		if (!ogl_is_succeed())
@@ -1426,7 +1570,7 @@ private:
 		ui_vaos_.fill({});
 		vaos_.clear();
 
-		sampler_states_.fill({});
+		uninitialize_samplers();
 		max_texture_lod_bias_ = 0.0F;
 	}
 
@@ -1812,7 +1956,7 @@ private:
 
 			if (ogl_is_succeed())
 			{
-				if (max_anisotropy_ > 1.0F)
+				if (max_anisotropy_ > min_anisotropy)
 				{
 					is_succeed = true;
 				}
@@ -2243,11 +2387,31 @@ private:
 		};
 	}
 
-	void set_default_sampler_states()
+	bool initialize_samplers()
+	{
+		auto param = SamplerStateImpl::InitializeParam{};
+		param.has_anisotropy_ = has_gl_ext_texture_filter_anisotropic_;
+		param.max_anisotropy_ = max_anisotropy_;
+		param.max_lod_bias_ = max_texture_lod_bias_;
+
+		for (auto i = 0; i < max_samplers; ++i)
+		{
+			param.unit_index_ = i;
+
+			if (!sampler_states_[i].initialize(param))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	void uninitialize_samplers()
 	{
 		for (auto& sampler_state : sampler_states_)
 		{
-			sampler_state.set_defaults();
+			sampler_state.uninitialize();
 		}
 	}
 }; // OglRendererImpl
@@ -2763,27 +2927,139 @@ void OglRendererImpl::VertexArrayObject::draw(
 
 
 // ==========================================================================
+// OglRendererImpl::SamplerStateImpl::InitializeParam
+//
+
+OglRendererImpl::SamplerStateImpl::InitializeParam::InitializeParam()
+	:
+	unit_index_{-1},
+	max_lod_bias_{},
+	has_anisotropy_{},
+	max_anisotropy_{}
+{
+}
+
+bool OglRendererImpl::SamplerStateImpl::InitializeParam::is_valid() const
+{
+	if (unit_index_ < 0 || unit_index_ >= max_samplers)
+	{
+		assert(!"Texture unit index out of range.");
+		return false;
+	}
+
+	if (max_lod_bias_ < 0.0F)
+	{
+		assert(!"Negative max absolute LOD bias.");
+		return false;
+	}
+
+	if (has_anisotropy_ && max_anisotropy_ < 0.0F)
+	{
+		assert(!"Negative max anisotropy.");
+		return false;
+	}
+
+	return true;
+}
+
+//
+// OglRendererImpl::SamplerStateImpl::InitializeParam
+// ==========================================================================
+
+
+// ==========================================================================
 // OglRendererImpl::SamplerStateImpl
 //
 
 OglRendererImpl::SamplerStateImpl::SamplerStateImpl()
 	:
+	is_initialized_{},
+	unit_index_{},
+	ogl_sampler_{},
 	address_mode_u_{},
 	address_mode_v_{},
 	mag_filter_{},
 	min_filter_{},
 	mip_filter_{},
-	mipmap_lod_bias_{},
+	lod_bias_{},
+	max_lod_bias_{},
+	has_anisotropy_{},
+	anisotropy_{},
 	max_anisotropy_{}
 {
 }
 
 OglRendererImpl::SamplerStateImpl::~SamplerStateImpl()
 {
+	assert(!is_initialized_);
+}
+
+bool OglRendererImpl::SamplerStateImpl::initialize(
+	const InitializeParam& param)
+{
+	uninitialize();
+
+	if (!param.is_valid())
+	{
+		return false;
+	}
+
+	unit_index_ = param.unit_index_;
+	max_lod_bias_ = param.max_lod_bias_;
+	has_anisotropy_ = param.has_anisotropy_;
+	max_anisotropy_ = param.max_anisotropy_;
+
+	::glGenSamplers(1, &ogl_sampler_);
+	assert(ogl_is_succeed());
+
+	::glBindSampler(unit_index_, ogl_sampler_);
+	assert(ogl_is_succeed());
+
+	if (!ogl_is_succeed())
+	{
+		return false;
+	}
+
+	set_defaults();
+
+	return true;
+}
+
+void OglRendererImpl::SamplerStateImpl::uninitialize()
+{
+	is_initialized_ = false;
+
+	if (unit_index_ >= 0)
+	{
+		::glBindSampler(unit_index_, 0);
+		assert(ogl_is_succeed());
+
+		unit_index_ = -1;
+	}
+
+	if (ogl_sampler_)
+	{
+		::glDeleteSamplers(1, &ogl_sampler_);
+		assert(ogl_is_succeed());
+
+		ogl_sampler_ = 0;
+	}
+
+	address_mode_u_ = AddressMode::none;
+	address_mode_v_ = AddressMode::none;
+	mag_filter_ = Filter::none;
+	min_filter_ = Filter::none;
+	mip_filter_ = Filter::none;
+	lod_bias_ = 0.0F;
+	max_lod_bias_ = 0.0F;
+	has_anisotropy_ = false;
+	anisotropy_ = 0;
+	max_anisotropy_ = 0;
 }
 
 OglRendererImpl::SamplerStateImpl::AddressMode OglRendererImpl::SamplerStateImpl::do_get_address_mode_u() const
 {
+	assert(is_initialized_);
 	return address_mode_u_;
 }
 
@@ -2802,10 +3078,12 @@ void OglRendererImpl::SamplerStateImpl::do_set_address_mode_u(
 	}
 
 	address_mode_u_ = address_mode_u;
+	set_address_mode_u_internal();
 }
 
 OglRendererImpl::SamplerStateImpl::AddressMode OglRendererImpl::SamplerStateImpl::do_get_address_mode_v() const
 {
+	assert(is_initialized_);
 	return address_mode_v_;
 }
 
@@ -2824,10 +3102,12 @@ void OglRendererImpl::SamplerStateImpl::do_set_address_mode_v(
 	}
 
 	address_mode_v_ = address_mode_v;
+	set_address_mode_v_internal();
 }
 
 OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_mag_filter() const
 {
+	assert(is_initialized_);
 	return mag_filter_;
 }
 
@@ -2836,22 +3116,23 @@ void OglRendererImpl::SamplerStateImpl::do_set_mag_filter(
 {
 	switch (mag_filter)
 	{
-	case Filter::disabled:
 	case Filter::point:
 	case Filter::linear:
 	case Filter::anisotropic:
 		break;
 
 	default:
-		assert(!"Unsupported magnification filter.");
+		assert(!"Unsupported magnification texture filter.");
 		return;
 	}
 
 	mag_filter_ = mag_filter;
+	set_mag_filter_internal();
 }
 
 OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_min_filter() const
 {
+	assert(is_initialized_);
 	return min_filter_;
 }
 
@@ -2867,15 +3148,17 @@ void OglRendererImpl::SamplerStateImpl::do_set_min_filter(
 		break;
 
 	default:
-		assert(!"Unsupported minification filter.");
+		assert(!"Unsupported minification texture filter.");
 		return;
 	}
 
 	min_filter_ = min_filter;
+	set_min_filter_internal();
 }
 
 OglRendererImpl::SamplerStateImpl::Filter OglRendererImpl::SamplerStateImpl::do_get_mip_filter() const
 {
+	assert(is_initialized_);
 	return mip_filter_;
 }
 
@@ -2889,50 +3172,154 @@ void OglRendererImpl::SamplerStateImpl::do_set_mip_filter(
 		break;
 
 	default:
-		assert(!"Unsupported mipmap filter.");
+		assert(!"Unsupported mipmap texture filter.");
 		return;
 	}
 
 	mip_filter_ = mip_filter;
+	set_mip_filter_internal();
 }
 
-float OglRendererImpl::SamplerStateImpl::do_get_mipmap_lod_bias() const
+float OglRendererImpl::SamplerStateImpl::do_get_lod_bias() const
 {
-	return mipmap_lod_bias_;
+	assert(is_initialized_);
+	return lod_bias_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_mipmap_lod_bias(
-	const float mipmap_lod_bias)
+void OglRendererImpl::SamplerStateImpl::do_set_lod_bias(
+	const float lod_bias)
 {
-	mipmap_lod_bias_ = mipmap_lod_bias;
+	if (lod_bias_ == lod_bias)
+	{
+		return;
+	}
+
+	lod_bias_ = lod_bias;
+	set_lod_bias_internal();
 }
 
-int OglRendererImpl::SamplerStateImpl::do_get_max_anisotropy() const
+float OglRendererImpl::SamplerStateImpl::do_get_anisotropy() const
 {
-	return max_anisotropy_;
+	assert(is_initialized_);
+	return anisotropy_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_max_anisotropy(
-	const int max_anisotropy)
+void OglRendererImpl::SamplerStateImpl::do_set_anisotropy(
+	const float anisotropy)
 {
-	if (max_anisotropy < 0)
+	if (anisotropy < 0.0F)
 	{
 		assert(!"Negative max anisotropy.");
 		return;
 	}
 
-	max_anisotropy_ = max_anisotropy;
+	if (anisotropy_ == anisotropy)
+	{
+		return;
+	}
+
+	anisotropy_ = anisotropy;
+	set_anisotropy_internal();
+}
+
+void OglRendererImpl::SamplerStateImpl::set_address_mode_u_internal()
+{
+	const auto ogl_address_mode_u = get_ogl_address_mode(address_mode_u_);
+	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_WRAP_S, ogl_address_mode_u);
+	assert(ogl_is_succeed());
+}
+
+void OglRendererImpl::SamplerStateImpl::set_address_mode_v_internal()
+{
+	const auto ogl_address_mode_v = get_ogl_address_mode(address_mode_v_);
+	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_WRAP_T, ogl_address_mode_v);
+	assert(ogl_is_succeed());
+}
+
+void OglRendererImpl::SamplerStateImpl::set_mag_filter_internal()
+{
+	const auto mag_filter = get_ogl_mag_filter(mag_filter_);
+	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_MAG_FILTER, mag_filter);
+	assert(ogl_is_succeed());
+}
+
+void OglRendererImpl::SamplerStateImpl::set_minmip_filter_internal()
+{
+	const auto min_filter = get_ogl_min_filter(min_filter_, mip_filter_);
+	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_MIN_FILTER, min_filter);
+	assert(ogl_is_succeed());
+}
+
+void OglRendererImpl::SamplerStateImpl::set_min_filter_internal()
+{
+	set_minmip_filter_internal();
+}
+
+void OglRendererImpl::SamplerStateImpl::set_mip_filter_internal()
+{
+	set_minmip_filter_internal();
+}
+
+void OglRendererImpl::SamplerStateImpl::set_lod_bias_internal()
+{
+	auto lod_bias = lod_bias_;
+
+	if (lod_bias < (-max_lod_bias_))
+	{
+		lod_bias = -max_lod_bias_;
+	}
+	else if (lod_bias > max_lod_bias_)
+	{
+		lod_bias = max_lod_bias_;
+	}
+
+	::glSamplerParameterf(ogl_sampler_, GL_TEXTURE_LOD_BIAS, lod_bias);
+	assert(ogl_is_succeed());
+}
+
+void OglRendererImpl::SamplerStateImpl::set_anisotropy_internal()
+{
+	if (!has_anisotropy_)
+	{
+		return;
+	}
+
+	auto anisotropy = anisotropy_;
+
+	if (anisotropy < min_anisotropy)
+	{
+		anisotropy = min_anisotropy;
+	}
+
+	if (anisotropy > max_anisotropy_)
+	{
+		anisotropy = max_anisotropy_;
+	}
+
+	::glSamplerParameterf(ogl_sampler_, GL_TEXTURE_MAX_ANISOTROPY_EXT, anisotropy);
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::SamplerStateImpl::set_defaults()
 {
 	address_mode_u_ = default_address_mode_u;
+	set_address_mode_u_internal();
+
 	address_mode_v_ = default_address_mode_v;
+	set_address_mode_v_internal();
+
 	mag_filter_ = default_mag_filter;
+	set_mag_filter_internal();
+
 	min_filter_ = default_min_filter;
 	mip_filter_ = default_mip_filter;
-	mipmap_lod_bias_ = default_mipmap_lod_bias;
-	max_anisotropy_ = default_max_anisotropy;
+	set_minmip_filter_internal();
+
+	lod_bias_ = default_lod_bias;
+	set_lod_bias_internal();
+
+	anisotropy_ = default_max_anisotropy;
+	set_anisotropy_internal();
 }
 
 //
@@ -3007,26 +3394,26 @@ void OglRenderer::SamplerState::set_mip_filter(
 	do_set_mip_filter(mip_filter);
 }
 
-float OglRenderer::SamplerState::get_mipmap_lod_bias() const
+float OglRenderer::SamplerState::get_lod_bias() const
 {
-	return do_get_mipmap_lod_bias();
+	return do_get_lod_bias();
 }
 
-void OglRenderer::SamplerState::set_mipmap_lod_bias(
+void OglRenderer::SamplerState::set_lod_bias(
 	const float mipmap_lod_bias)
 {
-	do_set_mipmap_lod_bias(mipmap_lod_bias);
+	do_set_lod_bias(mipmap_lod_bias);
 }
 
-int OglRenderer::SamplerState::get_max_anisotropy() const
+float OglRenderer::SamplerState::get_anisotropy() const
 {
-	return do_get_max_anisotropy();
+	return do_get_anisotropy();
 }
 
-void OglRenderer::SamplerState::set_max_anisotropy(
-	const int max_anisotropy)
+void OglRenderer::SamplerState::set_anisotropy(
+	const float anisotropy)
 {
-	do_set_max_anisotropy(max_anisotropy);
+	do_set_anisotropy(anisotropy);
 }
 
 //
@@ -3579,4 +3966,3 @@ OglRenderer& OglRenderer::get_instance()
 
 
 } // ltjs
-
