@@ -82,10 +82,10 @@ public:
 
 	enum class PrimitiveType
 	{
-		none,
-		triangle_strip,
-		triangle_fan,
-		triangle_list,
+		none = 0,
+		triangle_strip = 5,
+		triangle_fan = 6,
+		triangle_list = 4,
 	}; // PrimitiveType
 
 	enum class TextureAddressingMode :

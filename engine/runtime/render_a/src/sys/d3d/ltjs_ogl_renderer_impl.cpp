@@ -201,56 +201,6 @@ GLenum usage_flags_to_ogl_usage(
 	}
 }
 
-int calculate_vertex_count(
-	const OglRenderer::PrimitiveType primitive_type,
-	const int primitive_count)
-{
-	if (primitive_count <= 0)
-	{
-		assert(!"Invalid state.");
-		return 0;
-	}
-
-	if (primitive_count == 1)
-	{
-		return 3;
-	}
-
-	switch (primitive_type)
-	{
-	case OglRenderer::PrimitiveType::triangle_fan:
-	case OglRenderer::PrimitiveType::triangle_strip:
-		return 3 + (primitive_count - 1);
-
-	case OglRenderer::PrimitiveType::triangle_list:
-		return 3 * primitive_count;
-
-	default:
-		assert(!"Unsupported primitive type.");
-		return 0;
-	}
-}
-
-GLenum get_ogl_primitive_type(
-	const OglRenderer::PrimitiveType primitive_type)
-{
-	switch (primitive_type)
-	{
-	case OglRenderer::PrimitiveType::triangle_fan:
-		return GL_TRIANGLE_FAN;
-
-	case OglRenderer::PrimitiveType::triangle_strip:
-		return GL_TRIANGLE_STRIP;
-
-	case OglRenderer::PrimitiveType::triangle_list:
-		return GL_TRIANGLES;
-
-	default:
-		assert(!"Unsupported primitive type.");
-		return invalid_ogl_enum;
-	}
-}
-
 
 } // namespace
 
@@ -2337,6 +2287,56 @@ private:
 
 		default:
 			assert(!"Unsupported blending factor.");
+			return invalid_ogl_enum;
+		}
+	}
+
+	static int calculate_vertex_count(
+		const PrimitiveType primitive_type,
+		const int primitive_count)
+	{
+		if (primitive_count <= 0)
+		{
+			assert(!"Invalid state.");
+			return 0;
+		}
+
+		if (primitive_count == 1)
+		{
+			return 3;
+		}
+
+		switch (primitive_type)
+		{
+		case PrimitiveType::triangle_fan:
+		case PrimitiveType::triangle_strip:
+			return 3 + (primitive_count - 1);
+
+		case PrimitiveType::triangle_list:
+			return 3 * primitive_count;
+
+		default:
+			assert(!"Unsupported primitive type.");
+			return 0;
+		}
+	}
+
+	static GLenum get_ogl_primitive_type(
+		const PrimitiveType primitive_type)
+	{
+		switch (primitive_type)
+		{
+		case PrimitiveType::triangle_fan:
+			return GL_TRIANGLE_FAN;
+
+		case PrimitiveType::triangle_strip:
+			return GL_TRIANGLE_STRIP;
+
+		case PrimitiveType::triangle_list:
+			return GL_TRIANGLES;
+
+		default:
+			assert(!"Unsupported primitive type.");
 			return invalid_ogl_enum;
 		}
 	}
