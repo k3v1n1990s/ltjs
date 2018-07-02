@@ -172,6 +172,7 @@ constexpr auto d3dfvf_valid_flags =
 	0;
 
 constexpr auto invalid_ogl_enum = GLenum{0xFFFFFFFF};
+constexpr auto invalid_ogl_format = GLint{-1};
 
 
 GLenum usage_flags_to_ogl_usage(
@@ -201,6 +202,24 @@ GLenum usage_flags_to_ogl_usage(
 	}
 }
 
+bool is_surface_format_valid(
+	const OglRenderer::SurfaceFormat& surface_format)
+{
+	switch (surface_format)
+	{
+	case OglRenderer::SurfaceFormat::a4r4g4b4:
+	case OglRenderer::SurfaceFormat::a8r8g8b8:
+	case OglRenderer::SurfaceFormat::v8u8:
+	case OglRenderer::SurfaceFormat::dxt1:
+	case OglRenderer::SurfaceFormat::dxt3:
+	case OglRenderer::SurfaceFormat::dxt5:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
 
 } // namespace
 
@@ -216,7 +235,7 @@ public:
 	OglRendererImpl()
 		:
 		is_initialized_{},
-		is_context_current_{},
+		is_current_context_{},
 		ogl_dc_{},
 		ogl_rc_{},
 		extensions_{},
@@ -549,7 +568,9 @@ private:
 
 		int width_;
 		int height_;
+
 		int level_count_;
+		int max_level_count_;
 
 
 		// ==================================================================
@@ -557,13 +578,13 @@ private:
 		//
 
 		bool do_initialize(
-			const Type type,
-			const SurfaceFormat surface_format,
-			const int width,
-			const int height,
-			const int level_count) override;
+			const InitializeParam& param) override;
 
 		void do_uninitialize() override;
+
+
+		bool do_upload_level(
+			const UploadParam& param) override;
 
 
 		Type do_get_type() const override;
@@ -578,19 +599,39 @@ private:
 
 		int do_get_level_count() const override;
 
+		int do_get_level_width(
+			const int level) const override;
+
+		int do_get_level_height(
+			const int level) const override;
+
 		//
 		// API
 		// ==================================================================
 
 
 		bool initialize_internal(
-			const Type type,
-			const SurfaceFormat surface_format,
-			const int width,
-			const int height,
-			const int level_count);
+			const InitializeParam& param);
+
+		bool initialize_2d_internal();
+
+		bool initialize_cube_map_internal();
 
 		void uninitialize_internal();
+
+		static int calculate_max_levels(
+			const int width,
+			const int height);
+
+		int get_ogl_internal_format() const;
+
+		int calculate_compressed_image_size(
+			const int width,
+			const int height) const;
+
+		int calculate_pitch(
+			const int level,
+			const SurfaceFormat& surface_format) const;
 	}; // TextureImpl
 
 	using TextureUPtr = std::unique_ptr<TextureImpl>;
@@ -609,7 +650,7 @@ private:
 
 
 	bool is_initialized_;
-	bool is_context_current_;
+	bool is_current_context_;
 
 	HDC ogl_dc_;
 	HGLRC ogl_rc_;
@@ -742,8 +783,14 @@ private:
 		uninitialize_internal();
 	}
 
-	void do_set_current_context(
-		const bool is_current)
+	bool do_get_is_current_context() const override
+	{
+		assert(is_initialized_);
+		return is_current_context_;
+	}
+
+	void do_set_is_current_context(
+		const bool is_current) override
 	{
 		if (!is_initialized_)
 		{
@@ -751,7 +798,7 @@ private:
 			return;
 		}
 
-		if (is_current == is_context_current_)
+		if (is_current == is_current_context_)
 		{
 			return;
 		}
@@ -765,7 +812,7 @@ private:
 		const std::uint8_t b,
 		const std::uint8_t a) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -790,7 +837,7 @@ private:
 	void do_clear(
 		const ClearFlags clear_flags) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -811,7 +858,7 @@ private:
 	void do_set_viewport(
 		const Viewport& viewport) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -869,7 +916,7 @@ private:
 	void do_set_cull_mode(
 		const CullMode cull_mode) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -897,7 +944,7 @@ private:
 	void do_set_fill_mode(
 		const FillMode fill_mode) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -922,7 +969,7 @@ private:
 	void do_set_is_clipping(
 		const bool is_clipping) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -961,7 +1008,7 @@ private:
 	void do_set_is_depth_enabled(
 		const bool is_enabled) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -989,7 +1036,7 @@ private:
 	void do_set_is_depth_writable(
 		const bool is_writable) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -1014,7 +1061,7 @@ private:
 	void do_set_depth_func(
 		const CompareFunc depth_func) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -1039,7 +1086,7 @@ private:
 	void do_set_is_blending_enabled(
 		const bool is_blending_enabled) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -1069,7 +1116,7 @@ private:
 		const BlendingFactor src_factor,
 		const BlendingFactor dst_factor) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -1104,7 +1151,7 @@ private:
 		const int index,
 		const float* const world_matrix_ptr) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -1138,7 +1185,7 @@ private:
 	void do_set_view_matrix(
 		const float* const view_matrix_ptr) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -1170,7 +1217,7 @@ private:
 	void do_set_projection_matrix(
 		const float* const projection_matrix_ptr) override
 	{
-		if (!is_initialized_ || !is_context_current_)
+		if (!is_initialized_ || !is_current_context_)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -1263,7 +1310,7 @@ private:
 		const int primitive_count,
 		const void* const raw_data) override
 	{
-		if (!is_initialized_ || !is_context_current_ || !raw_data)
+		if (!is_initialized_ || !is_current_context_ || !raw_data)
 		{
 			assert(!"Invalid state.");
 			return;
@@ -1396,7 +1443,7 @@ private:
 		}
 
 		is_initialized_ = true;
-		is_context_current_ = true;
+		is_current_context_ = true;
 
 		add_ui_vaos();
 	
@@ -1406,7 +1453,7 @@ private:
 	void uninitialize_internal()
 	{
 		is_initialized_ = false;
-		is_context_current_ = false;
+		is_current_context_ = false;
 
 		ogl_dc_ = nullptr;
 		ogl_rc_ = nullptr;
@@ -1515,7 +1562,7 @@ private:
 		const auto make_result = ::wglMakeCurrent(dc, rc);
 		assert(make_result);
 
-		is_context_current_ = is_current;
+		is_current_context_ = is_current;
 	}
 
 	void set_default_cull_mode()
@@ -3805,7 +3852,7 @@ OglRenderer::Fvf OglRenderer::Fvf::from_d3d(
 
 
 // ==========================================================================
-// OglRenderer::TextureImpl
+// OglRendererImpl::TextureImpl
 //
 
 OglRendererImpl::TextureImpl::TextureImpl(
@@ -3819,7 +3866,8 @@ OglRendererImpl::TextureImpl::TextureImpl(
 	surface_format_{},
 	width_{},
 	height_{},
-	level_count_{}
+	level_count_{},
+	max_level_count_{}
 {
 }
 
@@ -3829,15 +3877,11 @@ OglRendererImpl::TextureImpl::~TextureImpl()
 }
 
 bool OglRendererImpl::TextureImpl::do_initialize(
-	const Type type,
-	const SurfaceFormat surface_format,
-	const int width,
-	const int height,
-	const int level_count)
+	const InitializeParam& param)
 {
 	uninitialize_internal();
 
-	if (!initialize_internal(type, surface_format, width, height, level_count))
+	if (!initialize_internal(param))
 	{
 		uninitialize_internal();
 		return false;
@@ -3849,6 +3893,35 @@ bool OglRendererImpl::TextureImpl::do_initialize(
 void OglRendererImpl::TextureImpl::do_uninitialize()
 {
 	uninitialize_internal();
+}
+
+bool OglRendererImpl::TextureImpl::do_upload_level(
+	const UploadParam& param)
+{
+	if (!param.is_valid())
+	{
+		return false;
+	}
+
+	const auto level_count = (level_count_ > 0 ? level_count_ : max_level_count_);
+
+	if (param.level_ >= level_count)
+	{
+		assert(!"Level out of range.");
+		return false;
+	}
+
+	if (type_ == Type::cube_map)
+	{
+		if (param.cube_face_index_ < 0 || param.cube_face_index_ >= 6)
+		{
+			assert(!"Cube face index out of range.");
+			return false;
+		}
+	}
+
+	assert(!"Not implemented.");
+	return false;
 }
 
 OglRenderer::Texture::Type OglRendererImpl::TextureImpl::do_get_type() const
@@ -3887,45 +3960,54 @@ int OglRendererImpl::TextureImpl::do_get_level_count() const
 	return level_count_;
 }
 
-bool OglRendererImpl::TextureImpl::initialize_internal(
-	const Type type,
-	const SurfaceFormat surface_format,
-	const int width,
-	const int height,
-	const int level_count)
+int OglRendererImpl::TextureImpl::do_get_level_width(
+	const int level) const
 {
-	auto is_2d = false;
-	auto is_cube_map = false;
+	assert(is_initialized_);
+	assert(level >= 0 && level < (level_count_ > 0 ? level_count_ : max_level_count_));
+	return width_ / (1 << level);
+}
 
-	switch (type)
+int OglRendererImpl::TextureImpl::do_get_level_height(
+	const int level) const
+{
+	assert(is_initialized_);
+	assert(level >= 0 && level < (level_count_ > 0 ? level_count_ : max_level_count_));
+	return height_ / (1 << level);
+}
+
+bool OglRendererImpl::TextureImpl::initialize_internal(
+	const InitializeParam& param)
+{
+	if (!param.is_valid())
 	{
-	case Type::two_d:
-		is_2d = true;
-		break;
-
-	case Type::cube_map:
-		is_cube_map = true;
-		break;
-
-	default:
-		assert(!"Unsupported texture type.");
 		return false;
 	}
 
-	bool is_compressed;
+	type_ = param.type_;
 
-	switch (surface_format)
+	const auto is_2d = (type_ == Type::two_d);
+
+	surface_format_ = param.surface_format_;
+
+	switch (surface_format_)
 	{
 	case SurfaceFormat::a4r4g4b4:
 	case SurfaceFormat::a8r8g8b8:
 	case SurfaceFormat::v8u8:
-		is_compressed = false;
+		is_compressed_ = false;
 		break;
 
 	case SurfaceFormat::dxt1:
 	case SurfaceFormat::dxt3:
 	case SurfaceFormat::dxt5:
-		is_compressed = true;
+		if (!ogl_renderer_.has_gl_ext_texture_compression_s3tc_)
+		{
+			assert(!"DXTC not supported.");
+			return false;
+		}
+
+		is_compressed_ = true;
 		break;
 
 	default:
@@ -3933,34 +4015,141 @@ bool OglRendererImpl::TextureImpl::initialize_internal(
 		return false;
 	}
 
-	if (width <= 0 || height <= 0)
+	width_ = param.width_;
+	height_ = param.height_;
+
+	if (width_ <= 0 || height_ <= 0)
 	{
 		assert(!"Unsupported texture size.");
 		return false;
 	}
 
-	if (level_count < 0)
+	level_count_ = param.level_count_;
+
+	if (level_count_ < 0)
 	{
 		assert(!"Negative level count.");
 		return false;
 	}
 
+	max_level_count_ = calculate_max_levels(width_, height_);
+
+	if (level_count_ > max_level_count_)
+	{
+		assert(!"Level count out of range.");
+		return false;
+	}
+
 	::glGenTextures(1, &ogl_texture_);
+	assert(ogl_is_succeed());
 
 	if (!ogl_is_succeed())
 	{
 		return false;
 	}
 
+	if (is_2d)
+	{
+		if (!initialize_2d_internal())
+		{
+			return false;
+		}
+	}
+	else
+	{
+		if (!initialize_cube_map_internal())
+		{
+			return false;
+		}
+	}
+
 	is_initialized_ = true;
-	type_ = type;
-	is_compressed_ = is_compressed;
-	surface_format_ = surface_format;
-	width_ = width;
-	height_ = height;
-	level_count_ = level_count;
 
 	return true;
+}
+
+bool OglRendererImpl::TextureImpl::initialize_2d_internal()
+{
+	if (ogl_renderer_.current_2d_texture_ != this)
+	{
+		::glBindTexture(GL_TEXTURE_2D, ogl_texture_);
+		assert(ogl_is_succeed());
+
+		ogl_renderer_.current_2d_texture_ = this;
+	}
+
+
+	auto level_count = level_count_;
+
+	if (level_count == 0)
+	{
+		level_count = max_level_count_;
+	}
+
+	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, level_count - 1);
+	assert(ogl_is_succeed());
+
+	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	assert(ogl_is_succeed());
+	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	assert(ogl_is_succeed());
+
+	if (level_count_ > 1)
+	{
+		::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+		assert(ogl_is_succeed());
+	}
+	else
+	{
+		::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		assert(ogl_is_succeed());
+	}
+
+	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	assert(ogl_is_succeed());
+
+	const auto ogl_internal_format = get_ogl_internal_format();
+
+	for (auto i = 0; i < level_count; ++i)
+	{
+		const auto level_width = width_ / (1 << i);
+		const auto level_height = height_ / (1 << i);
+
+		if (is_compressed_)
+		{
+			const auto image_size = calculate_compressed_image_size(level_width, level_height);
+
+			::glCompressedTexImage2D(GL_TEXTURE_2D, i, ogl_internal_format, level_width, level_height, 0, image_size, nullptr);
+			assert(ogl_is_succeed());
+		}
+		else
+		{
+			::glTexImage2D(GL_TEXTURE_2D, i, ogl_internal_format, level_width, level_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			assert(ogl_is_succeed());
+		}
+	}
+
+	return ogl_is_succeed();
+}
+
+bool OglRendererImpl::TextureImpl::initialize_cube_map_internal()
+{
+	if (width_ != height_)
+	{
+		assert(!"Expected square texture for cube map.");
+		return false;
+	}
+
+	if (ogl_renderer_.current_cube_map_texture_ != this)
+	{
+		::glBindTexture(GL_TEXTURE_CUBE_MAP, ogl_texture_);
+		assert(ogl_is_succeed());
+
+		ogl_renderer_.current_cube_map_texture_ = this;
+	}
+
+	assert(!"Not implemented.");
+	return false;
 }
 
 void OglRendererImpl::TextureImpl::uninitialize_internal()
@@ -4020,10 +4209,272 @@ void OglRendererImpl::TextureImpl::uninitialize_internal()
 	width_ = 0;
 	height_ = 0;
 	level_count_ = 0;
+	max_level_count_ = 0;
+}
+
+int OglRendererImpl::TextureImpl::calculate_max_levels(
+	const int width,
+	const int height)
+{
+	if (width <= 0 || height <= 0)
+	{
+		assert(!"Non-positive width or height.");
+		return 0;
+	}
+
+	auto level_width = width;
+	auto level_height = height;
+	auto level_count = 0;
+
+	while (!(level_width == 0 && level_height == 0))
+	{
+		level_count += 1;
+
+		level_width /= 2;
+		level_height /= 2;
+	}
+
+	return level_count;
+}
+
+int OglRendererImpl::TextureImpl::get_ogl_internal_format() const
+{
+	switch (surface_format_)
+	{
+	case SurfaceFormat::a4r4g4b4:
+		return GL_RGBA4;
+
+	case SurfaceFormat::a8r8g8b8:
+		return GL_RGBA8;
+
+	case SurfaceFormat::v8u8:
+		return GL_RG8_SNORM;
+
+	case SurfaceFormat::dxt1:
+		if (!ogl_renderer_.has_gl_ext_texture_compression_s3tc_)
+		{
+			return invalid_ogl_format;
+		}
+
+		return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+
+	case SurfaceFormat::dxt3:
+		if (!ogl_renderer_.has_gl_ext_texture_compression_s3tc_)
+		{
+			return invalid_ogl_format;
+		}
+
+		return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+
+	case SurfaceFormat::dxt5:
+		if (!ogl_renderer_.has_gl_ext_texture_compression_s3tc_)
+		{
+			return invalid_ogl_format;
+		}
+
+		return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+
+	default:
+		assert(!"Unsupported surface format.");
+		return invalid_ogl_format;
+	}
+}
+
+int OglRendererImpl::TextureImpl::calculate_compressed_image_size(
+	const int width,
+	const int height) const
+{
+	auto block_size = 0;
+
+	switch (surface_format_)
+	{
+	case SurfaceFormat::dxt1:
+		block_size = 8;
+		break;
+
+	case SurfaceFormat::dxt3:
+	case SurfaceFormat::dxt5:
+		block_size = 16;
+		break;
+
+	default:
+		assert(!"Unsupported surface format.");
+		return 0;
+	}
+
+	const auto row_width = ((width + 3) / 4);
+	const auto row_height = ((height + 3) / 4);
+	const auto image_size = block_size * row_width * row_height;
+
+	return image_size;
+}
+
+int OglRendererImpl::TextureImpl::calculate_pitch(
+	const int level,
+	const SurfaceFormat& surface_format) const
+{
+	const auto level_count = (level_count_ > 0 ? level_count_ : max_level_count_);
+
+	if (level < 0 || level >= level_count)
+	{
+		assert(!"Level out of range.");
+		return 0;
+	}
+
+	if (is_compressed_)
+	{
+		auto block_size = 0;
+
+		switch (surface_format)
+		{
+		case SurfaceFormat::dxt1:
+			block_size = 8;
+			break;
+
+		case SurfaceFormat::dxt3:
+		case SurfaceFormat::dxt5:
+			block_size = 16;
+			break;
+		}
+
+		return (((width_ / (1 << level)) + 3) / 4) * block_size;
+	}
+	else
+	{
+		auto block_size = 0;
+
+		switch (surface_format)
+		{
+		case SurfaceFormat::a4r4g4b4:
+			block_size = 2;
+			break;
+
+		case SurfaceFormat::a8r8g8b8:
+			block_size = 4;
+			break;
+
+		case SurfaceFormat::v8u8:
+			block_size = 4;
+			break;
+		}
+
+		return (width_ / (1 << level)) * block_size;
+	}
 }
 
 //
-// OglRenderer::TextureImpl
+// OglRendererImpl::TextureImpl
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRenderer::Texture::InitializeParam
+//
+
+OglRenderer::Texture::InitializeParam::InitializeParam()
+	:
+	type_{},
+	surface_format_{},
+	width_{},
+	height_{},
+	level_count_{}
+{
+}
+
+bool OglRenderer::Texture::InitializeParam::is_valid() const
+{
+	switch (type_)
+	{
+	case Type::two_d:
+	case Type::cube_map:
+		break;
+
+	default:
+		assert(!"Unsupported texture type.");
+		return false;
+	}
+
+	switch (surface_format_)
+	{
+	case SurfaceFormat::a4r4g4b4:
+	case SurfaceFormat::a8r8g8b8:
+	case SurfaceFormat::v8u8:
+	case SurfaceFormat::dxt1:
+	case SurfaceFormat::dxt3:
+	case SurfaceFormat::dxt5:
+		break;
+
+	default:
+		assert(!"Unsupported surface format.");
+		return false;
+	}
+
+	if (width_ <= 0 || height_ <= 0)
+	{
+		assert(!"Unsupported texture size.");
+		return false;
+	}
+
+	if (level_count_ < 0)
+	{
+		assert(!"Negative level count.");
+		return false;
+	}
+
+	return true;
+}
+
+//
+// OglRenderer::Texture::InitializeParam
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRenderer::Texture::UploadParam
+//
+
+OglRenderer::Texture::UploadParam::UploadParam()
+	:
+	has_linear_filter_{},
+	level_{},
+	cube_face_index_{},
+	src_surface_format_{},
+	src_pitch_{},
+	raw_data_{}
+{
+}
+
+bool OglRenderer::Texture::UploadParam::is_valid() const
+{
+	if (level_ < 0)
+	{
+		assert(!"Negative level.");
+		return false;
+	}
+
+	if (!is_surface_format_valid(src_surface_format_))
+	{
+		assert(!"Unsupported source surface format.");
+		return false;
+	}
+
+	if (src_pitch_ <= 0)
+	{
+		assert(!"Non-positive source pitch.");
+		return false;
+	}
+
+	if (!raw_data_)
+	{
+		assert(!"No source data.");
+		return false;
+	}
+
+	return true;
+}
+
+//
+// OglRenderer::Texture::UploadParam
 // ==========================================================================
 
 
@@ -4040,18 +4491,20 @@ OglRenderer::Texture::~Texture()
 }
 
 bool OglRenderer::Texture::initialize(
-	const Type type,
-	const SurfaceFormat surface_format,
-	const int width,
-	const int height,
-	const int level_count)
+	const InitializeParam& param)
 {
-	return do_initialize(type, surface_format, width, height, level_count);
+	return do_initialize(param);
 }
 
 void OglRenderer::Texture::uninitialize()
 {
 	do_uninitialize();
+}
+
+bool OglRenderer::Texture::upload_level(
+	const UploadParam& param)
+{
+	return do_upload_level(param);
 }
 
 OglRenderer::Texture::Type OglRenderer::Texture::get_type() const
@@ -4082,6 +4535,18 @@ int OglRenderer::Texture::get_height() const
 int OglRenderer::Texture::get_level_count() const
 {
 	return do_get_level_count();
+}
+
+int OglRenderer::Texture::get_level_width(
+	const int level) const
+{
+	return do_get_level_width(level);
+}
+
+int OglRenderer::Texture::get_level_height(
+	const int level) const
+{
+	return do_get_level_height(level);
 }
 
 //
@@ -4115,14 +4580,27 @@ bool OglRenderer::initialize(
 
 void OglRenderer::uninitialize()
 {
-	do_set_current_context(true);
+	do_set_is_current_context(true);
 	do_uninitialize();
 }
 
-void OglRenderer::set_current_context(
+bool OglRenderer::get_is_current_context() const
+{
+	return do_get_is_current_context();
+}
+
+void OglRenderer::set_is_current_context(
 	const bool is_current)
 {
-	do_set_current_context(is_current);
+	do_set_is_current_context(is_current);
+}
+
+bool OglRenderer::set_post_is_current_context(
+	const bool is_current_context)
+{
+	const auto old_is_current_context = do_get_is_current_context();
+	do_set_is_current_context(is_current_context);
+	return old_is_current_context;
 }
 
 void OglRenderer::set_clear_color(

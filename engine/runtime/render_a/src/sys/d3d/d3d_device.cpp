@@ -765,7 +765,7 @@ bool CD3D_Device::Start3D()
 #ifdef LTJS_WIP_OGL
 	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
 
-	ogl_renderer.set_current_context(true);
+	ogl_renderer.set_is_current_context(true);
 #endif // LTJS_WIP_OGL
 
 	return g_Device.m_bIn3D;

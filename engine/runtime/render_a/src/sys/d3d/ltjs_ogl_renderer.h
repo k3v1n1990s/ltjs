@@ -387,14 +387,51 @@ public:
 			cube_map,
 		}; // Type
 
+		enum class UploadFilter
+		{
+			none,
+			linear,
+		}; // UploadFilter
+
+
+		struct InitializeParam
+		{
+			Type type_;
+			SurfaceFormat surface_format_;
+			int width_;
+			int height_;
+			int level_count_;
+
+
+			InitializeParam();
+
+			bool is_valid() const;
+		}; // InitializeParam
+
+		struct UploadParam
+		{
+			bool has_linear_filter_;
+			int level_;
+			int cube_face_index_;
+			SurfaceFormat src_surface_format_;
+			int src_pitch_;
+			const void* raw_data_;
+
+
+			UploadParam();
+
+			bool is_valid() const;
+		}; // InitializeParam
+
+
 		bool initialize(
-			const Type type,
-			const SurfaceFormat surface_format,
-			const int width,
-			const int height,
-			const int level_count);
+			const InitializeParam& param);
 
 		void uninitialize();
+
+
+		bool upload_level(
+			const UploadParam& param);
 
 
 		Type get_type() const;
@@ -409,6 +446,12 @@ public:
 
 		int get_level_count() const;
 
+		int get_level_width(
+			const int level) const;
+
+		int get_level_height(
+			const int level) const;
+
 
 	protected:
 		Texture();
@@ -418,13 +461,13 @@ public:
 
 	private:
 		virtual bool do_initialize(
-			const Type type,
-			const SurfaceFormat surface_format,
-			const int width,
-			const int height,
-			const int level_count) = 0;
+			const InitializeParam& param) = 0;
 
 		virtual void do_uninitialize() = 0;
+
+
+		virtual bool do_upload_level(
+			const UploadParam& param) = 0;
 
 
 		virtual Type do_get_type() const = 0;
@@ -438,6 +481,12 @@ public:
 		virtual int do_get_height() const = 0;
 
 		virtual int do_get_level_count() const = 0;
+
+		virtual int do_get_level_width(
+			const int level) const = 0;
+
+		virtual int do_get_level_height(
+			const int level) const = 0;
 	}; // Texture
 
 	using TexturePtr = Texture*;
@@ -452,8 +501,13 @@ public:
 	void uninitialize();
 
 
-	void set_current_context(
-		const bool is_current);
+	bool get_is_current_context() const;
+
+	void set_is_current_context(
+		const bool is_current_context);
+
+	bool set_post_is_current_context(
+		const bool is_current_context);
 
 	void set_clear_color(
 		const std::uint8_t r,
@@ -602,7 +656,9 @@ private:
 
 	virtual void do_uninitialize() = 0;
 
-	virtual void do_set_current_context(
+	virtual bool do_get_is_current_context() const = 0;
+
+	virtual void do_set_is_current_context(
 		const bool is_current) = 0;
 
 	// Clearing.

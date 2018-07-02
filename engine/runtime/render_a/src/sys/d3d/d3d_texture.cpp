@@ -1070,6 +1070,35 @@ RTexture* CTextureManager::CreateRTexture(SharedTexture* pSharedTexture, Texture
 		
 		// Set priority!
 		pRTexture->m_pD3DTexture->SetPriority(pTextureData->m_Header.GetTexturePriority()); 
+
+#ifdef LTJS_WIP_OGL
+		auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+
+		auto ogl_texture = ogl_renderer.add_texture();
+
+		if (pRTexture->ogl_texture_)
+		{
+			const auto old_is_current_context = ogl_renderer.set_post_is_current_context(true);
+
+			auto param = ltjs::OglRenderer::Texture::InitializeParam{};
+			param.type_ = ltjs::OglRenderer::Texture::Type::two_d;
+			param.surface_format_ = static_cast<ltjs::OglRenderer::SurfaceFormat>(iFormat);
+			param.width_ = static_cast<int>(iTexWidth);
+			param.height_ = static_cast<int>(iTexHeight);
+			param.level_count_ = nMipsToCreate;
+
+			if (ogl_texture->initialize(param))
+			{
+				pRTexture->ogl_texture_ = ogl_texture;
+			}
+			else
+			{
+				ogl_renderer.remove_texture(ogl_texture);
+			}
+
+			ogl_renderer.set_is_current_context(old_is_current_context);
+		}
+#endif // LTJS_WIP_OGL
 	}
 
 	// Setup the uv coordinate multipliers.
@@ -1123,6 +1152,17 @@ void CTextureManager::FreeTexture(RTexture* pTexture)
 
 		pTexture->m_pD3DTexture = NULL; 
 	}
+
+#ifdef LTJS_WIP_OGL
+	if (pTexture->ogl_texture_)
+	{
+		auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+		const auto old_is_current_context = ogl_renderer.set_post_is_current_context(true);
+		ogl_renderer.remove_texture(pTexture->ogl_texture_);
+		ogl_renderer.set_is_current_context(old_is_current_context);
+		pTexture->ogl_texture_ = nullptr;
+	}
+#endif // LTJS_WIP_OGL
 
 	// Remove it from the list and free it
 	if (pTexture->m_Link.m_pData) 

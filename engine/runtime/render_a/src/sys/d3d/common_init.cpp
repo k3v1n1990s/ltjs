@@ -619,7 +619,7 @@ bool ogl_initialize_internal(
 
 	assert(ogl_is_succeed());
 
-	ogl_renderer.set_current_context(false);
+	ogl_renderer.set_is_current_context(false);
 
 	return true;
 }
@@ -653,7 +653,7 @@ void ogl_swap_buffers()
 	}
 
 	assert(ogl_is_succeed());
-	ltjs::OglRenderer::get_instance().set_current_context(false);
+	ltjs::OglRenderer::get_instance().set_is_current_context(false);
 
 	const auto swap_result = ::SwapBuffers(ogl_window_dc_);
 	assert(swap_result);

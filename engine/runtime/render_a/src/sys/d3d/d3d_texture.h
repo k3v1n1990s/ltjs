@@ -31,6 +31,9 @@ class PFormat;
 #	include "rendererframestats.h"
 #endif
 
+#ifdef LTJS_WIP_OGL
+#include "ltjs_ogl_renderer.h"
+#endif // LTJS_WIP_OGL
 
 
 class SharedTexture;
@@ -154,6 +157,10 @@ public:
 		LPDIRECT3DTEXTURE9		m_pD3DTexture;		// The D3D Texture (Note: Stores any mipmaps as well)...
 		LPDIRECT3DCUBETEXTURE9	m_pD3DCubeTexture; 
 	};
+
+#ifdef LTJS_WIP_OGL
+	ltjs::OglRenderer::TexturePtr ogl_texture_;
+#endif // LTJS_WIP_OGL
 
 	uint16				m_BaseWidth;
 	uint16				m_BaseHeight;	// Base width and height.
