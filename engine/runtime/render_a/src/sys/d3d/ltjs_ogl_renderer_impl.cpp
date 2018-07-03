@@ -623,15 +623,25 @@ private:
 			const int width,
 			const int height);
 
-		int get_ogl_internal_format() const;
+		int get_ogl_internal_pixel_format() const;
+
+		void get_ogl_pixel_format_and_type(
+			GLenum& format,
+			GLenum& type) const;
 
 		int calculate_compressed_image_size(
 			const int width,
 			const int height) const;
 
-		int calculate_pitch(
-			const int level,
-			const SurfaceFormat& surface_format) const;
+		bool upload_level_no_filter(
+			const UploadParam& param,
+			const void* raw_data);
+
+		bool upload_level_a4r4g4b4_linear(
+			const UploadParam& param);
+
+		bool upload_level_a8r8g8b8_to_v8u8_linear(
+			const UploadParam& param);
 	}; // TextureImpl
 
 	using TextureUPtr = std::unique_ptr<TextureImpl>;
@@ -3920,8 +3930,34 @@ bool OglRendererImpl::TextureImpl::do_upload_level(
 		}
 	}
 
-	assert(!"Not implemented.");
-	return false;
+	if (param.has_linear_filter_)
+	{
+		if (param.src_surface_format_ == SurfaceFormat::a4r4g4b4 && surface_format_ == SurfaceFormat::a4r4g4b4)
+		{
+			return upload_level_a4r4g4b4_linear(param);
+		}
+		else if (param.src_surface_format_ == SurfaceFormat::a8r8g8b8 && surface_format_ == SurfaceFormat::v8u8)
+		{
+			return upload_level_a8r8g8b8_to_v8u8_linear(param);
+		}
+		else
+		{
+			assert(!"Unsupported parameters combination.");
+			return false;
+		}
+	}
+	else
+	{
+		if (param.src_surface_format_ == surface_format_)
+		{
+			return upload_level_no_filter(param, param.raw_data_);
+		}
+		else
+		{
+			assert(!"Unsupported parameters combination.");
+			return false;
+		}
+	}
 }
 
 OglRenderer::Texture::Type OglRendererImpl::TextureImpl::do_get_type() const
@@ -4108,7 +4144,7 @@ bool OglRendererImpl::TextureImpl::initialize_2d_internal()
 	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	assert(ogl_is_succeed());
 
-	const auto ogl_internal_format = get_ogl_internal_format();
+	const auto ogl_internal_format = get_ogl_internal_pixel_format();
 
 	for (auto i = 0; i < level_count; ++i)
 	{
@@ -4237,7 +4273,7 @@ int OglRendererImpl::TextureImpl::calculate_max_levels(
 	return level_count;
 }
 
-int OglRendererImpl::TextureImpl::get_ogl_internal_format() const
+int OglRendererImpl::TextureImpl::get_ogl_internal_pixel_format() const
 {
 	switch (surface_format_)
 	{
@@ -4280,6 +4316,38 @@ int OglRendererImpl::TextureImpl::get_ogl_internal_format() const
 	}
 }
 
+void OglRendererImpl::TextureImpl::get_ogl_pixel_format_and_type(
+	GLenum& format,
+	GLenum& type) const
+{
+	format = invalid_ogl_enum;
+	type = invalid_ogl_enum;
+
+	switch (surface_format_)
+	{
+	case SurfaceFormat::a4r4g4b4:
+		format = GL_BGRA;
+		type = GL_UNSIGNED_SHORT_4_4_4_4;
+		break;
+
+	case SurfaceFormat::a8r8g8b8:
+		format = GL_BGRA;
+		type = GL_UNSIGNED_BYTE;
+		break;
+
+	case SurfaceFormat::v8u8:
+		format = GL_RG;
+		type = GL_UNSIGNED_BYTE;
+
+	case SurfaceFormat::dxt1:
+	case SurfaceFormat::dxt3:
+	case SurfaceFormat::dxt5:
+	default:
+		assert(!"Unsupported surface format.");
+		break;
+	}
+}
+
 int OglRendererImpl::TextureImpl::calculate_compressed_image_size(
 	const int width,
 	const int height) const
@@ -4309,57 +4377,117 @@ int OglRendererImpl::TextureImpl::calculate_compressed_image_size(
 	return image_size;
 }
 
-int OglRendererImpl::TextureImpl::calculate_pitch(
-	const int level,
-	const SurfaceFormat& surface_format) const
+bool OglRendererImpl::TextureImpl::upload_level_no_filter(
+	const UploadParam& param,
+	const void* raw_data)
 {
-	const auto level_count = (level_count_ > 0 ? level_count_ : max_level_count_);
+	const auto is_cube_map = (type_ == Type::cube_map);
+	const auto level_width = width_ / (1 << param.level_);
+	const auto level_height = height_ / (1 << param.level_);
 
-	if (level < 0 || level >= level_count)
+	const auto ogl_texture_target = GLenum(is_cube_map ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D);
+
+	::glBindTexture(ogl_texture_target, ogl_texture_);
+	assert(ogl_is_succeed());
+
+	GLenum ogl_level_target;
+
+	if (is_cube_map)
 	{
-		assert(!"Level out of range.");
-		return 0;
+		switch (param.cube_face_index_)
+		{
+		case 0:
+			ogl_level_target = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
+			break;
+
+		case 1:
+			ogl_level_target = GL_TEXTURE_CUBE_MAP_NEGATIVE_X;
+			break;
+
+		case 2:
+			ogl_level_target = GL_TEXTURE_CUBE_MAP_POSITIVE_Y;
+			break;
+
+		case 3:
+			ogl_level_target = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y;
+			break;
+
+		case 4:
+			ogl_level_target = GL_TEXTURE_CUBE_MAP_POSITIVE_Z;
+			break;
+
+		case 5:
+			ogl_level_target = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z;
+			break;
+
+		default:
+			ogl_level_target = invalid_ogl_enum;
+		}
+	}
+	else
+	{
+		ogl_level_target = GL_TEXTURE_2D;
 	}
 
 	if (is_compressed_)
 	{
-		auto block_size = 0;
+		const auto image_size = calculate_compressed_image_size(level_width, level_height);
 
-		switch (surface_format)
-		{
-		case SurfaceFormat::dxt1:
-			block_size = 8;
-			break;
+		::glCompressedTexSubImage2D(
+			ogl_level_target,
+			param.level_,
+			0,
+			0,
+			level_width,
+			level_height,
+			0,
+			image_size,
+			param.raw_data_);
 
-		case SurfaceFormat::dxt3:
-		case SurfaceFormat::dxt5:
-			block_size = 16;
-			break;
-		}
-
-		return (((width_ / (1 << level)) + 3) / 4) * block_size;
+		assert(ogl_is_succeed());
 	}
 	else
 	{
-		auto block_size = 0;
+		GLenum ogl_format;
+		GLenum ogl_type;
 
-		switch (surface_format)
-		{
-		case SurfaceFormat::a4r4g4b4:
-			block_size = 2;
-			break;
+		get_ogl_pixel_format_and_type(ogl_format, ogl_type);
 
-		case SurfaceFormat::a8r8g8b8:
-			block_size = 4;
-			break;
+		::glTexSubImage2D(
+			ogl_level_target,
+			param.level_,
+			0,
+			0,
+			level_width,
+			level_height,
+			ogl_format,
+			ogl_type,
+			param.raw_data_);
 
-		case SurfaceFormat::v8u8:
-			block_size = 4;
-			break;
-		}
-
-		return (width_ / (1 << level)) * block_size;
+		assert(ogl_is_succeed());
 	}
+
+	if (param.level_ == 0 && level_count_ == 0)
+	{
+		::glGenerateMipmap(ogl_texture_target);
+		assert(ogl_is_succeed());
+	}
+
+	return true;
+}
+
+bool OglRendererImpl::TextureImpl::upload_level_a4r4g4b4_linear(
+	const UploadParam& param)
+{
+	assert(!"Not implemented.");
+	return false;
+}
+
+bool OglRendererImpl::TextureImpl::upload_level_a8r8g8b8_to_v8u8_linear(
+	const UploadParam& param)
+{
+	assert(!"Not implemented.");
+	return false;
 }
 
 //
