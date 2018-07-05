@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 #include "glad.h"
+#include "bibendovsky_spul_scope_guard.h"
+#include "bibendovsky_spul_un_value.h"
 
 
 // --------------------------------------------------------------------------
@@ -556,6 +558,9 @@ private:
 
 
 	private:
+		using Buffer = std::vector<ul::UnValue<std::uint8_t>>;
+
+
 		OglRendererImpl& ogl_renderer_;
 
 		bool is_initialized_;
@@ -571,6 +576,8 @@ private:
 
 		int level_count_;
 		int max_level_count_;
+
+		Buffer buffer_;
 
 
 		// ==================================================================
@@ -642,6 +649,20 @@ private:
 
 		bool upload_level_a8r8g8b8_to_v8u8_linear(
 			const UploadParam& param);
+
+		static std::uint16_t interpolate_pixel_linearly_a4r4g4b4(
+			const int x,
+			const int y,
+			const int width,
+			const int height,
+			const std::uint8_t* src_memory);
+
+		static std::uint16_t interpolate_pixel_linearly_a8r8g8b8_to_v8u8(
+			const int x,
+			const int y,
+			const int width,
+			const int height,
+			const std::uint8_t* src_memory);
 	}; // TextureImpl
 
 	using TextureUPtr = std::unique_ptr<TextureImpl>;
@@ -1301,6 +1322,20 @@ private:
 		}
 
 		const auto size_before = textures_.size();
+
+		auto old_is_current_context = false;
+
+		auto guard_context = ul::ScopeGuard{
+			[&]()
+			{
+				old_is_current_context = set_post_is_current_context(true);
+			},
+
+			[&]()
+			{
+				set_is_current_context(old_is_current_context);
+			},
+		};
 
 		textures_.remove_if(
 			[&](const auto& item_uptr)
@@ -3877,7 +3912,8 @@ OglRendererImpl::TextureImpl::TextureImpl(
 	width_{},
 	height_{},
 	level_count_{},
-	max_level_count_{}
+	max_level_count_{},
+	buffer_{}
 {
 }
 
@@ -3890,6 +3926,20 @@ bool OglRendererImpl::TextureImpl::do_initialize(
 	const InitializeParam& param)
 {
 	uninitialize_internal();
+
+	auto old_is_current_context = false;
+
+	auto guard_context = ul::ScopeGuard{
+		[&]()
+		{
+			old_is_current_context = ogl_renderer_.set_post_is_current_context(true);
+		},
+
+		[&]()
+		{
+			ogl_renderer_.set_is_current_context(old_is_current_context);
+		},
+	};
 
 	if (!initialize_internal(param))
 	{
@@ -3929,6 +3979,20 @@ bool OglRendererImpl::TextureImpl::do_upload_level(
 			return false;
 		}
 	}
+
+	auto old_is_current_context = false;
+
+	auto guard_context = ul::ScopeGuard{
+		[&]()
+		{
+			old_is_current_context = ogl_renderer_.set_post_is_current_context(true);
+		},
+
+		[&]()
+		{
+			ogl_renderer_.set_is_current_context(old_is_current_context);
+		},
+	};
 
 	if (param.has_linear_filter_)
 	{
@@ -4431,6 +4495,7 @@ bool OglRendererImpl::TextureImpl::upload_level_no_filter(
 
 	if (is_compressed_)
 	{
+		const auto ogl_format = get_ogl_internal_pixel_format();
 		const auto image_size = calculate_compressed_image_size(level_width, level_height);
 
 		::glCompressedTexSubImage2D(
@@ -4440,7 +4505,7 @@ bool OglRendererImpl::TextureImpl::upload_level_no_filter(
 			0,
 			level_width,
 			level_height,
-			0,
+			ogl_format,
 			image_size,
 			param.raw_data_);
 
@@ -4479,15 +4544,183 @@ bool OglRendererImpl::TextureImpl::upload_level_no_filter(
 bool OglRendererImpl::TextureImpl::upload_level_a4r4g4b4_linear(
 	const UploadParam& param)
 {
-	assert(!"Not implemented.");
-	return false;
+	const auto bytes_per_pixel = 2;
+	const auto level_width = width_ / (1 << param.level_);
+	const auto level_height = height_ / (1 << param.level_);
+	const auto pitch = bytes_per_pixel * level_width;
+	const auto buffer_size = pitch * level_height;
+
+	if (static_cast<int>(buffer_.size()) < buffer_size)
+	{
+		buffer_.resize(buffer_size);
+	}
+
+	auto dst_memory = buffer_.data();
+
+	for (auto h = 0; h < level_height; ++h)
+	{
+		auto dst_row = reinterpret_cast<std::uint16_t*>(dst_memory);
+
+		for (auto w = 0; w < level_width; ++w)
+		{
+			dst_row[w] = interpolate_pixel_linearly_a4r4g4b4(
+				w,
+				h,
+				level_width,
+				level_height,
+				static_cast<const std::uint8_t*>(param.raw_data_));
+		}
+
+		dst_memory += pitch;
+	}
+
+	return upload_level_no_filter(param, buffer_.data());
 }
 
 bool OglRendererImpl::TextureImpl::upload_level_a8r8g8b8_to_v8u8_linear(
 	const UploadParam& param)
 {
-	assert(!"Not implemented.");
-	return false;
+	const auto dst_bytes_per_pixel = 2;
+	const auto level_width = width_ / (1 << param.level_);
+	const auto level_height = height_ / (1 << param.level_);
+	const auto dst_pitch = dst_bytes_per_pixel * level_width;
+	const auto buffer_size = dst_pitch * level_height;
+
+	if (static_cast<int>(buffer_.size()) < buffer_size)
+	{
+		buffer_.resize(buffer_size);
+	}
+
+	auto dst_memory = buffer_.data();
+
+	for (auto h = 0; h < level_height; ++h)
+	{
+		auto dst_row = reinterpret_cast<std::uint16_t*>(dst_memory);
+
+		for (auto w = 0; w < level_width; ++w)
+		{
+			dst_row[w] = interpolate_pixel_linearly_a8r8g8b8_to_v8u8(
+				w,
+				h,
+				level_width,
+				level_height,
+				static_cast<const std::uint8_t*>(param.raw_data_));
+		}
+
+		dst_memory += dst_pitch;
+	}
+
+	return upload_level_no_filter(param, buffer_.data());
+}
+
+std::uint16_t OglRendererImpl::TextureImpl::interpolate_pixel_linearly_a4r4g4b4(
+	const int x,
+	const int y,
+	const int width,
+	const int height,
+	const std::uint8_t* src_memory)
+{
+	constexpr auto max_sample_count = 4;
+
+	struct SampleDelta
+	{
+		int dx_;
+		int dy_;
+	}; // SampleDelta
+
+	constexpr SampleDelta sample_deltas[max_sample_count] =
+	{
+		{0, -1}, {-1, 0}, {0, 1}, {1, 0},
+	};
+
+	const auto src_pitch = 2 * width;
+
+	auto a_sum = 0;
+	auto r_sum = 0;
+	auto g_sum = 0;
+	auto b_sum = 0;
+	auto sample_count = 0;
+
+	for (auto i = 0; i < max_sample_count; ++i)
+	{
+		const auto& sample_delta = sample_deltas[i];
+		const auto new_x = x + sample_delta.dx_;
+		const auto new_y = y + sample_delta.dy_;
+
+		if (new_x < 0 || new_x >= width || new_y < 0 || new_y >= height)
+		{
+			continue;
+		}
+
+		const auto pixel_a4r4g4b4 = *(reinterpret_cast<const std::uint16_t*>(
+			src_memory + (new_y * src_pitch)) + new_x);
+
+		a_sum += (pixel_a4r4g4b4 >> 12) & 0xF;
+		r_sum += (pixel_a4r4g4b4 >> 8) & 0xF;
+		g_sum += (pixel_a4r4g4b4 >> 4) & 0xF;
+		b_sum += pixel_a4r4g4b4 & 0xF;
+
+		sample_count += 1;
+	}
+
+	return static_cast<std::uint16_t>(
+		((a_sum / sample_count) << 12) |
+		((r_sum / sample_count) << 8) |
+		((g_sum / sample_count) << 4) |
+		(b_sum / sample_count)
+	);
+}
+
+std::uint16_t OglRendererImpl::TextureImpl::interpolate_pixel_linearly_a8r8g8b8_to_v8u8(
+	const int x,
+	const int y,
+	const int width,
+	const int height,
+	const std::uint8_t* src_memory)
+{
+	constexpr auto max_sample_count = 4;
+
+	struct SampleDelta
+	{
+		int dx_;
+		int dy_;
+	}; // SampleDelta
+
+	constexpr SampleDelta sample_deltas[max_sample_count] =
+	{
+		{0, -1}, {-1, 0}, {0, 1}, {1, 0},
+	};
+
+	const auto src_pitch = 4 * width;
+
+	auto g_sum = 0;
+	auto b_sum = 0;
+	auto sample_count = 0;
+
+	for (auto i = 0; i < max_sample_count; ++i)
+	{
+		const auto& sample_delta = sample_deltas[i];
+		const auto new_x = x + sample_delta.dx_;
+		const auto new_y = y + sample_delta.dy_;
+
+		if (new_x < 0 || new_x >= width || new_y < 0 || new_y >= height)
+		{
+			continue;
+		}
+
+		const auto pixel_a8r8g8b8 = *(reinterpret_cast<const std::uint32_t*>(
+			src_memory + (new_y * src_pitch)) + new_x);
+
+		g_sum += static_cast<std::int8_t>((pixel_a8r8g8b8 >> 8) & 0xFF);
+		b_sum += static_cast<std::int8_t>(pixel_a8r8g8b8 & 0xFF);
+
+		sample_count += 1;
+	}
+
+	return static_cast<std::uint16_t>(
+		(((g_sum / sample_count) & 0xFF) << 8) |
+		((b_sum / sample_count) & 0xFF)
+	);
 }
 
 //

@@ -883,7 +883,24 @@ bool CTextureManager::UploadRTexture(TextureData* pSrcTexture, uint32 iSrcLvl, R
 
 			if (hResult != D3D_OK) 
 				return false; 
-	
+
+#ifdef LTJS_WIP_OGL
+			if (pDstTexture->ogl_texture_)
+			{
+				auto param = ltjs::OglRenderer::Texture::UploadParam{};
+				param.level_ = static_cast<int>(iDstLvl);
+				param.cube_face_index_ = i;
+				param.src_surface_format_ = static_cast<ltjs::OglRenderer::SurfaceFormat>(D3DSrcFormat);
+				param.src_pitch_ = static_cast<int>(SrcPitch);
+				param.raw_data_ = pSrcData;
+
+				if (!pDstTexture->ogl_texture_->upload_level(param))
+				{
+					assert(!"Failed to upload a texture.");
+				}
+			}
+#endif // LTJS_OGL_WIP
+
 			pSrcData += pSrcMip->m_dataSize;
 		} 
 	}
@@ -917,7 +934,23 @@ bool CTextureManager::UploadRTexture(TextureData* pSrcTexture, uint32 iSrcLvl, R
 		
 		pDstSurface->Release();
 		if (hResult != D3D_OK) 
-			return false; 
+			return false;
+
+#ifdef LTJS_WIP_OGL
+		if (pDstTexture->ogl_texture_)
+		{
+			auto param = ltjs::OglRenderer::Texture::UploadParam{};
+			param.level_ = static_cast<int>(iDstLvl);
+			param.src_surface_format_ = static_cast<ltjs::OglRenderer::SurfaceFormat>(D3DSrcFormat);
+			param.src_pitch_ = static_cast<int>(SrcPitch);
+			param.raw_data_ = pSrcData;
+
+			if (!pDstTexture->ogl_texture_->upload_level(param))
+			{
+				assert(!"Failed to upload a texture.");
+			}
+		}
+#endif // LTJS_OGL_WIP
 	}
 
 	return true;
@@ -1051,7 +1084,7 @@ RTexture* CTextureManager::CreateRTexture(SharedTexture* pSharedTexture, Texture
 		assert(MipDesc.Width == pTextureData->m_Mips[pRTexture->m_iStartMipmap].m_Width && MipDesc.Height == pTextureData->m_Mips[pRTexture->m_iStartMipmap].m_Height);
 
 		// Set priority!
-		pRTexture->m_pD3DCubeTexture->SetPriority(pTextureData->m_Header.GetTexturePriority()); 
+		pRTexture->m_pD3DCubeTexture->SetPriority(pTextureData->m_Header.GetTexturePriority());
 	}
 	else 
 	{	
@@ -1070,36 +1103,40 @@ RTexture* CTextureManager::CreateRTexture(SharedTexture* pSharedTexture, Texture
 		
 		// Set priority!
 		pRTexture->m_pD3DTexture->SetPriority(pTextureData->m_Header.GetTexturePriority()); 
+	}
 
 #ifdef LTJS_WIP_OGL
-		auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
 
-		auto ogl_texture = ogl_renderer.add_texture();
+	auto ogl_texture = ogl_renderer.add_texture();
 
-		if (pRTexture->ogl_texture_)
+	if (pRTexture->ogl_texture_)
+	{
+		const auto type = (
+			pRTexture->IsCubeMap()
+			?
+			ltjs::OglRenderer::Texture::Type::cube_map
+			:
+			ltjs::OglRenderer::Texture::Type::two_d
+		);
+
+		auto param = ltjs::OglRenderer::Texture::InitializeParam{};
+		param.type_ = type;
+		param.surface_format_ = static_cast<ltjs::OglRenderer::SurfaceFormat>(iFormat);
+		param.width_ = static_cast<int>(iTexWidth);
+		param.height_ = static_cast<int>(iTexHeight);
+		param.level_count_ = nMipsToCreate;
+
+		if (ogl_texture->initialize(param))
 		{
-			const auto old_is_current_context = ogl_renderer.set_post_is_current_context(true);
-
-			auto param = ltjs::OglRenderer::Texture::InitializeParam{};
-			param.type_ = ltjs::OglRenderer::Texture::Type::two_d;
-			param.surface_format_ = static_cast<ltjs::OglRenderer::SurfaceFormat>(iFormat);
-			param.width_ = static_cast<int>(iTexWidth);
-			param.height_ = static_cast<int>(iTexHeight);
-			param.level_count_ = nMipsToCreate;
-
-			if (ogl_texture->initialize(param))
-			{
-				pRTexture->ogl_texture_ = ogl_texture;
-			}
-			else
-			{
-				ogl_renderer.remove_texture(ogl_texture);
-			}
-
-			ogl_renderer.set_is_current_context(old_is_current_context);
+			pRTexture->ogl_texture_ = ogl_texture;
 		}
-#endif // LTJS_WIP_OGL
+		else
+		{
+			ogl_renderer.remove_texture(ogl_texture);
+		}
 	}
+#endif // LTJS_WIP_OGL
 
 	// Setup the uv coordinate multipliers.
 	uint32 realWidth,realHeight;
@@ -1157,9 +1194,7 @@ void CTextureManager::FreeTexture(RTexture* pTexture)
 	if (pTexture->ogl_texture_)
 	{
 		auto& ogl_renderer = ltjs::OglRenderer::get_instance();
-		const auto old_is_current_context = ogl_renderer.set_post_is_current_context(true);
 		ogl_renderer.remove_texture(pTexture->ogl_texture_);
-		ogl_renderer.set_is_current_context(old_is_current_context);
 		pTexture->ogl_texture_ = nullptr;
 	}
 #endif // LTJS_WIP_OGL
