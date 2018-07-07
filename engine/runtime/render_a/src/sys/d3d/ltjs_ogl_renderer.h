@@ -380,11 +380,14 @@ public:
 	class Texture
 	{
 	public:
+		static constexpr auto max_types = 2;
+
+
 		enum class Type
 		{
-			none,
-			two_d,
-			cube_map,
+			none = 0,
+			two_d = 1,
+			cube_map = 2,
 		}; // Type
 
 		enum class UploadFilter

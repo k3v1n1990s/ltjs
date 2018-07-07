@@ -281,9 +281,8 @@ public:
 		current_vao_{},
 		ui_vaos_{},
 		vaos_{},
-		current_2d_texture_{},
-		current_cube_map_texture_{},
 		textures_{},
+		texture_bindings_{},
 		sampler_states_{},
 		max_texture_lod_bias_{}
 	{
@@ -558,7 +557,29 @@ private:
 
 
 	private:
+		static constexpr auto max_cube_faces = 6;
+
+		static constexpr auto max_interpolation_sample_count = 4;
+
+		struct InterpolationSampleDelta
+		{
+			int dx_;
+			int dy_;
+		}; // InterpolationSampleDelta
+
+		using InterpolationSampleDeltas = std::array<InterpolationSampleDelta, max_interpolation_sample_count>;
+
+		static constexpr InterpolationSampleDeltas interpolation_sample_deltas =
+		{{
+			{0, -1}, {-1, 0}, {0, 1}, {1, 0},
+		}}; // interpolation_sample_deltas
+
+
 		using Buffer = std::vector<ul::UnValue<std::uint8_t>>;
+		using OglCubeMapFaceMap = std::array<GLenum, max_cube_faces>;
+
+
+		static const OglCubeMapFaceMap ogl_cube_map_face_map;
 
 
 		OglRendererImpl& ogl_renderer_;
@@ -566,6 +587,7 @@ private:
 		bool is_initialized_;
 
 		GLuint ogl_texture_;
+		GLenum ogl_target_;
 
 		Type type_;
 		bool is_compressed_;
@@ -663,10 +685,18 @@ private:
 			const int width,
 			const int height,
 			const std::uint8_t* src_memory);
+
+		void bind_internal(
+			const bool is_binded);
+
+		TextureImpl*& get_binding();
 	}; // TextureImpl
 
-	using TextureUPtr = std::unique_ptr<TextureImpl>;
-	using TextureUList = std::list<TextureUPtr>;
+	using TextureImplPtr = TextureImpl*;
+	using TextureImplUPtr = std::unique_ptr<TextureImpl>;
+	using TextureImplUList = std::list<TextureImplUPtr>;
+
+	using TextureBindings = std::array<TextureImplPtr, Texture::max_types>;
 
 
 	using ViewportSize = std::array<int, 2>;
@@ -747,10 +777,8 @@ private:
 	UiVaos ui_vaos_;
 	VertexArrayObjectUList vaos_;
 
-	TextureImpl* current_2d_texture_;
-	TextureImpl* current_cube_map_texture_;
-
-	TextureUList textures_;
+	TextureImplUList textures_;
+	TextureBindings texture_bindings_;
 
 	SamplerStates sampler_states_;
 	float max_texture_lod_bias_;
@@ -1589,10 +1617,8 @@ private:
 		ui_vaos_.fill({});
 		vaos_.clear();
 
-		current_2d_texture_ = nullptr;
-		current_cube_map_texture_ = nullptr;
-
 		textures_.clear();
+		texture_bindings_.fill(nullptr);
 
 		uninitialize_samplers();
 		max_texture_lod_bias_ = 0.0F;
@@ -3900,12 +3926,23 @@ OglRenderer::Fvf OglRenderer::Fvf::from_d3d(
 // OglRendererImpl::TextureImpl
 //
 
+const OglRendererImpl::TextureImpl::OglCubeMapFaceMap OglRendererImpl::TextureImpl::ogl_cube_map_face_map =
+{
+	GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+	GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+	GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+	GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,
+};
+
 OglRendererImpl::TextureImpl::TextureImpl(
 	OglRendererImpl& ogl_renderer)
 	:
 	ogl_renderer_{ogl_renderer},
 	is_initialized_{},
 	ogl_texture_{},
+	ogl_target_{},
 	type_{},
 	is_compressed_{},
 	surface_format_{},
@@ -3973,7 +4010,7 @@ bool OglRendererImpl::TextureImpl::do_upload_level(
 
 	if (type_ == Type::cube_map)
 	{
-		if (param.cube_face_index_ < 0 || param.cube_face_index_ >= 6)
+		if (param.cube_face_index_ < 0 || param.cube_face_index_ >= max_cube_faces)
 		{
 			assert(!"Cube face index out of range.");
 			return false;
@@ -4170,14 +4207,9 @@ bool OglRendererImpl::TextureImpl::initialize_internal(
 
 bool OglRendererImpl::TextureImpl::initialize_2d_internal()
 {
-	if (ogl_renderer_.current_2d_texture_ != this)
-	{
-		::glBindTexture(GL_TEXTURE_2D, ogl_texture_);
-		assert(ogl_is_succeed());
+	ogl_target_ = GL_TEXTURE_2D;
 
-		ogl_renderer_.current_2d_texture_ = this;
-	}
-
+	bind_internal(true);
 
 	auto level_count = level_count_;
 
@@ -4186,45 +4218,66 @@ bool OglRendererImpl::TextureImpl::initialize_2d_internal()
 		level_count = max_level_count_;
 	}
 
-	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, level_count - 1);
+	::glTexParameteri(ogl_target_, GL_TEXTURE_MAX_LEVEL, level_count - 1);
 	assert(ogl_is_succeed());
 
-	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	::glTexParameteri(ogl_target_, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	assert(ogl_is_succeed());
-	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	::glTexParameteri(ogl_target_, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	assert(ogl_is_succeed());
 
 	if (level_count_ > 1)
 	{
-		::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+		::glTexParameteri(ogl_target_, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
 		assert(ogl_is_succeed());
 	}
 	else
 	{
-		::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		::glTexParameteri(ogl_target_, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		assert(ogl_is_succeed());
 	}
 
-	::glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	::glTexParameteri(ogl_target_, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	assert(ogl_is_succeed());
 
 	const auto ogl_internal_format = get_ogl_internal_pixel_format();
 
-	for (auto i = 0; i < level_count; ++i)
+	for (auto i_level = 0; i_level < level_count; ++i_level)
 	{
-		const auto level_width = width_ / (1 << i);
-		const auto level_height = height_ / (1 << i);
+		const auto level_width = width_ / (1 << i_level);
+		const auto level_height = height_ / (1 << i_level);
 
 		if (is_compressed_)
 		{
 			const auto image_size = calculate_compressed_image_size(level_width, level_height);
 
-			::glCompressedTexImage2D(GL_TEXTURE_2D, i, ogl_internal_format, level_width, level_height, 0, image_size, nullptr);
+			::glCompressedTexImage2D(
+				GL_TEXTURE_2D,
+				i_level,
+				ogl_internal_format,
+				level_width,
+				level_height,
+				0, // border
+				image_size,
+				nullptr
+			);
+
 			assert(ogl_is_succeed());
 		}
 		else
 		{
-			::glTexImage2D(GL_TEXTURE_2D, i, ogl_internal_format, level_width, level_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+			::glTexImage2D(
+				GL_TEXTURE_2D,
+				i_level,
+				ogl_internal_format,
+				level_width,
+				level_height,
+				0, // border
+				GL_RGBA,
+				GL_UNSIGNED_BYTE,
+				nullptr
+			);
+
 			assert(ogl_is_succeed());
 		}
 	}
@@ -4240,16 +4293,87 @@ bool OglRendererImpl::TextureImpl::initialize_cube_map_internal()
 		return false;
 	}
 
-	if (ogl_renderer_.current_cube_map_texture_ != this)
-	{
-		::glBindTexture(GL_TEXTURE_CUBE_MAP, ogl_texture_);
-		assert(ogl_is_succeed());
+	ogl_target_ = GL_TEXTURE_CUBE_MAP;
 
-		ogl_renderer_.current_cube_map_texture_ = this;
+	bind_internal(true);
+
+	auto level_count = level_count_;
+
+	if (level_count == 0)
+	{
+		level_count = max_level_count_;
 	}
 
-	assert(!"Not implemented.");
-	return false;
+	::glTexParameteri(ogl_target_, GL_TEXTURE_MAX_LEVEL, level_count - 1);
+	assert(ogl_is_succeed());
+
+	::glTexParameteri(ogl_target_, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	assert(ogl_is_succeed());
+	::glTexParameteri(ogl_target_, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	assert(ogl_is_succeed());
+
+	if (level_count_ > 1)
+	{
+		::glTexParameteri(ogl_target_, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+		assert(ogl_is_succeed());
+	}
+	else
+	{
+		::glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		assert(ogl_is_succeed());
+	}
+
+	::glTexParameteri(ogl_target_, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	assert(ogl_is_succeed());
+
+	const auto ogl_internal_format = get_ogl_internal_pixel_format();
+
+	for (auto i_level = 0; i_level < level_count; ++i_level)
+	{
+		const auto level_width = width_ / (1 << i_level);
+		const auto level_height = height_ / (1 << i_level);
+
+		for (auto i_face_index = 0; i_face_index < max_cube_faces; ++i_face_index)
+		{
+			const auto ogl_level_target = ogl_cube_map_face_map[i_face_index];
+
+			if (is_compressed_)
+			{
+				const auto image_size = calculate_compressed_image_size(level_width, level_height);
+
+				::glCompressedTexImage2D(
+					ogl_level_target,
+					i_level,
+					ogl_internal_format,
+					level_width,
+					level_height,
+					0, // border
+					image_size,
+					nullptr
+				);
+
+				assert(ogl_is_succeed());
+			}
+			else
+			{
+				::glTexImage2D(
+					ogl_level_target,
+					i_level,
+					ogl_internal_format,
+					level_width,
+					level_height,
+					0, // border
+					GL_RGBA,
+					GL_UNSIGNED_BYTE,
+					nullptr
+				);
+
+				assert(ogl_is_succeed());
+			}
+		}
+	}
+
+	return ogl_is_succeed();
 }
 
 void OglRendererImpl::TextureImpl::uninitialize_internal()
@@ -4258,50 +4382,15 @@ void OglRendererImpl::TextureImpl::uninitialize_internal()
 
 	if (ogl_texture_)
 	{
-		auto is_current_2d = false;
-		auto is_current_cube_map = false;
-
-		GLenum ogl_target;
-
-		switch (type_)
-		{
-		case Type::two_d:
-			ogl_target = GL_TEXTURE_2D;
-			is_current_2d = (ogl_renderer_.current_2d_texture_ == this);
-			break;
-
-		case Type::cube_map:
-			ogl_target = GL_TEXTURE_CUBE_MAP;
-			is_current_cube_map = (ogl_renderer_.current_cube_map_texture_ == this);
-			break;
-
-		default:
-			assert(!"Unsupported texture target.");
-			ogl_target = invalid_ogl_enum;
-			break;
-		}
-
-		if (is_current_2d)
-		{
-			ogl_renderer_.current_2d_texture_ = nullptr;
-
-			::glBindTexture(GL_TEXTURE_2D, 0);
-			assert(ogl_is_succeed());
-		}
-
-		if (is_current_cube_map)
-		{
-			ogl_renderer_.current_cube_map_texture_ = nullptr;
-
-			::glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-			assert(ogl_is_succeed());
-		}
+		bind_internal(false);
 
 		::glDeleteTextures(1, &ogl_texture_);
 		assert(ogl_is_succeed());
 
 		ogl_texture_ = 0;
 	}
+
+	ogl_target_ = invalid_ogl_enum;
 
 	type_ = Type::none;
 	is_compressed_ = false;
@@ -4449,44 +4538,13 @@ bool OglRendererImpl::TextureImpl::upload_level_no_filter(
 	const auto level_width = width_ / (1 << param.level_);
 	const auto level_height = height_ / (1 << param.level_);
 
-	const auto ogl_texture_target = GLenum(is_cube_map ? GL_TEXTURE_CUBE_MAP : GL_TEXTURE_2D);
-
-	::glBindTexture(ogl_texture_target, ogl_texture_);
-	assert(ogl_is_succeed());
+	bind_internal(true);
 
 	GLenum ogl_level_target;
 
 	if (is_cube_map)
 	{
-		switch (param.cube_face_index_)
-		{
-		case 0:
-			ogl_level_target = GL_TEXTURE_CUBE_MAP_POSITIVE_X;
-			break;
-
-		case 1:
-			ogl_level_target = GL_TEXTURE_CUBE_MAP_NEGATIVE_X;
-			break;
-
-		case 2:
-			ogl_level_target = GL_TEXTURE_CUBE_MAP_POSITIVE_Y;
-			break;
-
-		case 3:
-			ogl_level_target = GL_TEXTURE_CUBE_MAP_NEGATIVE_Y;
-			break;
-
-		case 4:
-			ogl_level_target = GL_TEXTURE_CUBE_MAP_POSITIVE_Z;
-			break;
-
-		case 5:
-			ogl_level_target = GL_TEXTURE_CUBE_MAP_NEGATIVE_Z;
-			break;
-
-		default:
-			ogl_level_target = invalid_ogl_enum;
-		}
+		ogl_level_target = ogl_cube_map_face_map[param.cube_face_index_];
 	}
 	else
 	{
@@ -4501,13 +4559,14 @@ bool OglRendererImpl::TextureImpl::upload_level_no_filter(
 		::glCompressedTexSubImage2D(
 			ogl_level_target,
 			param.level_,
-			0,
-			0,
+			0, // x
+			0, // y
 			level_width,
 			level_height,
 			ogl_format,
 			image_size,
-			param.raw_data_);
+			param.raw_data_
+		);
 
 		assert(ogl_is_succeed());
 	}
@@ -4521,20 +4580,21 @@ bool OglRendererImpl::TextureImpl::upload_level_no_filter(
 		::glTexSubImage2D(
 			ogl_level_target,
 			param.level_,
-			0,
-			0,
+			0, // x
+			0, // y
 			level_width,
 			level_height,
 			ogl_format,
 			ogl_type,
-			param.raw_data_);
+			param.raw_data_
+		);
 
 		assert(ogl_is_succeed());
 	}
 
 	if (param.level_ == 0 && level_count_ == 0)
 	{
-		::glGenerateMipmap(ogl_texture_target);
+		::glGenerateMipmap(ogl_target_);
 		assert(ogl_is_succeed());
 	}
 
@@ -4620,19 +4680,6 @@ std::uint16_t OglRendererImpl::TextureImpl::interpolate_pixel_linearly_a4r4g4b4(
 	const int height,
 	const std::uint8_t* src_memory)
 {
-	constexpr auto max_sample_count = 4;
-
-	struct SampleDelta
-	{
-		int dx_;
-		int dy_;
-	}; // SampleDelta
-
-	constexpr SampleDelta sample_deltas[max_sample_count] =
-	{
-		{0, -1}, {-1, 0}, {0, 1}, {1, 0},
-	};
-
 	const auto src_pitch = 2 * width;
 
 	auto a_sum = 0;
@@ -4641,9 +4688,9 @@ std::uint16_t OglRendererImpl::TextureImpl::interpolate_pixel_linearly_a4r4g4b4(
 	auto b_sum = 0;
 	auto sample_count = 0;
 
-	for (auto i = 0; i < max_sample_count; ++i)
+	for (auto i = 0; i < max_interpolation_sample_count; ++i)
 	{
-		const auto& sample_delta = sample_deltas[i];
+		const auto& sample_delta = interpolation_sample_deltas[i];
 		const auto new_x = x + sample_delta.dx_;
 		const auto new_y = y + sample_delta.dy_;
 
@@ -4678,28 +4725,15 @@ std::uint16_t OglRendererImpl::TextureImpl::interpolate_pixel_linearly_a8r8g8b8_
 	const int height,
 	const std::uint8_t* src_memory)
 {
-	constexpr auto max_sample_count = 4;
-
-	struct SampleDelta
-	{
-		int dx_;
-		int dy_;
-	}; // SampleDelta
-
-	constexpr SampleDelta sample_deltas[max_sample_count] =
-	{
-		{0, -1}, {-1, 0}, {0, 1}, {1, 0},
-	};
-
 	const auto src_pitch = 4 * width;
 
 	auto g_sum = 0;
 	auto b_sum = 0;
 	auto sample_count = 0;
 
-	for (auto i = 0; i < max_sample_count; ++i)
+	for (auto i = 0; i < max_interpolation_sample_count; ++i)
 	{
-		const auto& sample_delta = sample_deltas[i];
+		const auto& sample_delta = interpolation_sample_deltas[i];
 		const auto new_x = x + sample_delta.dx_;
 		const auto new_y = y + sample_delta.dy_;
 
@@ -4721,6 +4755,53 @@ std::uint16_t OglRendererImpl::TextureImpl::interpolate_pixel_linearly_a8r8g8b8_
 		(((g_sum / sample_count) & 0xFF) << 8) |
 		((b_sum / sample_count) & 0xFF)
 	);
+}
+
+void OglRendererImpl::TextureImpl::bind_internal(
+	const bool is_binded)
+{
+	auto& binding = get_binding();
+
+	if (is_binded)
+	{
+		if (binding == this)
+		{
+			return;
+		}
+
+		binding = this;
+
+		::glBindTexture(ogl_target_, ogl_texture_);
+		assert(ogl_is_succeed());
+	}
+	else
+	{
+		if (binding != this)
+		{
+			return;
+		}
+
+		binding = nullptr;
+
+		::glBindTexture(ogl_target_, 0);
+		assert(ogl_is_succeed());
+	}
+}
+
+OglRendererImpl::TextureImpl*& OglRendererImpl::TextureImpl::get_binding()
+{
+	switch (type_)
+	{
+	case Type::two_d:
+		return ogl_renderer_.texture_bindings_[0];
+
+	case Type::cube_map:
+		return ogl_renderer_.texture_bindings_[1];
+
+	default:
+		assert(!"Unsupported texture type.");
+		throw "Unsupported texture type.";
+	}
 }
 
 //
