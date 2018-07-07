@@ -280,103 +280,6 @@ public:
 	using VertexArrayObjectPtr = VertexArrayObject*;
 
 
-	class SamplerState
-	{
-	public:
-		TextureAddressingMode get_addressing_mode_u() const;
-
-		void set_addressing_mode_u(
-			const TextureAddressingMode addressing_mode_u);
-
-
-		TextureAddressingMode get_addressing_mode_v() const;
-
-		void set_addressing_mode_v(
-			const TextureAddressingMode addressing_mode_v);
-
-
-		TextureFilterType get_mag_filter() const;
-
-		void set_mag_filter(
-			const TextureFilterType mag_filter);
-
-
-		TextureFilterType get_min_filter() const;
-
-		void set_min_filter(
-			const TextureFilterType min_filter);
-
-
-		TextureFilterType get_mip_filter() const;
-
-		void set_mip_filter(
-			const TextureFilterType mip_filter);
-
-
-		float get_lod_bias() const;
-
-		void set_lod_bias(
-			const float mipmap_lod_bias);
-
-
-		float get_anisotropy() const;
-
-		void set_anisotropy(
-			const float anisotropy);
-
-
-	protected:
-		SamplerState();
-
-		virtual ~SamplerState();
-
-
-	private:
-		virtual TextureAddressingMode do_get_addressing_mode_u() const = 0;
-
-		virtual void do_set_addressing_mode_u(
-			const TextureAddressingMode address_mode_u) = 0;
-
-
-		virtual TextureAddressingMode do_get_addressing_mode_v() const = 0;
-
-		virtual void do_set_addressing_mode_v(
-			const TextureAddressingMode address_mode_v) = 0;
-
-
-		virtual TextureFilterType do_get_mag_filter() const = 0;
-
-		virtual void do_set_mag_filter(
-			const TextureFilterType mag_filter) = 0;
-
-
-		virtual TextureFilterType do_get_min_filter() const = 0;
-
-		virtual void do_set_min_filter(
-			const TextureFilterType min_filter) = 0;
-
-
-		virtual TextureFilterType do_get_mip_filter() const = 0;
-
-		virtual void do_set_mip_filter(
-			const TextureFilterType mip_filter) = 0;
-
-
-		virtual float do_get_lod_bias() const = 0;
-
-		virtual void do_set_lod_bias(
-			const float lod_bias) = 0;
-
-
-		virtual float do_get_anisotropy() const = 0;
-
-		virtual void do_set_anisotropy(
-			const float anisotropy) = 0;
-	}; // SamplerState
-
-	using SamplerStatePtr = SamplerState*;
-
-
 	class Texture
 	{
 	public:
@@ -495,6 +398,103 @@ public:
 	using TexturePtr = Texture*;
 
 
+	class Sampler
+	{
+	public:
+		TextureAddressingMode get_addressing_mode_u() const;
+
+		void set_addressing_mode_u(
+			const TextureAddressingMode addressing_mode_u);
+
+
+		TextureAddressingMode get_addressing_mode_v() const;
+
+		void set_addressing_mode_v(
+			const TextureAddressingMode addressing_mode_v);
+
+
+		TextureFilterType get_mag_filter() const;
+
+		void set_mag_filter(
+			const TextureFilterType mag_filter);
+
+
+		TextureFilterType get_min_filter() const;
+
+		void set_min_filter(
+			const TextureFilterType min_filter);
+
+
+		TextureFilterType get_mip_filter() const;
+
+		void set_mip_filter(
+			const TextureFilterType mip_filter);
+
+
+		float get_lod_bias() const;
+
+		void set_lod_bias(
+			const float mipmap_lod_bias);
+
+
+		float get_anisotropy() const;
+
+		void set_anisotropy(
+			const float anisotropy);
+
+
+	protected:
+		Sampler();
+
+		virtual ~Sampler();
+
+
+	private:
+		virtual TextureAddressingMode do_get_addressing_mode_u() const = 0;
+
+		virtual void do_set_addressing_mode_u(
+			const TextureAddressingMode address_mode_u) = 0;
+
+
+		virtual TextureAddressingMode do_get_addressing_mode_v() const = 0;
+
+		virtual void do_set_addressing_mode_v(
+			const TextureAddressingMode address_mode_v) = 0;
+
+
+		virtual TextureFilterType do_get_mag_filter() const = 0;
+
+		virtual void do_set_mag_filter(
+			const TextureFilterType mag_filter) = 0;
+
+
+		virtual TextureFilterType do_get_min_filter() const = 0;
+
+		virtual void do_set_min_filter(
+			const TextureFilterType min_filter) = 0;
+
+
+		virtual TextureFilterType do_get_mip_filter() const = 0;
+
+		virtual void do_set_mip_filter(
+			const TextureFilterType mip_filter) = 0;
+
+
+		virtual float do_get_lod_bias() const = 0;
+
+		virtual void do_set_lod_bias(
+			const float lod_bias) = 0;
+
+
+		virtual float do_get_anisotropy() const = 0;
+
+		virtual void do_set_anisotropy(
+			const float anisotropy) = 0;
+	}; // Sampler
+
+	using SamplerPtr = Sampler*;
+
+
 	bool is_initialized() const;
 
 	bool initialize(
@@ -606,7 +606,7 @@ public:
 		const float* const projection_matrix_ptr);
 
 
-	SamplerStatePtr get_sampler_state(
+	SamplerPtr get_sampler(
 		const int index);
 
 
@@ -766,10 +766,10 @@ private:
 		const float* const projection_matrix_ptr) = 0;
 
 
-	// Sampler state.
+	// Sampler.
 	//
 
-	virtual SamplerStatePtr do_get_sampler_state(
+	virtual SamplerPtr do_get_sampler(
 		const int index) = 0;
 
 	// Vertex array objects.

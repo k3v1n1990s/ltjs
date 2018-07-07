@@ -283,7 +283,7 @@ public:
 		vaos_{},
 		textures_{},
 		texture_bindings_{},
-		sampler_states_{},
+		samplers_{},
 		max_texture_lod_bias_{}
 	{
 	}
@@ -399,151 +399,6 @@ private:
 
 	using VertexArrayObjectUPtr = std::unique_ptr<VertexArrayObjectImpl>;
 	using VertexArrayObjectUList = std::list<VertexArrayObjectUPtr>;
-
-
-	class SamplerStateImpl :
-		public SamplerState
-	{
-	public:
-		struct InitializeParam
-		{
-			int unit_index_;
-			float max_lod_bias_;
-			bool has_anisotropy_;
-			float max_anisotropy_;
-
-
-			InitializeParam();
-
-			bool is_valid() const;
-		}; // InitializeParam
-
-
-		SamplerStateImpl();
-
-		~SamplerStateImpl() override;
-
-
-		bool initialize(
-			const InitializeParam& param);
-
-		void uninitialize();
-
-
-	private:
-		static constexpr auto default_addressing_mode_u = TextureAddressingMode::wrap;
-		static constexpr auto default_addressing_mode_v = TextureAddressingMode::wrap;
-
-		static constexpr auto default_mag_filter = TextureFilterType::point;
-		static constexpr auto default_min_filter = TextureFilterType::point;
-		static constexpr auto default_mip_filter = TextureFilterType::none;
-
-		static constexpr auto default_lod_bias = 0.0F;
-
-		static constexpr auto default_max_anisotropy = min_anisotropy;
-
-
-		bool is_initialized_;
-
-		int unit_index_;
-		GLuint ogl_sampler_;
-
-		TextureAddressingMode addressing_mode_u_;
-		TextureAddressingMode addressing_mode_v_;
-
-		TextureFilterType mag_filter_;
-		TextureFilterType min_filter_;
-		TextureFilterType mip_filter_;
-
-		float lod_bias_;
-		float max_lod_bias_;
-
-		bool has_anisotropy_;
-		float anisotropy_;
-		float max_anisotropy_;
-
-
-		// ========================================================================
-		// API
-		//
-
-		TextureAddressingMode do_get_addressing_mode_u() const override;
-
-		void do_set_addressing_mode_u(
-			const TextureAddressingMode addressing_mode_u) override;
-
-
-		TextureAddressingMode do_get_addressing_mode_v() const override;
-
-		void do_set_addressing_mode_v(
-			const TextureAddressingMode addressing_mode_v) override;
-
-
-		TextureFilterType do_get_mag_filter() const override;
-
-		void do_set_mag_filter(
-			const TextureFilterType mag_filter) override;
-
-
-		TextureFilterType do_get_min_filter() const override;
-
-		void do_set_min_filter(
-			const TextureFilterType min_filter) override;
-
-
-		TextureFilterType do_get_mip_filter() const override;
-
-		void do_set_mip_filter(
-			const TextureFilterType mip_filter) override;
-
-
-		float do_get_lod_bias() const override;
-
-		void do_set_lod_bias(
-			const float lod_bias) override;
-
-
-		float do_get_anisotropy() const override;
-
-		void do_set_anisotropy(
-			const float anisotropy) override;
-
-		//
-		// API
-		// ========================================================================
-
-
-		void set_addressing_mode_u_internal();
-
-		void set_addressing_mode_v_internal();
-
-		void set_mag_filter_internal();
-
-		void set_minmip_filter_internal();
-
-		void set_min_filter_internal();
-
-		void set_mip_filter_internal();
-
-		void set_lod_bias_internal();
-
-		void set_anisotropy_internal();
-
-		void set_defaults();
-
-
-		static GLenum get_ogl_addressing_mode(
-			const TextureAddressingMode d3d_addressing_mode);
-
-		static GLenum get_ogl_mag_filter(
-			const TextureFilterType d3d_mag_filter);
-
-		static GLenum get_ogl_min_filter(
-			const TextureFilterType d3d_min_filter,
-			const TextureFilterType d3d_mip_filter);
-	}; // SamplerStateImpl
-
-	using SamplerStates = std::array<SamplerStateImpl, max_samplers>;
 
 
 	class TextureImpl :
@@ -693,6 +548,153 @@ private:
 	}; // TextureImpl
 
 	using TextureImplPtr = TextureImpl*;
+
+
+	class SamplerImpl :
+		public Sampler
+	{
+	public:
+		struct InitializeParam
+		{
+			int unit_index_;
+			float max_lod_bias_;
+			bool has_anisotropy_;
+			float max_anisotropy_;
+
+
+			InitializeParam();
+
+			bool is_valid() const;
+		}; // InitializeParam
+
+
+		SamplerImpl();
+
+		~SamplerImpl() override;
+
+
+		bool initialize(
+			const InitializeParam& param);
+
+		void uninitialize();
+
+
+	private:
+		static constexpr auto default_addressing_mode_u = TextureAddressingMode::wrap;
+		static constexpr auto default_addressing_mode_v = TextureAddressingMode::wrap;
+
+		static constexpr auto default_mag_filter = TextureFilterType::point;
+		static constexpr auto default_min_filter = TextureFilterType::point;
+		static constexpr auto default_mip_filter = TextureFilterType::none;
+
+		static constexpr auto default_lod_bias = 0.0F;
+
+		static constexpr auto default_max_anisotropy = min_anisotropy;
+
+
+		bool is_initialized_;
+
+		int unit_index_;
+		GLuint ogl_sampler_;
+
+		TextureAddressingMode addressing_mode_u_;
+		TextureAddressingMode addressing_mode_v_;
+
+		TextureFilterType mag_filter_;
+		TextureFilterType min_filter_;
+		TextureFilterType mip_filter_;
+
+		float lod_bias_;
+		float max_lod_bias_;
+
+		bool has_anisotropy_;
+		float anisotropy_;
+		float max_anisotropy_;
+
+
+		// ========================================================================
+		// API
+		//
+
+		TextureAddressingMode do_get_addressing_mode_u() const override;
+
+		void do_set_addressing_mode_u(
+			const TextureAddressingMode addressing_mode_u) override;
+
+
+		TextureAddressingMode do_get_addressing_mode_v() const override;
+
+		void do_set_addressing_mode_v(
+			const TextureAddressingMode addressing_mode_v) override;
+
+
+		TextureFilterType do_get_mag_filter() const override;
+
+		void do_set_mag_filter(
+			const TextureFilterType mag_filter) override;
+
+
+		TextureFilterType do_get_min_filter() const override;
+
+		void do_set_min_filter(
+			const TextureFilterType min_filter) override;
+
+
+		TextureFilterType do_get_mip_filter() const override;
+
+		void do_set_mip_filter(
+			const TextureFilterType mip_filter) override;
+
+
+		float do_get_lod_bias() const override;
+
+		void do_set_lod_bias(
+			const float lod_bias) override;
+
+
+		float do_get_anisotropy() const override;
+
+		void do_set_anisotropy(
+			const float anisotropy) override;
+
+		//
+		// API
+		// ========================================================================
+
+
+		void set_addressing_mode_u_internal();
+
+		void set_addressing_mode_v_internal();
+
+		void set_mag_filter_internal();
+
+		void set_minmip_filter_internal();
+
+		void set_min_filter_internal();
+
+		void set_mip_filter_internal();
+
+		void set_lod_bias_internal();
+
+		void set_anisotropy_internal();
+
+		void set_defaults();
+
+
+		static GLenum get_ogl_addressing_mode(
+			const TextureAddressingMode d3d_addressing_mode);
+
+		static GLenum get_ogl_mag_filter(
+			const TextureFilterType d3d_mag_filter);
+
+		static GLenum get_ogl_min_filter(
+			const TextureFilterType d3d_min_filter,
+			const TextureFilterType d3d_mip_filter);
+	}; // SamplerImpl
+
+	using Samplers = std::array<SamplerImpl, max_samplers>;
+
+
 	using TextureImplUPtr = std::unique_ptr<TextureImpl>;
 	using TextureImplUList = std::list<TextureImplUPtr>;
 
@@ -780,7 +782,7 @@ private:
 	TextureImplUList textures_;
 	TextureBindings texture_bindings_;
 
-	SamplerStates sampler_states_;
+	Samplers samplers_;
 	float max_texture_lod_bias_;
 
 
@@ -1299,10 +1301,10 @@ private:
 		is_u_projection_dirty_ = true;
 	}
 
-	SamplerStatePtr do_get_sampler_state(
+	SamplerPtr do_get_sampler(
 		const int index) override
 	{
-		return &sampler_states_[index];
+		return &samplers_[index];
 	}
 
 	VertexArrayObjectPtr do_add_vertex_array_object() override
@@ -2389,7 +2391,7 @@ private:
 
 	bool initialize_samplers()
 	{
-		auto param = SamplerStateImpl::InitializeParam{};
+		auto param = SamplerImpl::InitializeParam{};
 		param.has_anisotropy_ = has_gl_ext_texture_filter_anisotropic_;
 		param.max_anisotropy_ = max_anisotropy_;
 		param.max_lod_bias_ = max_texture_lod_bias_;
@@ -2398,7 +2400,7 @@ private:
 		{
 			param.unit_index_ = i;
 
-			if (!sampler_states_[i].initialize(param))
+			if (!samplers_[i].initialize(param))
 			{
 				return false;
 			}
@@ -2409,9 +2411,9 @@ private:
 
 	void uninitialize_samplers()
 	{
-		for (auto& sampler_state : sampler_states_)
+		for (auto& sampler : samplers_)
 		{
-			sampler_state.uninitialize();
+			sampler.uninitialize();
 		}
 	}
 
@@ -3141,10 +3143,10 @@ void OglRendererImpl::VertexArrayObject::draw(
 
 
 // ==========================================================================
-// OglRendererImpl::SamplerStateImpl::InitializeParam
+// OglRendererImpl::SamplerImpl::InitializeParam
 //
 
-OglRendererImpl::SamplerStateImpl::InitializeParam::InitializeParam()
+OglRendererImpl::SamplerImpl::InitializeParam::InitializeParam()
 	:
 	unit_index_{-1},
 	max_lod_bias_{},
@@ -3153,7 +3155,7 @@ OglRendererImpl::SamplerStateImpl::InitializeParam::InitializeParam()
 {
 }
 
-bool OglRendererImpl::SamplerStateImpl::InitializeParam::is_valid() const
+bool OglRendererImpl::SamplerImpl::InitializeParam::is_valid() const
 {
 	if (unit_index_ < 0 || unit_index_ >= max_samplers)
 	{
@@ -3177,15 +3179,15 @@ bool OglRendererImpl::SamplerStateImpl::InitializeParam::is_valid() const
 }
 
 //
-// OglRendererImpl::SamplerStateImpl::InitializeParam
+// OglRendererImpl::SamplerImpl::InitializeParam
 // ==========================================================================
 
 
 // ==========================================================================
-// OglRendererImpl::SamplerStateImpl
+// OglRendererImpl::SamplerImpl
 //
 
-OglRendererImpl::SamplerStateImpl::SamplerStateImpl()
+OglRendererImpl::SamplerImpl::SamplerImpl()
 	:
 	is_initialized_{},
 	unit_index_{},
@@ -3203,12 +3205,12 @@ OglRendererImpl::SamplerStateImpl::SamplerStateImpl()
 {
 }
 
-OglRendererImpl::SamplerStateImpl::~SamplerStateImpl()
+OglRendererImpl::SamplerImpl::~SamplerImpl()
 {
 	assert(!is_initialized_);
 }
 
-bool OglRendererImpl::SamplerStateImpl::initialize(
+bool OglRendererImpl::SamplerImpl::initialize(
 	const InitializeParam& param)
 {
 	uninitialize();
@@ -3239,7 +3241,7 @@ bool OglRendererImpl::SamplerStateImpl::initialize(
 	return true;
 }
 
-void OglRendererImpl::SamplerStateImpl::uninitialize()
+void OglRendererImpl::SamplerImpl::uninitialize()
 {
 	is_initialized_ = false;
 
@@ -3271,13 +3273,13 @@ void OglRendererImpl::SamplerStateImpl::uninitialize()
 	max_anisotropy_ = 0;
 }
 
-OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerStateImpl::do_get_addressing_mode_u() const
+OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerImpl::do_get_addressing_mode_u() const
 {
 	assert(is_initialized_);
 	return addressing_mode_u_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_addressing_mode_u(
+void OglRendererImpl::SamplerImpl::do_set_addressing_mode_u(
 	const TextureAddressingMode addressing_mode_u)
 {
 	switch (addressing_mode_u)
@@ -3295,13 +3297,13 @@ void OglRendererImpl::SamplerStateImpl::do_set_addressing_mode_u(
 	set_addressing_mode_u_internal();
 }
 
-OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerStateImpl::do_get_addressing_mode_v() const
+OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerImpl::do_get_addressing_mode_v() const
 {
 	assert(is_initialized_);
 	return addressing_mode_v_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_addressing_mode_v(
+void OglRendererImpl::SamplerImpl::do_set_addressing_mode_v(
 	const TextureAddressingMode addressing_mode_v)
 {
 	switch (addressing_mode_v)
@@ -3319,13 +3321,13 @@ void OglRendererImpl::SamplerStateImpl::do_set_addressing_mode_v(
 	set_addressing_mode_v_internal();
 }
 
-OglRendererImpl::TextureFilterType OglRendererImpl::SamplerStateImpl::do_get_mag_filter() const
+OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_mag_filter() const
 {
 	assert(is_initialized_);
 	return mag_filter_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_mag_filter(
+void OglRendererImpl::SamplerImpl::do_set_mag_filter(
 	const TextureFilterType mag_filter)
 {
 	if (mag_filter_ == mag_filter)
@@ -3337,13 +3339,13 @@ void OglRendererImpl::SamplerStateImpl::do_set_mag_filter(
 	set_mag_filter_internal();
 }
 
-OglRendererImpl::TextureFilterType OglRendererImpl::SamplerStateImpl::do_get_min_filter() const
+OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_min_filter() const
 {
 	assert(is_initialized_);
 	return min_filter_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_min_filter(
+void OglRendererImpl::SamplerImpl::do_set_min_filter(
 	const TextureFilterType min_filter)
 {
 	if (min_filter_ == min_filter)
@@ -3355,13 +3357,13 @@ void OglRendererImpl::SamplerStateImpl::do_set_min_filter(
 	set_min_filter_internal();
 }
 
-OglRendererImpl::TextureFilterType OglRendererImpl::SamplerStateImpl::do_get_mip_filter() const
+OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_mip_filter() const
 {
 	assert(is_initialized_);
 	return mip_filter_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_mip_filter(
+void OglRendererImpl::SamplerImpl::do_set_mip_filter(
 	const TextureFilterType mip_filter)
 {
 	if (mip_filter_ == mip_filter)
@@ -3373,13 +3375,13 @@ void OglRendererImpl::SamplerStateImpl::do_set_mip_filter(
 	set_mip_filter_internal();
 }
 
-float OglRendererImpl::SamplerStateImpl::do_get_lod_bias() const
+float OglRendererImpl::SamplerImpl::do_get_lod_bias() const
 {
 	assert(is_initialized_);
 	return lod_bias_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_lod_bias(
+void OglRendererImpl::SamplerImpl::do_set_lod_bias(
 	const float lod_bias)
 {
 	if (lod_bias_ == lod_bias)
@@ -3391,13 +3393,13 @@ void OglRendererImpl::SamplerStateImpl::do_set_lod_bias(
 	set_lod_bias_internal();
 }
 
-float OglRendererImpl::SamplerStateImpl::do_get_anisotropy() const
+float OglRendererImpl::SamplerImpl::do_get_anisotropy() const
 {
 	assert(is_initialized_);
 	return anisotropy_;
 }
 
-void OglRendererImpl::SamplerStateImpl::do_set_anisotropy(
+void OglRendererImpl::SamplerImpl::do_set_anisotropy(
 	const float anisotropy)
 {
 	if (anisotropy < 0.0F)
@@ -3415,45 +3417,45 @@ void OglRendererImpl::SamplerStateImpl::do_set_anisotropy(
 	set_anisotropy_internal();
 }
 
-void OglRendererImpl::SamplerStateImpl::set_addressing_mode_u_internal()
+void OglRendererImpl::SamplerImpl::set_addressing_mode_u_internal()
 {
 	const auto ogl_addressing_mode_u = get_ogl_addressing_mode(addressing_mode_u_);
 	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_WRAP_S, ogl_addressing_mode_u);
 	assert(ogl_is_succeed());
 }
 
-void OglRendererImpl::SamplerStateImpl::set_addressing_mode_v_internal()
+void OglRendererImpl::SamplerImpl::set_addressing_mode_v_internal()
 {
 	const auto ogl_addressing_mode_v = get_ogl_addressing_mode(addressing_mode_v_);
 	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_WRAP_T, ogl_addressing_mode_v);
 	assert(ogl_is_succeed());
 }
 
-void OglRendererImpl::SamplerStateImpl::set_mag_filter_internal()
+void OglRendererImpl::SamplerImpl::set_mag_filter_internal()
 {
 	const auto mag_filter = get_ogl_mag_filter(mag_filter_);
 	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_MAG_FILTER, mag_filter);
 	assert(ogl_is_succeed());
 }
 
-void OglRendererImpl::SamplerStateImpl::set_minmip_filter_internal()
+void OglRendererImpl::SamplerImpl::set_minmip_filter_internal()
 {
 	const auto min_filter = get_ogl_min_filter(min_filter_, mip_filter_);
 	::glSamplerParameteri(ogl_sampler_, GL_TEXTURE_MIN_FILTER, min_filter);
 	assert(ogl_is_succeed());
 }
 
-void OglRendererImpl::SamplerStateImpl::set_min_filter_internal()
+void OglRendererImpl::SamplerImpl::set_min_filter_internal()
 {
 	set_minmip_filter_internal();
 }
 
-void OglRendererImpl::SamplerStateImpl::set_mip_filter_internal()
+void OglRendererImpl::SamplerImpl::set_mip_filter_internal()
 {
 	set_minmip_filter_internal();
 }
 
-void OglRendererImpl::SamplerStateImpl::set_lod_bias_internal()
+void OglRendererImpl::SamplerImpl::set_lod_bias_internal()
 {
 	auto lod_bias = lod_bias_;
 
@@ -3470,7 +3472,7 @@ void OglRendererImpl::SamplerStateImpl::set_lod_bias_internal()
 	assert(ogl_is_succeed());
 }
 
-void OglRendererImpl::SamplerStateImpl::set_anisotropy_internal()
+void OglRendererImpl::SamplerImpl::set_anisotropy_internal()
 {
 	if (!has_anisotropy_)
 	{
@@ -3493,7 +3495,7 @@ void OglRendererImpl::SamplerStateImpl::set_anisotropy_internal()
 	assert(ogl_is_succeed());
 }
 
-void OglRendererImpl::SamplerStateImpl::set_defaults()
+void OglRendererImpl::SamplerImpl::set_defaults()
 {
 	addressing_mode_u_ = default_addressing_mode_u;
 	set_addressing_mode_u_internal();
@@ -3515,7 +3517,7 @@ void OglRendererImpl::SamplerStateImpl::set_defaults()
 	set_anisotropy_internal();
 }
 
-GLenum OglRendererImpl::SamplerStateImpl::get_ogl_addressing_mode(
+GLenum OglRendererImpl::SamplerImpl::get_ogl_addressing_mode(
 	const TextureAddressingMode d3d_addressing_mode)
 {
 	switch (d3d_addressing_mode)
@@ -3532,7 +3534,7 @@ GLenum OglRendererImpl::SamplerStateImpl::get_ogl_addressing_mode(
 	}
 }
 
-GLenum OglRendererImpl::SamplerStateImpl::get_ogl_mag_filter(
+GLenum OglRendererImpl::SamplerImpl::get_ogl_mag_filter(
 	const TextureFilterType d3d_mag_filter)
 {
 	switch (d3d_mag_filter)
@@ -3550,7 +3552,7 @@ GLenum OglRendererImpl::SamplerStateImpl::get_ogl_mag_filter(
 	}
 }
 
-GLenum OglRendererImpl::SamplerStateImpl::get_ogl_min_filter(
+GLenum OglRendererImpl::SamplerImpl::get_ogl_min_filter(
 	const TextureFilterType d3d_min_filter,
 	const TextureFilterType d3d_mip_filter)
 {
@@ -3608,317 +3610,101 @@ GLenum OglRendererImpl::SamplerStateImpl::get_ogl_min_filter(
 }
 
 //
-// OglRendererImpl::SamplerStateImpl
+// OglRendererImpl::SamplerImpl
 // ==========================================================================
 
 
 // ==========================================================================
-// OglRenderer::SamplerState
+// OglRenderer::Sampler
 //
 
-OglRenderer::SamplerState::SamplerState()
+OglRenderer::Sampler::Sampler()
 {
 }
 
-OglRenderer::SamplerState::~SamplerState()
+OglRenderer::Sampler::~Sampler()
 {
 }
 
-OglRenderer::TextureAddressingMode OglRenderer::SamplerState::get_addressing_mode_u() const
+OglRenderer::TextureAddressingMode OglRenderer::Sampler::get_addressing_mode_u() const
 {
 	return do_get_addressing_mode_u();
 }
 
-void OglRenderer::SamplerState::set_addressing_mode_u(
+void OglRenderer::Sampler::set_addressing_mode_u(
 	const TextureAddressingMode addressing_mode_u)
 {
 	do_set_addressing_mode_u(addressing_mode_u);
 }
 
-OglRenderer::TextureAddressingMode OglRenderer::SamplerState::get_addressing_mode_v() const
+OglRenderer::TextureAddressingMode OglRenderer::Sampler::get_addressing_mode_v() const
 {
 	return do_get_addressing_mode_v();
 }
 
-void OglRenderer::SamplerState::set_addressing_mode_v(
+void OglRenderer::Sampler::set_addressing_mode_v(
 	const TextureAddressingMode addressing_mode_v)
 {
 	do_set_addressing_mode_v(addressing_mode_v);
 }
 
-OglRenderer::TextureFilterType OglRenderer::SamplerState::get_mag_filter() const
+OglRenderer::TextureFilterType OglRenderer::Sampler::get_mag_filter() const
 {
 	return do_get_mag_filter();
 }
 
-void OglRenderer::SamplerState::set_mag_filter(
+void OglRenderer::Sampler::set_mag_filter(
 	const TextureFilterType mag_filter)
 {
 	do_set_mag_filter(mag_filter);
 }
 
-OglRenderer::TextureFilterType OglRenderer::SamplerState::get_min_filter() const
+OglRenderer::TextureFilterType OglRenderer::Sampler::get_min_filter() const
 {
 	return do_get_min_filter();
 }
 
-void OglRenderer::SamplerState::set_min_filter(
+void OglRenderer::Sampler::set_min_filter(
 	const TextureFilterType min_filter)
 {
 	do_set_min_filter(min_filter);
 }
 
-OglRenderer::TextureFilterType OglRenderer::SamplerState::get_mip_filter() const
+OglRenderer::TextureFilterType OglRenderer::Sampler::get_mip_filter() const
 {
 	return do_get_mip_filter();
 }
 
-void OglRenderer::SamplerState::set_mip_filter(
+void OglRenderer::Sampler::set_mip_filter(
 	const TextureFilterType mip_filter)
 {
 	do_set_mip_filter(mip_filter);
 }
 
-float OglRenderer::SamplerState::get_lod_bias() const
+float OglRenderer::Sampler::get_lod_bias() const
 {
 	return do_get_lod_bias();
 }
 
-void OglRenderer::SamplerState::set_lod_bias(
+void OglRenderer::Sampler::set_lod_bias(
 	const float mipmap_lod_bias)
 {
 	do_set_lod_bias(mipmap_lod_bias);
 }
 
-float OglRenderer::SamplerState::get_anisotropy() const
+float OglRenderer::Sampler::get_anisotropy() const
 {
 	return do_get_anisotropy();
 }
 
-void OglRenderer::SamplerState::set_anisotropy(
+void OglRenderer::Sampler::set_anisotropy(
 	const float anisotropy)
 {
 	do_set_anisotropy(anisotropy);
 }
 
 //
-// OglRenderer::SamplerState
-// ==========================================================================
-
-
-// ==========================================================================
-// OglRenderer::Viewport
-//
-
-OglRenderer::Viewport::Viewport()
-	:
-	x_{},
-	y_{},
-	width_{},
-	height_{},
-	depth_min_z_{},
-	depth_max_z_{}
-{
-}
-
-//
-// OglRenderer::Viewport
-// ==========================================================================
-
-
-// ==========================================================================
-// OglRenderer::Fvf
-//
-
-OglRenderer::Fvf::Fvf()
-	:
-	has_position_{},
-	is_position_transformed_{},
-	blending_weight_count_{},
-	has_normal_{},
-	has_diffuse_{},
-	tex_coord_set_count_{},
-	tex_coord_item_counts_{},
-	vertex_size_{}
-{
-}
-
-OglRenderer::Fvf::Fvf(
-	const std::uint32_t d3d_fvf)
-{
-	*this = from_d3d(d3d_fvf);
-}
-
-bool OglRenderer::Fvf::has_blending_weights() const
-{
-	return blending_weight_count_ > 0;
-}
-
-bool OglRenderer::Fvf::has_tex_coord_sets() const
-{
-	return tex_coord_set_count_ > 0;
-}
-
-bool OglRenderer::Fvf::is_valid() const
-{
-	return has_position_ && vertex_size_ > 0;
-}
-
-OglRenderer::Fvf OglRenderer::Fvf::from_d3d(
-	const std::uint32_t d3d_fvf)
-{
-	auto is_zero = false;
-
-	if (d3d_fvf == 0)
-	{
-		is_zero = true;
-	}
-
-	if ((d3d_fvf & d3dfvf_valid_flags) != d3d_fvf)
-	{
-		assert(!"Unsupported flags.");
-		is_zero = true;
-	}
-
-	if (is_zero)
-	{
-		return {};
-	}
-
-	auto has_transformed = false;
-	auto has_untransformed = false;
-
-	if (((d3d_fvf & d3dfvf_xyz) == d3dfvf_xyz && (d3d_fvf & d3dfvf_xyzrhw) != d3dfvf_xyzrhw) ||
-		(d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1 ||
-		(d3d_fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2 ||
-		(d3d_fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
-	{
-		has_untransformed = true;
-	}
-
-	if ((d3d_fvf & d3dfvf_xyzrhw) == d3dfvf_xyzrhw)
-	{
-		has_transformed = true;
-	}
-
-	if (has_transformed && has_untransformed)
-	{
-		assert(!"Transformed and untransformed are mutual exclusive.");
-		return {};
-	}
-
-	auto has_normal = false;
-
-	if ((d3d_fvf & d3dfvf_normal) == d3dfvf_normal)
-	{
-		has_normal = true;
-	}
-
-	if (has_transformed && has_normal)
-	{
-		assert(!"Transformed and normal are prohibited.");
-		return {};
-	}
-
-
-	auto fvf = Fvf{};
-
-	if (has_transformed)
-	{
-		fvf.has_position_ = true;
-		fvf.is_position_transformed_ = true;
-	}
-
-	if (has_untransformed)
-	{
-		fvf.has_position_ = true;
-		fvf.is_position_transformed_ = false;
-	}
-
-	if ((d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1)
-	{
-		fvf.has_position_ = true;
-		fvf.blending_weight_count_ = 1;
-	}
-
-	if ((d3d_fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2)
-	{
-		fvf.has_position_ = true;
-		fvf.blending_weight_count_ = 2;
-	}
-
-	if ((d3d_fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
-	{
-		fvf.has_position_ = true;
-		fvf.blending_weight_count_ = 3;
-	}
-
-	if ((d3d_fvf & d3dfvf_normal) == d3dfvf_normal)
-	{
-		fvf.has_normal_ = true;
-	}
-
-	if ((d3d_fvf & d3dfvf_diffuse) == d3dfvf_diffuse)
-	{
-		fvf.has_diffuse_ = true;
-	}
-
-	if ((d3d_fvf & d3dfvf_tex1) == d3dfvf_tex1)
-	{
-		fvf.tex_coord_set_count_ = 1;
-	}
-
-	if ((d3d_fvf & d3dfvf_tex2) == d3dfvf_tex2)
-	{
-		fvf.tex_coord_set_count_ = 2;
-	}
-
-	if ((d3d_fvf & d3dfvf_tex3) == d3dfvf_tex3)
-	{
-		fvf.tex_coord_set_count_ = 3;
-	}
-
-	if ((d3d_fvf & d3dfvf_tex4) == d3dfvf_tex4)
-	{
-		fvf.tex_coord_set_count_ = 4;
-	}
-
-	for (auto i = 0; i < fvf.tex_coord_set_count_; ++i)
-	{
-		if ((d3d_fvf & d3dfvf_texcoordsize4(i)) == d3dfvf_texcoordsize4(i))
-		{
-			fvf.tex_coord_item_counts_[i] = 4;
-		}
-		else if ((d3d_fvf & d3dfvf_texcoordsize3(i)) == d3dfvf_texcoordsize3(i))
-		{
-			fvf.tex_coord_item_counts_[i] = 3;
-		}
-		else
-		{
-			fvf.tex_coord_item_counts_[i] = 2;
-		}
-	}
-
-
-	// Calculate a size of the vertex.
-	// Each component item has four byte size (float, DWORD).
-	//
-	fvf.vertex_size_ = 4 * (
-		(fvf.has_position_ ? (fvf.is_position_transformed_ ? 4 : 3) : 0) +
-		fvf.blending_weight_count_ +
-		(fvf.has_normal_ ? 3 : 0) +
-		(fvf.has_diffuse_ ? 1 : 0) +
-		std::accumulate(
-			fvf.tex_coord_item_counts_.cbegin(),
-			fvf.tex_coord_item_counts_.cbegin() + fvf.tex_coord_set_count_,
-			0) +
-		0);
-
-	return fvf;
-}
-
-//
-// OglRenderer::Fvf
+// OglRenderer::Sampler
 // ==========================================================================
 
 
@@ -4997,6 +4783,222 @@ int OglRenderer::Texture::get_level_height(
 
 
 // ==========================================================================
+// OglRenderer::Viewport
+//
+
+OglRenderer::Viewport::Viewport()
+	:
+	x_{},
+	y_{},
+	width_{},
+	height_{},
+	depth_min_z_{},
+	depth_max_z_{}
+{
+}
+
+//
+// OglRenderer::Viewport
+// ==========================================================================
+
+
+// ==========================================================================
+// OglRenderer::Fvf
+//
+
+OglRenderer::Fvf::Fvf()
+	:
+	has_position_{},
+	is_position_transformed_{},
+	blending_weight_count_{},
+	has_normal_{},
+	has_diffuse_{},
+	tex_coord_set_count_{},
+	tex_coord_item_counts_{},
+	vertex_size_{}
+{
+}
+
+OglRenderer::Fvf::Fvf(
+	const std::uint32_t d3d_fvf)
+{
+	*this = from_d3d(d3d_fvf);
+}
+
+bool OglRenderer::Fvf::has_blending_weights() const
+{
+	return blending_weight_count_ > 0;
+}
+
+bool OglRenderer::Fvf::has_tex_coord_sets() const
+{
+	return tex_coord_set_count_ > 0;
+}
+
+bool OglRenderer::Fvf::is_valid() const
+{
+	return has_position_ && vertex_size_ > 0;
+}
+
+OglRenderer::Fvf OglRenderer::Fvf::from_d3d(
+	const std::uint32_t d3d_fvf)
+{
+	auto is_zero = false;
+
+	if (d3d_fvf == 0)
+	{
+		is_zero = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_valid_flags) != d3d_fvf)
+	{
+		assert(!"Unsupported flags.");
+		is_zero = true;
+	}
+
+	if (is_zero)
+	{
+		return {};
+	}
+
+	auto has_transformed = false;
+	auto has_untransformed = false;
+
+	if (((d3d_fvf & d3dfvf_xyz) == d3dfvf_xyz && (d3d_fvf & d3dfvf_xyzrhw) != d3dfvf_xyzrhw) ||
+		(d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1 ||
+		(d3d_fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2 ||
+		(d3d_fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
+	{
+		has_untransformed = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_xyzrhw) == d3dfvf_xyzrhw)
+	{
+		has_transformed = true;
+	}
+
+	if (has_transformed && has_untransformed)
+	{
+		assert(!"Transformed and untransformed are mutual exclusive.");
+		return {};
+	}
+
+	auto has_normal = false;
+
+	if ((d3d_fvf & d3dfvf_normal) == d3dfvf_normal)
+	{
+		has_normal = true;
+	}
+
+	if (has_transformed && has_normal)
+	{
+		assert(!"Transformed and normal are prohibited.");
+		return {};
+	}
+
+
+	auto fvf = Fvf{};
+
+	if (has_transformed)
+	{
+		fvf.has_position_ = true;
+		fvf.is_position_transformed_ = true;
+	}
+
+	if (has_untransformed)
+	{
+		fvf.has_position_ = true;
+		fvf.is_position_transformed_ = false;
+	}
+
+	if ((d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1)
+	{
+		fvf.has_position_ = true;
+		fvf.blending_weight_count_ = 1;
+	}
+
+	if ((d3d_fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2)
+	{
+		fvf.has_position_ = true;
+		fvf.blending_weight_count_ = 2;
+	}
+
+	if ((d3d_fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
+	{
+		fvf.has_position_ = true;
+		fvf.blending_weight_count_ = 3;
+	}
+
+	if ((d3d_fvf & d3dfvf_normal) == d3dfvf_normal)
+	{
+		fvf.has_normal_ = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_diffuse) == d3dfvf_diffuse)
+	{
+		fvf.has_diffuse_ = true;
+	}
+
+	if ((d3d_fvf & d3dfvf_tex1) == d3dfvf_tex1)
+	{
+		fvf.tex_coord_set_count_ = 1;
+	}
+
+	if ((d3d_fvf & d3dfvf_tex2) == d3dfvf_tex2)
+	{
+		fvf.tex_coord_set_count_ = 2;
+	}
+
+	if ((d3d_fvf & d3dfvf_tex3) == d3dfvf_tex3)
+	{
+		fvf.tex_coord_set_count_ = 3;
+	}
+
+	if ((d3d_fvf & d3dfvf_tex4) == d3dfvf_tex4)
+	{
+		fvf.tex_coord_set_count_ = 4;
+	}
+
+	for (auto i = 0; i < fvf.tex_coord_set_count_; ++i)
+	{
+		if ((d3d_fvf & d3dfvf_texcoordsize4(i)) == d3dfvf_texcoordsize4(i))
+		{
+			fvf.tex_coord_item_counts_[i] = 4;
+		}
+		else if ((d3d_fvf & d3dfvf_texcoordsize3(i)) == d3dfvf_texcoordsize3(i))
+		{
+			fvf.tex_coord_item_counts_[i] = 3;
+		}
+		else
+		{
+			fvf.tex_coord_item_counts_[i] = 2;
+		}
+	}
+
+
+	// Calculate a size of the vertex.
+	// Each component item has four byte size (float, DWORD).
+	//
+	fvf.vertex_size_ = 4 * (
+		(fvf.has_position_ ? (fvf.is_position_transformed_ ? 4 : 3) : 0) +
+		fvf.blending_weight_count_ +
+		(fvf.has_normal_ ? 3 : 0) +
+		(fvf.has_diffuse_ ? 1 : 0) +
+		std::accumulate(
+			fvf.tex_coord_item_counts_.cbegin(),
+			fvf.tex_coord_item_counts_.cbegin() + fvf.tex_coord_set_count_,
+			0) +
+		0);
+
+	return fvf;
+}
+
+//
+// OglRenderer::Fvf
+// ==========================================================================
+
+
+// ==========================================================================
 // OglRenderer
 //
 
@@ -5200,10 +5202,10 @@ void OglRenderer::set_projection_matrix(
 	do_set_projection_matrix(projection_matrix_ptr);
 }
 
-OglRenderer::SamplerStatePtr OglRenderer::get_sampler_state(
+OglRenderer::SamplerPtr OglRenderer::get_sampler(
 	const int index)
 {
-	return do_get_sampler_state(index);
+	return do_get_sampler(index);
 }
 
 OglRenderer::VertexArrayObjectPtr OglRenderer::add_vertex_array_object()
