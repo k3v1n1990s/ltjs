@@ -19,6 +19,7 @@ class OglRenderer
 {
 public:
 	static constexpr auto max_samplers = 4;
+	static constexpr auto max_stages = 4;
 
 
 	struct ClearFlags :
@@ -136,7 +137,7 @@ public:
 	// Flexible vertex format.
 	struct Fvf
 	{
-		using TexCoordItemCounts = std::array<int, max_samplers>;
+		using TexCoordItemCounts = std::array<int, max_stages>;
 
 
 		// Has position? (D3DFVF_XYZ or D3DFVF_XYZRHW)

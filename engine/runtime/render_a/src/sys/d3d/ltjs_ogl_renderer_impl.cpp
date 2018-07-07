@@ -556,7 +556,7 @@ private:
 	public:
 		struct InitializeParam
 		{
-			int unit_index_;
+			int index_;
 			float max_lod_bias_;
 			bool has_anisotropy_;
 			float max_anisotropy_;
@@ -594,7 +594,7 @@ private:
 
 		bool is_initialized_;
 
-		int unit_index_;
+		int index_;
 		GLuint ogl_sampler_;
 
 		TextureAddressingMode addressing_mode_u_;
@@ -2398,7 +2398,7 @@ private:
 
 		for (auto i = 0; i < max_samplers; ++i)
 		{
-			param.unit_index_ = i;
+			param.index_ = i;
 
 			if (!samplers_[i].initialize(param))
 			{
@@ -3148,7 +3148,7 @@ void OglRendererImpl::VertexArrayObject::draw(
 
 OglRendererImpl::SamplerImpl::InitializeParam::InitializeParam()
 	:
-	unit_index_{-1},
+	index_{-1},
 	max_lod_bias_{},
 	has_anisotropy_{},
 	max_anisotropy_{}
@@ -3157,9 +3157,9 @@ OglRendererImpl::SamplerImpl::InitializeParam::InitializeParam()
 
 bool OglRendererImpl::SamplerImpl::InitializeParam::is_valid() const
 {
-	if (unit_index_ < 0 || unit_index_ >= max_samplers)
+	if (index_ < 0 || index_ >= max_samplers)
 	{
-		assert(!"Texture unit index out of range.");
+		assert(!"Sampler index out of range.");
 		return false;
 	}
 
@@ -3190,7 +3190,7 @@ bool OglRendererImpl::SamplerImpl::InitializeParam::is_valid() const
 OglRendererImpl::SamplerImpl::SamplerImpl()
 	:
 	is_initialized_{},
-	unit_index_{},
+	index_{},
 	ogl_sampler_{},
 	addressing_mode_u_{},
 	addressing_mode_v_{},
@@ -3220,7 +3220,7 @@ bool OglRendererImpl::SamplerImpl::initialize(
 		return false;
 	}
 
-	unit_index_ = param.unit_index_;
+	index_ = param.index_;
 	max_lod_bias_ = param.max_lod_bias_;
 	has_anisotropy_ = param.has_anisotropy_;
 	max_anisotropy_ = param.max_anisotropy_;
@@ -3228,7 +3228,7 @@ bool OglRendererImpl::SamplerImpl::initialize(
 	::glGenSamplers(1, &ogl_sampler_);
 	assert(ogl_is_succeed());
 
-	::glBindSampler(unit_index_, ogl_sampler_);
+	::glBindSampler(index_, ogl_sampler_);
 	assert(ogl_is_succeed());
 
 	if (!ogl_is_succeed())
@@ -3245,12 +3245,12 @@ void OglRendererImpl::SamplerImpl::uninitialize()
 {
 	is_initialized_ = false;
 
-	if (unit_index_ >= 0)
+	if (index_ >= 0)
 	{
-		::glBindSampler(unit_index_, 0);
+		::glBindSampler(index_, 0);
 		assert(ogl_is_succeed());
 
-		unit_index_ = -1;
+		index_ = -1;
 	}
 
 	if (ogl_sampler_)
