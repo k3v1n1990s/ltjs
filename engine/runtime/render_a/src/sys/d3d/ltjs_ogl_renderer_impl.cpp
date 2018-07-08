@@ -249,7 +249,7 @@ public:
 		max_anisotropy_{},
 		screen_width_{},
 		screen_height_{},
-		is_dirty_{},
+		is_modified_{},
 		clear_color_r_{},
 		clear_color_g_{},
 		clear_color_b_{},
@@ -271,8 +271,8 @@ public:
 		has_diffuse_{},
 		u_has_diffuse_{},
 		is_position_transformed_{},
-		are_u_model_views_dirty_{},
-		is_u_projection_dirty_{},
+		are_u_model_views_modified_{},
+		is_u_projection_modified_{},
 		world_matrices_{},
 		view_matrix_{},
 		projection_matrix_{},
@@ -318,7 +318,7 @@ private:
 	using WorldMatrix = Matrix4F;
 	using WorldMatrices = std::array<WorldMatrix, max_world_matrices>;
 
-	using ModelViewMatrixDirtyFlags = std::bitset<max_world_matrices>;
+	using ModelViewMatrixModificationFlags = std::bitset<max_world_matrices>;
 
 	using ViewMatrix = Matrix4F;
 	using ModelViewMatrix = Matrix4F;
@@ -554,29 +554,16 @@ private:
 		public Sampler
 	{
 	public:
-		struct InitializeParam
-		{
-			int index_;
-			float max_lod_bias_;
-			bool has_anisotropy_;
-			float max_anisotropy_;
-
-
-			InitializeParam();
-
-			bool is_valid() const;
-		}; // InitializeParam
-
-
-		SamplerImpl();
+		SamplerImpl(
+			OglRendererImpl& ogl_renderer,
+			const int index);
 
 		~SamplerImpl() override;
 
 
-		bool initialize(
-			const InitializeParam& param);
+		bool is_initialized() const;
 
-		void uninitialize();
+		void apply_modifications();
 
 
 	private:
@@ -592,22 +579,33 @@ private:
 		static constexpr auto default_max_anisotropy = min_anisotropy;
 
 
-		bool is_initialized_;
+		OglRendererImpl& ogl_renderer_;
 
-		int index_;
+		bool is_initialized_;
+		bool is_modified_;
+
+		const int index_;
 		GLuint ogl_sampler_;
 
+		bool is_addressing_mode_u_modified_;
 		TextureAddressingMode addressing_mode_u_;
+
+		bool is_addressing_mode_v_modified_;
 		TextureAddressingMode addressing_mode_v_;
 
+		bool is_mag_filter_modified_;
 		TextureFilterType mag_filter_;
+
+		bool is_minmip_filter_modified_;
 		TextureFilterType min_filter_;
 		TextureFilterType mip_filter_;
 
+		bool is_lod_bias_modified_;
 		float lod_bias_;
 		float max_lod_bias_;
 
 		bool has_anisotropy_;
+		bool is_anisotropy_modified_;
 		float anisotropy_;
 		float max_anisotropy_;
 
@@ -662,6 +660,11 @@ private:
 		// ========================================================================
 
 
+		void initialize_internal();
+
+		void uninitialize_internal();
+
+
 		void set_addressing_mode_u_internal();
 
 		void set_addressing_mode_v_internal();
@@ -670,15 +673,24 @@ private:
 
 		void set_minmip_filter_internal();
 
-		void set_min_filter_internal();
-
-		void set_mip_filter_internal();
-
 		void set_lod_bias_internal();
 
 		void set_anisotropy_internal();
 
 		void set_defaults();
+
+
+		void apply_addressing_mode_u_modifications();
+
+		void apply_addressing_mode_v_modifications();
+
+		void apply_mag_filter_modifications();
+
+		void apply_minmip_filter_modifications();
+
+		void apply_lod_bias_modifications();
+
+		void apply_anisotropy_modifications();
 
 
 		static GLenum get_ogl_addressing_mode(
@@ -692,7 +704,7 @@ private:
 			const TextureFilterType d3d_mip_filter);
 	}; // SamplerImpl
 
-	using Samplers = std::array<SamplerImpl, max_samplers>;
+	using Samplers = std::vector<SamplerImpl>;
 
 
 	using TextureImplUPtr = std::unique_ptr<TextureImpl>;
@@ -731,7 +743,7 @@ private:
 	int screen_width_;
 	int screen_height_;
 
-	bool is_dirty_;
+	bool is_modified_;
 
 	std::uint8_t clear_color_r_;
 	std::uint8_t clear_color_g_;
@@ -764,8 +776,8 @@ private:
 
 	bool is_position_transformed_;
 
-	ModelViewMatrixDirtyFlags are_u_model_views_dirty_;
-	bool is_u_projection_dirty_;
+	ModelViewMatrixModificationFlags are_u_model_views_modified_;
+	bool is_u_projection_modified_;
 
 	WorldMatrices world_matrices_;
 	ViewMatrix view_matrix_;
@@ -956,8 +968,8 @@ private:
 
 		if (is_size_changed)
 		{
-			is_dirty_ = true;
-			is_u_projection_dirty_ = true;
+			is_modified_ = true;
+			is_u_projection_modified_ = true;
 
 			set_viewport_size_internal();
 		}
@@ -1084,8 +1096,8 @@ private:
 
 		set_is_depth_enabled_internal();
 
-		is_dirty_ = true;
-		is_u_projection_dirty_ = true;
+		is_modified_ = true;
+		is_u_projection_modified_ = true;
 	}
 
 	bool do_is_depth_writable() const override
@@ -1233,8 +1245,8 @@ private:
 
 		world_matrices_[index] = *reinterpret_cast<const Matrix4F*>(world_matrix_ptr);
 
-		is_dirty_ = true;
-		are_u_model_views_dirty_.set(index);
+		is_modified_ = true;
+		are_u_model_views_modified_.set(index);
 	}
 
 	const float* do_get_view_matrix() const override
@@ -1265,8 +1277,8 @@ private:
 
 		view_matrix_ = *reinterpret_cast<const ViewMatrix*>(view_matrix_ptr);
 
-		is_dirty_ = true;
-		are_u_model_views_dirty_.set();
+		is_modified_ = true;
+		are_u_model_views_modified_.set();
 	}
 
 	const float* do_get_projection_matrix() const override
@@ -1297,8 +1309,8 @@ private:
 
 		projection_matrix_ = *reinterpret_cast<const ProjectionMatrix*>(projection_matrix_ptr);
 
-		is_dirty_ = true;
-		is_u_projection_dirty_ = true;
+		is_modified_ = true;
+		is_u_projection_modified_ = true;
 	}
 
 	SamplerPtr do_get_sampler(
@@ -1546,7 +1558,7 @@ private:
 		screen_width_ = 0;
 		screen_height_ = 0;
 
-		is_dirty_ = false;
+		is_modified_ = false;
 
 		clear_color_r_ = 0;
 		clear_color_g_ = 0;
@@ -1588,8 +1600,8 @@ private:
 
 		is_position_transformed_ = false;
 
-		are_u_model_views_dirty_ = {};
-		is_u_projection_dirty_ = false;
+		are_u_model_views_modified_ = {};
+		is_u_projection_modified_ = false;
 
 		world_matrices_ = {};
 		view_matrix_ = {};
@@ -2240,9 +2252,9 @@ private:
 
 		is_position_transformed_ = is_position_transformed;
 
-		is_dirty_ = true;
-		are_u_model_views_dirty_.set();
-		is_u_projection_dirty_ = true;
+		is_modified_ = true;
+		are_u_model_views_modified_.set();
+		is_u_projection_modified_ = true;
 	}
 
 	void set_u_model_view(
@@ -2299,70 +2311,79 @@ private:
 	{
 		world_matrices_.fill(identity_matrix);
 
-		is_dirty_ = true;
-		are_u_model_views_dirty_.set();
+		is_modified_ = true;
+		are_u_model_views_modified_.set();
 	}
 
 	void set_default_view_matrix()
 	{
 		view_matrix_ = identity_matrix;
 
-		is_dirty_ = true;
-		are_u_model_views_dirty_.set();
+		is_modified_ = true;
+		are_u_model_views_modified_.set();
 	}
 
 	void set_default_projection_matrix()
 	{
 		projection_matrix_ = identity_matrix;
 
-		is_dirty_ = true;
-		is_u_projection_dirty_ = true;
+		is_modified_ = true;
+		is_u_projection_modified_ = true;
 	}
 
-	void apply_u_view_model_changes(
+	void apply_u_view_model_modifications(
 		const int index)
 	{
-		if (!are_u_model_views_dirty_.test(index))
+		if (!are_u_model_views_modified_.test(index))
 		{
 			return;
 		}
 
-		are_u_model_views_dirty_.reset(index);
+		are_u_model_views_modified_.reset(index);
 
 		set_u_model_view(index);
 	}
 
-	void apply_u_view_models_changes()
+	void apply_u_view_models_modifications()
 	{
 		for (auto i = 0; i < max_world_matrices; ++i)
 		{
-			apply_u_view_model_changes(i);
+			apply_u_view_model_modifications(i);
 		}
 	}
 
-	void apply_u_projection_changes()
+	void apply_u_projection_modifications()
 	{
-		if (!is_u_projection_dirty_)
+		if (!is_u_projection_modified_)
 		{
 			return;
 		}
 
-		is_u_projection_dirty_ = false;
+		is_u_projection_modified_ = false;
 
 		set_u_projection();
 	}
 
-	void apply_changes()
+	void apply_samplers_modifications()
 	{
-		if (!is_dirty_)
+		for (auto& sampler : samplers_)
+		{
+			sampler.apply_modifications();
+		}
+	}
+
+	void apply_modifications()
+	{
+		if (!is_modified_)
 		{
 			return;
 		}
 
-		is_dirty_ = false;
+		is_modified_ = false;
 
-		apply_u_view_models_changes();
-		apply_u_projection_changes();
+		apply_u_view_models_modifications();
+		apply_u_projection_modifications();
+		apply_samplers_modifications();
 	}
 
 	static Matrix4F multiply_matrices(
@@ -2391,19 +2412,23 @@ private:
 
 	bool initialize_samplers()
 	{
-		auto param = SamplerImpl::InitializeParam{};
-		param.has_anisotropy_ = has_gl_ext_texture_filter_anisotropic_;
-		param.max_anisotropy_ = max_anisotropy_;
-		param.max_lod_bias_ = max_texture_lod_bias_;
+		samplers_.clear();
+		samplers_.reserve(max_samplers);
 
-		for (auto i = 0; i < max_samplers; ++i)
+		auto index = 0;
+
+		for (auto i_sampler = 0; i_sampler < max_samplers; ++i_sampler)
 		{
-			param.index_ = i;
+			samplers_.emplace_back(*this, i_sampler);
 
-			if (!samplers_[i].initialize(param))
+			auto& sampler = samplers_.back();
+
+			if (!sampler.is_initialized())
 			{
 				return false;
 			}
+
+			index += 1;
 		}
 
 		return true;
@@ -2411,10 +2436,7 @@ private:
 
 	void uninitialize_samplers()
 	{
-		for (auto& sampler : samplers_)
-		{
-			sampler.uninitialize();
-		}
+		samplers_.clear();
 	}
 
 	static GLbitfield get_ogl_clear_flags(
@@ -2943,7 +2965,7 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 
 	ogl_renderer_.set_has_diffuse(vertex_format_.has_diffuse_);
 	ogl_renderer_.set_is_position_transformed(vertex_format_.is_position_transformed_);
-	ogl_renderer_.apply_changes();
+	ogl_renderer_.apply_modifications();
 
 	if (ogl_renderer_.current_vao_ != this)
 	{
@@ -3143,87 +3165,46 @@ void OglRendererImpl::VertexArrayObject::draw(
 
 
 // ==========================================================================
-// OglRendererImpl::SamplerImpl::InitializeParam
-//
-
-OglRendererImpl::SamplerImpl::InitializeParam::InitializeParam()
-	:
-	index_{-1},
-	max_lod_bias_{},
-	has_anisotropy_{},
-	max_anisotropy_{}
-{
-}
-
-bool OglRendererImpl::SamplerImpl::InitializeParam::is_valid() const
-{
-	if (index_ < 0 || index_ >= max_samplers)
-	{
-		assert(!"Sampler index out of range.");
-		return false;
-	}
-
-	if (max_lod_bias_ < 0.0F)
-	{
-		assert(!"Negative max absolute LOD bias.");
-		return false;
-	}
-
-	if (has_anisotropy_ && max_anisotropy_ < 0.0F)
-	{
-		assert(!"Negative max anisotropy.");
-		return false;
-	}
-
-	return true;
-}
-
-//
-// OglRendererImpl::SamplerImpl::InitializeParam
-// ==========================================================================
-
-
-// ==========================================================================
 // OglRendererImpl::SamplerImpl
 //
 
-OglRendererImpl::SamplerImpl::SamplerImpl()
+OglRendererImpl::SamplerImpl::SamplerImpl(
+	OglRendererImpl& ogl_renderer,
+	const int index)
 	:
+	ogl_renderer_{ogl_renderer},
 	is_initialized_{},
-	index_{},
+	is_modified_{},
+	index_{index},
 	ogl_sampler_{},
+	is_addressing_mode_u_modified_{},
 	addressing_mode_u_{},
+	is_addressing_mode_v_modified_{},
 	addressing_mode_v_{},
+	is_mag_filter_modified_{},
 	mag_filter_{},
+	is_minmip_filter_modified_{},
 	min_filter_{},
 	mip_filter_{},
+	is_lod_bias_modified_{},
 	lod_bias_{},
 	max_lod_bias_{},
 	has_anisotropy_{},
+	is_anisotropy_modified_{},
 	anisotropy_{},
 	max_anisotropy_{}
 {
+	initialize_internal();
 }
 
 OglRendererImpl::SamplerImpl::~SamplerImpl()
 {
-	assert(!is_initialized_);
+	uninitialize_internal();
 }
 
-bool OglRendererImpl::SamplerImpl::initialize(
-	const InitializeParam& param)
+void OglRendererImpl::SamplerImpl::initialize_internal()
 {
-	uninitialize();
-
-	if (!param.is_valid())
-	{
-		return false;
-	}
-
-	index_ = param.index_;
-	max_lod_bias_ = param.max_lod_bias_;
-	has_anisotropy_ = param.has_anisotropy_;
-	max_anisotropy_ = param.max_anisotropy_;
+	uninitialize_internal();
 
 	::glGenSamplers(1, &ogl_sampler_);
 	assert(ogl_is_succeed());
@@ -3233,25 +3214,19 @@ bool OglRendererImpl::SamplerImpl::initialize(
 
 	if (!ogl_is_succeed())
 	{
-		return false;
+		uninitialize_internal();
+		return;
 	}
 
 	set_defaults();
 
-	return true;
+	is_initialized_ = true;
 }
 
-void OglRendererImpl::SamplerImpl::uninitialize()
+void OglRendererImpl::SamplerImpl::uninitialize_internal()
 {
 	is_initialized_ = false;
-
-	if (index_ >= 0)
-	{
-		::glBindSampler(index_, 0);
-		assert(ogl_is_succeed());
-
-		index_ = -1;
-	}
+	is_modified_ = false;
 
 	if (ogl_sampler_)
 	{
@@ -3261,16 +3236,49 @@ void OglRendererImpl::SamplerImpl::uninitialize()
 		ogl_sampler_ = 0;
 	}
 
+	is_addressing_mode_u_modified_ = false;
 	addressing_mode_u_ = TextureAddressingMode::none;
+
+	is_addressing_mode_v_modified_ = false;
 	addressing_mode_v_ = TextureAddressingMode::none;
+
+	is_mag_filter_modified_ = false;
 	mag_filter_ = TextureFilterType::none;
+
+	is_minmip_filter_modified_ = false;
 	min_filter_ = TextureFilterType::none;
 	mip_filter_ = TextureFilterType::none;
+
+	is_lod_bias_modified_ = false;
 	lod_bias_ = 0.0F;
 	max_lod_bias_ = 0.0F;
+
 	has_anisotropy_ = false;
+	is_anisotropy_modified_ = false;
 	anisotropy_ = 0;
 	max_anisotropy_ = 0;
+}
+
+bool OglRendererImpl::SamplerImpl::is_initialized() const
+{
+	return is_initialized_;
+}
+
+void OglRendererImpl::SamplerImpl::apply_modifications()
+{
+	if (!is_modified_)
+	{
+		return;
+	}
+
+	is_modified_ = false;
+
+	apply_addressing_mode_u_modifications();
+	apply_addressing_mode_v_modifications();
+	apply_mag_filter_modifications();
+	apply_minmip_filter_modifications();
+	apply_lod_bias_modifications();
+	apply_anisotropy_modifications();
 }
 
 OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerImpl::do_get_addressing_mode_u() const
@@ -3282,6 +3290,12 @@ OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerImpl::do_get_addr
 void OglRendererImpl::SamplerImpl::do_set_addressing_mode_u(
 	const TextureAddressingMode addressing_mode_u)
 {
+	if (!is_initialized_)
+	{
+		assert(!"Invalid state.");
+		return;
+	}
+
 	switch (addressing_mode_u)
 	{
 	case TextureAddressingMode::clamp:
@@ -3289,12 +3303,19 @@ void OglRendererImpl::SamplerImpl::do_set_addressing_mode_u(
 		break;
 
 	default:
-		assert(!"Unsupported texture addressing mode.");
+		assert(!"Unsupported texture U-addressing mode.");
 		return;
 	}
 
+	if (addressing_mode_u_ == addressing_mode_u)
+	{
+		return;
+	}
+
+	is_modified_ = true;
+	ogl_renderer_.is_modified_ = true;
+	is_addressing_mode_u_modified_ = true;
 	addressing_mode_u_ = addressing_mode_u;
-	set_addressing_mode_u_internal();
 }
 
 OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerImpl::do_get_addressing_mode_v() const
@@ -3306,6 +3327,12 @@ OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerImpl::do_get_addr
 void OglRendererImpl::SamplerImpl::do_set_addressing_mode_v(
 	const TextureAddressingMode addressing_mode_v)
 {
+	if (!is_initialized_)
+	{
+		assert(!"Invalid state.");
+		return;
+	}
+
 	switch (addressing_mode_v)
 	{
 	case TextureAddressingMode::clamp:
@@ -3313,12 +3340,19 @@ void OglRendererImpl::SamplerImpl::do_set_addressing_mode_v(
 		break;
 
 	default:
-		assert(!"Unsupported texture addressing mode.");
+		assert(!"Unsupported texture V-addressing mode.");
 		return;
 	}
 
+	if (addressing_mode_v_ == addressing_mode_v)
+	{
+		return;
+	}
+
+	is_modified_ = true;
+	ogl_renderer_.is_modified_ = true;
+	is_addressing_mode_v_modified_ = true;
 	addressing_mode_v_ = addressing_mode_v;
-	set_addressing_mode_v_internal();
 }
 
 OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_mag_filter() const
@@ -3330,13 +3364,21 @@ OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_mag_filt
 void OglRendererImpl::SamplerImpl::do_set_mag_filter(
 	const TextureFilterType mag_filter)
 {
+	if (!is_initialized_)
+	{
+		assert(!"Invalid state.");
+		return;
+	}
+
 	if (mag_filter_ == mag_filter)
 	{
 		return;
 	}
 
+	is_modified_ = true;
+	ogl_renderer_.is_modified_ = true;
+	is_mag_filter_modified_ = true;
 	mag_filter_ = mag_filter;
-	set_mag_filter_internal();
 }
 
 OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_min_filter() const
@@ -3348,13 +3390,21 @@ OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_min_filt
 void OglRendererImpl::SamplerImpl::do_set_min_filter(
 	const TextureFilterType min_filter)
 {
+	if (!is_initialized_)
+	{
+		assert(!"Invalid state.");
+		return;
+	}
+
 	if (min_filter_ == min_filter)
 	{
 		return;
 	}
 
+	is_modified_ = true;
+	ogl_renderer_.is_modified_ = true;
+	is_minmip_filter_modified_ = true;
 	min_filter_ = min_filter;
-	set_min_filter_internal();
 }
 
 OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_mip_filter() const
@@ -3366,13 +3416,21 @@ OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_mip_filt
 void OglRendererImpl::SamplerImpl::do_set_mip_filter(
 	const TextureFilterType mip_filter)
 {
+	if (!is_initialized_)
+	{
+		assert(!"Invalid state.");
+		return;
+	}
+
 	if (mip_filter_ == mip_filter)
 	{
 		return;
 	}
 
+	is_modified_ = true;
+	ogl_renderer_.is_modified_ = true;
+	is_minmip_filter_modified_ = true;
 	mip_filter_ = mip_filter;
-	set_mip_filter_internal();
 }
 
 float OglRendererImpl::SamplerImpl::do_get_lod_bias() const
@@ -3384,13 +3442,21 @@ float OglRendererImpl::SamplerImpl::do_get_lod_bias() const
 void OglRendererImpl::SamplerImpl::do_set_lod_bias(
 	const float lod_bias)
 {
+	if (!is_initialized_)
+	{
+		assert(!"Invalid state.");
+		return;
+	}
+
 	if (lod_bias_ == lod_bias)
 	{
 		return;
 	}
 
+	is_modified_ = true;
+	ogl_renderer_.is_modified_ = true;
+	is_lod_bias_modified_ = true;
 	lod_bias_ = lod_bias;
-	set_lod_bias_internal();
 }
 
 float OglRendererImpl::SamplerImpl::do_get_anisotropy() const
@@ -3402,6 +3468,12 @@ float OglRendererImpl::SamplerImpl::do_get_anisotropy() const
 void OglRendererImpl::SamplerImpl::do_set_anisotropy(
 	const float anisotropy)
 {
+	if (!is_initialized_)
+	{
+		assert(!"Invalid state.");
+		return;
+	}
+
 	if (anisotropy < 0.0F)
 	{
 		assert(!"Negative max anisotropy.");
@@ -3413,8 +3485,15 @@ void OglRendererImpl::SamplerImpl::do_set_anisotropy(
 		return;
 	}
 
+	if (!has_anisotropy_)
+	{
+		return;
+	}
+
+	is_modified_ = true;
+	ogl_renderer_.is_modified_ = true;
+	is_anisotropy_modified_ = true;
 	anisotropy_ = anisotropy;
-	set_anisotropy_internal();
 }
 
 void OglRendererImpl::SamplerImpl::set_addressing_mode_u_internal()
@@ -3445,16 +3524,6 @@ void OglRendererImpl::SamplerImpl::set_minmip_filter_internal()
 	assert(ogl_is_succeed());
 }
 
-void OglRendererImpl::SamplerImpl::set_min_filter_internal()
-{
-	set_minmip_filter_internal();
-}
-
-void OglRendererImpl::SamplerImpl::set_mip_filter_internal()
-{
-	set_minmip_filter_internal();
-}
-
 void OglRendererImpl::SamplerImpl::set_lod_bias_internal()
 {
 	auto lod_bias = lod_bias_;
@@ -3463,9 +3532,9 @@ void OglRendererImpl::SamplerImpl::set_lod_bias_internal()
 	{
 		lod_bias = -max_lod_bias_;
 	}
-	else if (lod_bias > max_lod_bias_)
+	else if (lod_bias > (+max_lod_bias_))
 	{
-		lod_bias = max_lod_bias_;
+		lod_bias = +max_lod_bias_;
 	}
 
 	::glSamplerParameterf(ogl_sampler_, GL_TEXTURE_LOD_BIAS, lod_bias);
@@ -3497,23 +3566,97 @@ void OglRendererImpl::SamplerImpl::set_anisotropy_internal()
 
 void OglRendererImpl::SamplerImpl::set_defaults()
 {
+	is_modified_ = false;
+
+	is_addressing_mode_u_modified_ = false;
 	addressing_mode_u_ = default_addressing_mode_u;
 	set_addressing_mode_u_internal();
 
+	is_addressing_mode_v_modified_ = false;
 	addressing_mode_v_ = default_addressing_mode_v;
 	set_addressing_mode_v_internal();
 
+	is_mag_filter_modified_ = false;
 	mag_filter_ = default_mag_filter;
 	set_mag_filter_internal();
 
+	is_minmip_filter_modified_ = false;
 	min_filter_ = default_min_filter;
 	mip_filter_ = default_mip_filter;
 	set_minmip_filter_internal();
 
+	is_lod_bias_modified_ = false;
 	lod_bias_ = default_lod_bias;
 	set_lod_bias_internal();
 
+	is_anisotropy_modified_ = false;
 	anisotropy_ = default_max_anisotropy;
+	set_anisotropy_internal();
+}
+
+void OglRendererImpl::SamplerImpl::apply_addressing_mode_u_modifications()
+{
+	if (!is_addressing_mode_u_modified_)
+	{
+		return;
+	}
+
+	is_addressing_mode_u_modified_ = false;
+	set_addressing_mode_u_internal();
+}
+
+void OglRendererImpl::SamplerImpl::apply_addressing_mode_v_modifications()
+{
+	if (!is_addressing_mode_v_modified_)
+	{
+		return;
+	}
+
+	is_addressing_mode_v_modified_ = false;
+	set_addressing_mode_v_internal();
+}
+
+void OglRendererImpl::SamplerImpl::apply_mag_filter_modifications()
+{
+	if (!is_mag_filter_modified_)
+	{
+		return;
+	}
+
+	is_mag_filter_modified_ = false;
+	set_mag_filter_internal();
+}
+
+void OglRendererImpl::SamplerImpl::apply_minmip_filter_modifications()
+{
+	if (!is_minmip_filter_modified_)
+	{
+		return;
+	}
+
+	is_minmip_filter_modified_ = false;
+	set_minmip_filter_internal();
+}
+
+void OglRendererImpl::SamplerImpl::apply_lod_bias_modifications()
+{
+	if (!is_lod_bias_modified_)
+	{
+		return;
+	}
+
+	is_lod_bias_modified_ = false;
+	set_lod_bias_internal();
+}
+
+void OglRendererImpl::SamplerImpl::apply_anisotropy_modifications()
+{
+	if (!is_anisotropy_modified_)
+	{
+		return;
+	}
+
+	is_anisotropy_modified_ = false;
 	set_anisotropy_internal();
 }
 
