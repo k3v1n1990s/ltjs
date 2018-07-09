@@ -106,6 +106,82 @@ public:
 		anisotropic = 3,
 	}; // TextureFilterType
 
+	enum class TextureOperation :
+		std::uint32_t
+	{
+		none = 0,
+		disable = 1,
+		select_arg1 = 2,
+		select_arg2 = 3,
+		modulate = 4,
+		modulate_2x = 5,
+		add = 7,
+		add_signed = 8,
+		subtract = 10,
+		blend_current_alpha = 16,
+		modulate_alpha_add_color = 18,
+		bump_envmap = 22,
+		bump_envmap_luminance = 23,
+		dot_product3 = 24,
+	}; // TextureOperation
+
+	struct TextureArgument :
+		public ul::EnumFlags
+	{
+		TextureArgument(
+			const Value flags = none)
+			:
+			ul::EnumFlags{flags}
+		{
+		}
+
+		enum : Value
+		{
+			diffuse = 0x00000000,
+			current = 0x00000001,
+			texture = 0x00000002,
+			factor = 0x00000003,
+			complement = 0x00000010,
+		}; // enum
+	}; // TextureArgument
+
+	struct TextureTransformationFlags :
+		public ul::EnumFlags
+	{
+		TextureTransformationFlags(
+			const Value flags = none)
+			:
+			ul::EnumFlags{flags}
+		{
+		}
+
+		enum : Value
+		{
+			disable = 0,
+			count2 = 2,
+			count3 = 3,
+			projected = 256,
+		}; // enum
+	}; // TextureTransformationFlags
+
+	struct TextureCoordIndex :
+		public ul::EnumFlags
+	{
+		TextureCoordIndex(
+			const Value flags = none)
+			:
+			ul::EnumFlags{flags}
+		{
+		}
+
+		enum : Value
+		{
+			pass_through = 0x00000000,
+			camera_space_position = 0x00020000,
+			camera_space_reflection_vector = 0x00030000,
+		}; // enum
+	}; // TextureCoordIndex
+
 	enum class SurfaceFormat :
 		std::uint32_t
 	{
@@ -493,6 +569,167 @@ public:
 	}; // Sampler
 
 	using SamplerPtr = Sampler*;
+
+
+	class Stage
+	{
+	public:
+		TexturePtr get_texture();
+
+		void set_texture(
+			TexturePtr texture);
+
+
+		TextureOperation get_color_operation() const;
+
+		void set_color_operation(
+			const TextureOperation& operation);
+
+
+		TextureArgument get_color_argument_1() const;
+
+		void set_color_argument_1(
+			const TextureArgument& argument_1);
+
+
+		TextureArgument get_color_argument_2() const;
+
+		void set_color_argument_2(
+			const TextureArgument& argument_2);
+
+
+		TextureOperation get_alpha_operation() const;
+
+		void set_alpha_operation(
+			const TextureOperation& operation);
+
+
+		TextureArgument get_alpha_argument_1() const;
+
+		void set_alpha_argument_1(
+			const TextureArgument& argument_1);
+
+
+		TextureArgument get_alpha_argument_2() const;
+
+		void set_alpha_argument_2(
+			const TextureArgument& argument_2);
+
+
+		TextureCoordIndex get_coord_index() const;
+
+		void set_coord_index(
+			const TextureCoordIndex& index);
+
+
+		TextureTransformationFlags get_transformation_flags() const;
+
+		void set_transformation_flags(
+			const TextureTransformationFlags& flags);
+
+
+		float get_bump_map_luminance_scale() const;
+
+		void set_bump_map_luminance_scale(
+			const float scale);
+
+
+		float get_bump_map_luminance_offset() const;
+
+		void set_bump_map_luminance_offset(
+			const float offset);
+
+
+		float get_bump_map_coefficient(
+			const int index) const;
+
+		void set_bump_map_coefficient(
+			const int index,
+			const float coefficient);
+
+
+	protected:
+		Stage();
+
+		virtual ~Stage();
+
+
+	private:
+		virtual TexturePtr do_get_texture() = 0;
+
+		virtual void do_set_texture(
+			TexturePtr texture) = 0;
+
+
+		virtual TextureOperation do_get_color_operation() const = 0;
+
+		virtual void do_set_color_operation(
+			const TextureOperation& operation) = 0;
+
+
+		virtual TextureArgument do_get_color_argument_1() const = 0;
+
+		virtual void do_set_color_argument_1(
+			const TextureArgument& argument_1) = 0;
+
+
+		virtual TextureArgument do_get_color_argument_2() const = 0;
+
+		virtual void do_set_color_argument_2(
+			const TextureArgument& argument_2) = 0;
+
+
+		virtual TextureOperation do_get_alpha_operation() const = 0;
+
+		virtual void do_set_alpha_operation(
+			const TextureOperation& operation) = 0;
+
+
+		virtual TextureArgument do_get_alpha_argument_1() const = 0;
+
+		virtual void do_set_alpha_argument_1(
+			const TextureArgument& argument_1) = 0;
+
+
+		virtual TextureArgument do_get_alpha_argument_2() const = 0;
+
+		virtual void do_set_alpha_argument_2(
+			const TextureArgument& argument_2) = 0;
+
+
+		virtual TextureCoordIndex do_get_coord_index() const = 0;
+
+		virtual void do_set_coord_index(
+			const TextureCoordIndex& index) = 0;
+
+
+		virtual TextureTransformationFlags do_get_transformation_flags() const = 0;
+
+		virtual void do_set_transformation_flags(
+			const TextureTransformationFlags& flags) = 0;
+
+
+		virtual float do_get_bump_map_luminance_scale() const = 0;
+
+		virtual void do_set_bump_map_luminance_scale(
+			const float scale) = 0;
+
+
+		virtual float do_get_bump_map_luminance_offset() const = 0;
+
+		virtual void do_set_bump_map_luminance_offset(
+			const float offset) = 0;
+
+
+		virtual float do_get_bump_map_coefficient(
+			const int index) const = 0;
+
+		virtual void do_set_bump_map_coefficient(
+			const int index,
+			const float coefficient) = 0;
+	}; // Stage
+
+	using StagePtr = Stage*;
 
 
 	bool is_initialized() const;
