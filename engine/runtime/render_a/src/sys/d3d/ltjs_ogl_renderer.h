@@ -106,7 +106,7 @@ public:
 		anisotropic = 3,
 	}; // TextureFilterType
 
-	enum class TextureOperation :
+	enum class TextureOp :
 		std::uint32_t
 	{
 		none = 0,
@@ -123,12 +123,12 @@ public:
 		bump_envmap = 22,
 		bump_envmap_luminance = 23,
 		dot_product3 = 24,
-	}; // TextureOperation
+	}; // TextureOp
 
-	struct TextureArgument :
+	struct TextureArg :
 		public ul::EnumFlags
 	{
-		TextureArgument(
+		TextureArg(
 			const Value flags = none)
 			:
 			ul::EnumFlags{flags}
@@ -143,12 +143,12 @@ public:
 			factor = 0x00000003,
 			complement = 0x00000010,
 		}; // enum
-	}; // TextureArgument
+	}; // TextureArg
 
-	struct TextureTransformationFlags :
+	struct TextureTransFlags :
 		public ul::EnumFlags
 	{
-		TextureTransformationFlags(
+		TextureTransFlags(
 			const Value flags = none)
 			:
 			ul::EnumFlags{flags}
@@ -162,7 +162,7 @@ public:
 			count3 = 3,
 			projected = 256,
 		}; // enum
-	}; // TextureTransformationFlags
+	}; // TextureTransFlags
 
 	struct TextureCoordIndex :
 		public ul::EnumFlags
@@ -580,64 +580,64 @@ public:
 			TexturePtr texture);
 
 
-		TextureOperation get_color_operation() const;
+		TextureOp get_color_op() const;
 
-		void set_color_operation(
-			const TextureOperation& operation);
-
-
-		TextureArgument get_color_argument_1() const;
-
-		void set_color_argument_1(
-			const TextureArgument& argument_1);
+		void set_color_op(
+			const TextureOp& color_op);
 
 
-		TextureArgument get_color_argument_2() const;
+		TextureArg get_color_arg1() const;
 
-		void set_color_argument_2(
-			const TextureArgument& argument_2);
-
-
-		TextureOperation get_alpha_operation() const;
-
-		void set_alpha_operation(
-			const TextureOperation& operation);
+		void set_color_arg1(
+			const TextureArg& color_arg1);
 
 
-		TextureArgument get_alpha_argument_1() const;
+		TextureArg get_color_arg2() const;
 
-		void set_alpha_argument_1(
-			const TextureArgument& argument_1);
+		void set_color_arg2(
+			const TextureArg& color_arg2);
 
 
-		TextureArgument get_alpha_argument_2() const;
+		TextureOp get_alpha_op() const;
 
-		void set_alpha_argument_2(
-			const TextureArgument& argument_2);
+		void set_alpha_op(
+			const TextureOp& alpha_op);
+
+
+		TextureArg get_alpha_arg1() const;
+
+		void set_alpha_arg1(
+			const TextureArg& alpha_arg1);
+
+
+		TextureArg get_alpha_arg2() const;
+
+		void set_alpha_arg2(
+			const TextureArg& alpha_arg2);
 
 
 		TextureCoordIndex get_coord_index() const;
 
 		void set_coord_index(
-			const TextureCoordIndex& index);
+			const TextureCoordIndex& coord_index);
 
 
-		TextureTransformationFlags get_transformation_flags() const;
+		TextureTransFlags get_trans_flags() const;
 
-		void set_transformation_flags(
-			const TextureTransformationFlags& flags);
-
-
-		float get_bump_map_luminance_scale() const;
-
-		void set_bump_map_luminance_scale(
-			const float scale);
+		void set_trans_flags(
+			const TextureTransFlags& trans_flags);
 
 
-		float get_bump_map_luminance_offset() const;
+		float get_bump_map_lum_scale() const;
 
-		void set_bump_map_luminance_offset(
-			const float offset);
+		void set_bump_map_lum_scale(
+			const float lum_scale);
+
+
+		float get_bump_map_lum_offset() const;
+
+		void set_bump_map_lum_offset(
+			const float lum_offset);
 
 
 		float get_bump_map_coefficient(
@@ -661,64 +661,64 @@ public:
 			TexturePtr texture) = 0;
 
 
-		virtual TextureOperation do_get_color_operation() const = 0;
+		virtual TextureOp do_get_color_op() const = 0;
 
-		virtual void do_set_color_operation(
-			const TextureOperation& operation) = 0;
-
-
-		virtual TextureArgument do_get_color_argument_1() const = 0;
-
-		virtual void do_set_color_argument_1(
-			const TextureArgument& argument_1) = 0;
+		virtual void do_set_color_op(
+			const TextureOp& color_operation) = 0;
 
 
-		virtual TextureArgument do_get_color_argument_2() const = 0;
+		virtual TextureArg do_get_color_arg1() const = 0;
 
-		virtual void do_set_color_argument_2(
-			const TextureArgument& argument_2) = 0;
-
-
-		virtual TextureOperation do_get_alpha_operation() const = 0;
-
-		virtual void do_set_alpha_operation(
-			const TextureOperation& operation) = 0;
+		virtual void do_set_color_arg1(
+			const TextureArg& color_argument1) = 0;
 
 
-		virtual TextureArgument do_get_alpha_argument_1() const = 0;
+		virtual TextureArg do_get_color_arg2() const = 0;
 
-		virtual void do_set_alpha_argument_1(
-			const TextureArgument& argument_1) = 0;
+		virtual void do_set_color_arg2(
+			const TextureArg& color_argument2) = 0;
 
 
-		virtual TextureArgument do_get_alpha_argument_2() const = 0;
+		virtual TextureOp do_get_alpha_op() const = 0;
 
-		virtual void do_set_alpha_argument_2(
-			const TextureArgument& argument_2) = 0;
+		virtual void do_set_alpha_op(
+			const TextureOp& alpha_operation) = 0;
+
+
+		virtual TextureArg do_get_alpha_arg1() const = 0;
+
+		virtual void do_set_alpha_arg1(
+			const TextureArg& alpha_argument1) = 0;
+
+
+		virtual TextureArg do_get_alpha_arg2() const = 0;
+
+		virtual void do_set_alpha_arg2(
+			const TextureArg& alpha_argument2) = 0;
 
 
 		virtual TextureCoordIndex do_get_coord_index() const = 0;
 
 		virtual void do_set_coord_index(
-			const TextureCoordIndex& index) = 0;
+			const TextureCoordIndex& coord_index) = 0;
 
 
-		virtual TextureTransformationFlags do_get_transformation_flags() const = 0;
+		virtual TextureTransFlags do_get_trans_flags() const = 0;
 
-		virtual void do_set_transformation_flags(
-			const TextureTransformationFlags& flags) = 0;
-
-
-		virtual float do_get_bump_map_luminance_scale() const = 0;
-
-		virtual void do_set_bump_map_luminance_scale(
-			const float scale) = 0;
+		virtual void do_set_trans_flags(
+			const TextureTransFlags& transformation_flags) = 0;
 
 
-		virtual float do_get_bump_map_luminance_offset() const = 0;
+		virtual float do_get_bump_map_lum_scale() const = 0;
 
-		virtual void do_set_bump_map_luminance_offset(
-			const float offset) = 0;
+		virtual void do_set_bump_map_lum_scale(
+			const float luminance_scale) = 0;
+
+
+		virtual float do_get_bump_map_lum_offset() const = 0;
+
+		virtual void do_set_bump_map_lum_offset(
+			const float luminance_offset) = 0;
 
 
 		virtual float do_get_bump_map_coefficient(

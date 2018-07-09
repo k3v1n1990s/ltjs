@@ -733,20 +733,20 @@ private:
 	private:
 		static TextureImplPtr default_texture;
 
-		static TextureOperation default_color_op_0;
-		static TextureOperation default_color_op_n;
-		static TextureArgument default_color_arg1;
-		static TextureArgument default_color_arg2;
+		static TextureOp default_color_op_0;
+		static TextureOp default_color_op_n;
+		static TextureArg default_color_arg1;
+		static TextureArg default_color_arg2;
 
-		static TextureOperation default_alpha_op_0;
-		static TextureOperation default_alpha_op_n;
-		static TextureArgument default_alpha_arg1;
-		static TextureArgument default_alpha_arg2;
+		static TextureOp default_alpha_op_0;
+		static TextureOp default_alpha_op_n;
+		static TextureArg default_alpha_arg1;
+		static TextureArg default_alpha_arg2;
 
-		static TextureTransformationFlags default_transformation_flags;
+		static TextureTransFlags default_trans_flags;
 
-		static float default_bump_map_luminance_scale;
-		static float default_bump_map_luminance_offset;
+		static float default_bump_map_lum_scale;
+		static float default_bump_map_lum_offset;
 		static Matrix2F default_bump_map_matrix;
 
 
@@ -760,34 +760,34 @@ private:
 		TextureImplPtr texture_;
 
 		bool is_color_op_modified_;
-		TextureOperation color_op_;
+		TextureOp color_op_;
 
 		bool is_color_arg1_modified_;
-		TextureArgument color_arg_1_;
+		TextureArg color_arg_1_;
 
 		bool is_color_arg2_modified_;
-		TextureArgument color_arg_2_;
+		TextureArg color_arg_2_;
 
 		bool is_alpha_op_modified_;
-		TextureOperation alpha_op_;
+		TextureOp alpha_op_;
 
 		bool is_alpha_arg1_modified_;
-		TextureArgument alpha_arg1_;
+		TextureArg alpha_arg1_;
 
 		bool is_alpha_arg2_modified_;
-		TextureArgument alpha_arg2_;
+		TextureArg alpha_arg2_;
 
 		bool is_coord_index_modified_;
 		TextureCoordIndex coord_index_;
 
-		bool is_transformation_flags_modified_;
-		TextureTransformationFlags transformation_flags_;
+		bool is_trans_flags_modified_;
+		TextureTransFlags trans_flags_;
 
-		bool is_bump_map_luminance_scale_modified_;
-		float bump_map_luminance_scale_;
+		bool is_bump_map_lum_scale_modified_;
+		float bump_map_lum_scale_;
 
-		bool is_bump_map_luminance_offset_modified_;
-		float bump_map_luminance_offset_;
+		bool is_bump_map_lum_offset_modified_;
+		float bump_map_lum_offset_;
 
 		bool is_bump_map_matrix_modified_;
 		Matrix2F bump_map_matrix_;
@@ -803,64 +803,64 @@ private:
 			TexturePtr texture) override;
 
 
-		TextureOperation do_get_color_operation() const override;
+		TextureOp do_get_color_op() const override;
 
-		void do_set_color_operation(
-			const TextureOperation& operation) override;
-
-
-		TextureArgument do_get_color_argument_1() const override;
-
-		void do_set_color_argument_1(
-			const TextureArgument& argument_1) override;
+		void do_set_color_op(
+			const TextureOp& color_op) override;
 
 
-		TextureArgument do_get_color_argument_2() const override;
+		TextureArg do_get_color_arg1() const override;
 
-		void do_set_color_argument_2(
-			const TextureArgument& argument_2) override;
-
-
-		TextureOperation do_get_alpha_operation() const override;
-
-		void do_set_alpha_operation(
-			const TextureOperation& operation) override;
+		void do_set_color_arg1(
+			const TextureArg& color_arg1) override;
 
 
-		TextureArgument do_get_alpha_argument_1() const override;
+		TextureArg do_get_color_arg2() const override;
 
-		void do_set_alpha_argument_1(
-			const TextureArgument& argument_1) override;
+		void do_set_color_arg2(
+			const TextureArg& color_arg2) override;
 
 
-		TextureArgument do_get_alpha_argument_2() const override;
+		TextureOp do_get_alpha_op() const override;
 
-		void do_set_alpha_argument_2(
-			const TextureArgument& argument_2) override;
+		void do_set_alpha_op(
+			const TextureOp& alpha_op) override;
+
+
+		TextureArg do_get_alpha_arg1() const override;
+
+		void do_set_alpha_arg1(
+			const TextureArg& alpha_arg1) override;
+
+
+		TextureArg do_get_alpha_arg2() const override;
+
+		void do_set_alpha_arg2(
+			const TextureArg& alpha_arg2) override;
 
 
 		TextureCoordIndex do_get_coord_index() const override;
 
 		void do_set_coord_index(
-			const TextureCoordIndex& index) override;
+			const TextureCoordIndex& coord_index) override;
 
 
-		TextureTransformationFlags do_get_transformation_flags() const override;
+		TextureTransFlags do_get_trans_flags() const override;
 
-		void do_set_transformation_flags(
-			const TextureTransformationFlags& flags) override;
-
-
-		float do_get_bump_map_luminance_scale() const override;
-
-		void do_set_bump_map_luminance_scale(
-			const float scale) override;
+		void do_set_trans_flags(
+			const TextureTransFlags& trans_flags) override;
 
 
-		float do_get_bump_map_luminance_offset() const override;
+		float do_get_bump_map_lum_scale() const override;
 
-		void do_set_bump_map_luminance_offset(
-			const float offset) override;
+		void do_set_bump_map_lum_scale(
+			const float lum_scale) override;
+
+
+		float do_get_bump_map_lum_offset() const override;
+
+		void do_set_bump_map_lum_offset(
+			const float lum_offset) override;
 
 
 		float do_get_bump_map_coefficient(
@@ -884,37 +884,62 @@ private:
 
 		void set_texture_internal();
 
-		void set_color_operation_internal();
+		void set_color_op_internal();
 
-		void set_color_argument_1_internal();
+		void set_color_arg1_internal();
 
-		void set_color_argument_2_internal();
+		void set_color_arg2_internal();
 
-		void set_alpha_operation_internal();
+		void set_alpha_op_internal();
 
-		void set_alpha_argument_1_internal();
+		void set_alpha_arg1_internal();
 
-		void set_alpha_argument_2_internal();
+		void set_alpha_arg2_internal();
 
 		void set_coord_index_internal();
 
-		void set_transformation_flags_internal();
+		void set_trans_flags_internal();
 
-		void set_bump_map_luminance_scale_internal();
+		void set_bump_map_lum_scale_internal();
 
-		void set_bump_map_luminance_offset_internal();
+		void set_bump_map_lum_offset_internal();
 
 		void set_bump_map_matrix_internal();
 
 
-		static bool is_operation_valid(
-			const TextureOperation& operation);
+		void apply_texture_modifications();
 
-		static bool is_argument_valid(
-			const TextureArgument& argument);
+		void apply_color_op_modifications();
 
-		bool are_transformation_flags_valid(
-			const TextureTransformationFlags& flags);
+		void apply_color_arg1_modifications();
+
+		void apply_color_arg2_modifications();
+
+		void apply_alpha_op_modifications();
+
+		void apply_alpha_arg1_modifications();
+
+		void apply_alpha_arg2_modifications();
+
+		void apply_coord_index_modifications();
+
+		void apply_trans_flags_modifications();
+
+		void apply_bump_map_lum_scale_modifications();
+
+		void apply_bump_map_lum_offset_modifications();
+
+		void apply_bump_map_matrix_modifications();
+
+
+		static bool is_op_valid(
+			const TextureOp& op);
+
+		static bool is_arg_valid(
+			const TextureArg& arg);
+
+		bool are_trans_flags_valid(
+			const TextureTransFlags& trans_flags);
 
 		bool is_coord_index_valid(
 			const TextureCoordIndex& coord_index);
@@ -2676,6 +2701,11 @@ private:
 			stages_.emplace_back(*this, i_stage);
 
 			auto& stage = stages_.back();
+
+			if (!stage.initialize())
+			{
+				return false;
+			}
 
 			index += 1;
 		}
@@ -5180,20 +5210,20 @@ int OglRenderer::Texture::get_level_height(
 
 OglRendererImpl::TextureImplPtr OglRendererImpl::StageImpl::default_texture = nullptr;
 
-OglRenderer::TextureOperation OglRendererImpl::StageImpl::default_color_op_0 = OglRenderer::TextureOperation::modulate;
-OglRenderer::TextureOperation OglRendererImpl::StageImpl::default_color_op_n = OglRenderer::TextureOperation::disable;
-OglRenderer::TextureArgument OglRendererImpl::StageImpl::default_color_arg1 = OglRenderer::TextureArgument::texture;
-OglRenderer::TextureArgument OglRendererImpl::StageImpl::default_color_arg2 = OglRenderer::TextureArgument::current;
+OglRenderer::TextureOp OglRendererImpl::StageImpl::default_color_op_0 = OglRenderer::TextureOp::modulate;
+OglRenderer::TextureOp OglRendererImpl::StageImpl::default_color_op_n = OglRenderer::TextureOp::disable;
+OglRenderer::TextureArg OglRendererImpl::StageImpl::default_color_arg1 = OglRenderer::TextureArg::texture;
+OglRenderer::TextureArg OglRendererImpl::StageImpl::default_color_arg2 = OglRenderer::TextureArg::current;
 
-OglRenderer::TextureOperation OglRendererImpl::StageImpl::default_alpha_op_0 = OglRenderer::TextureOperation::select_arg1;
-OglRenderer::TextureOperation OglRendererImpl::StageImpl::default_alpha_op_n = OglRenderer::TextureOperation::disable;
-OglRenderer::TextureArgument OglRendererImpl::StageImpl::default_alpha_arg1 = OglRenderer::TextureArgument::texture;
-OglRenderer::TextureArgument OglRendererImpl::StageImpl::default_alpha_arg2 = OglRenderer::TextureArgument::current;
+OglRenderer::TextureOp OglRendererImpl::StageImpl::default_alpha_op_0 = OglRenderer::TextureOp::select_arg1;
+OglRenderer::TextureOp OglRendererImpl::StageImpl::default_alpha_op_n = OglRenderer::TextureOp::disable;
+OglRenderer::TextureArg OglRendererImpl::StageImpl::default_alpha_arg1 = OglRenderer::TextureArg::texture;
+OglRenderer::TextureArg OglRendererImpl::StageImpl::default_alpha_arg2 = OglRenderer::TextureArg::current;
 
-OglRenderer::TextureTransformationFlags OglRendererImpl::StageImpl::default_transformation_flags = OglRenderer::TextureTransformationFlags::disable;
+OglRenderer::TextureTransFlags OglRendererImpl::StageImpl::default_trans_flags = OglRenderer::TextureTransFlags::disable;
 
-float OglRendererImpl::StageImpl::default_bump_map_luminance_scale = 0.0F;
-float OglRendererImpl::StageImpl::default_bump_map_luminance_offset = 0.0F;
+float OglRendererImpl::StageImpl::default_bump_map_lum_scale = 0.0F;
+float OglRendererImpl::StageImpl::default_bump_map_lum_offset = 0.0F;
 
 OglRendererImpl::Matrix2F OglRendererImpl::StageImpl::default_bump_map_matrix =
 {
@@ -5226,12 +5256,12 @@ OglRendererImpl::StageImpl::StageImpl(
 	alpha_arg2_{},
 	is_coord_index_modified_{},
 	coord_index_{},
-	is_transformation_flags_modified_{},
-	transformation_flags_{},
-	is_bump_map_luminance_scale_modified_{},
-	bump_map_luminance_scale_{},
-	is_bump_map_luminance_offset_modified_{},
-	bump_map_luminance_offset_{},
+	is_trans_flags_modified_{},
+	trans_flags_{},
+	is_bump_map_lum_scale_modified_{},
+	bump_map_lum_scale_{},
+	is_bump_map_lum_offset_modified_{},
+	bump_map_lum_offset_{},
 	is_bump_map_matrix_modified_{},
 	bump_map_matrix_{}
 {
@@ -5273,6 +5303,20 @@ void OglRendererImpl::StageImpl::apply_modifications()
 	}
 
 	is_modified_ = false;
+
+
+	apply_texture_modifications();
+	apply_color_op_modifications();
+	apply_color_arg1_modifications();
+	apply_color_arg2_modifications();
+	apply_alpha_op_modifications();
+	apply_alpha_arg1_modifications();
+	apply_alpha_arg2_modifications();
+	apply_coord_index_modifications();
+	apply_trans_flags_modifications();
+	apply_bump_map_lum_scale_modifications();
+	apply_bump_map_lum_offset_modifications();
+	apply_bump_map_matrix_modifications();
 }
 
 OglRenderer::TexturePtr OglRendererImpl::StageImpl::do_get_texture()
@@ -5302,14 +5346,14 @@ void OglRendererImpl::StageImpl::do_set_texture(
 	is_texture_modified_ = true;
 }
 
-OglRenderer::TextureOperation OglRendererImpl::StageImpl::do_get_color_operation() const
+OglRenderer::TextureOp OglRendererImpl::StageImpl::do_get_color_op() const
 {
 	assert(is_initialized_);
 	return color_op_;
 }
 
-void OglRendererImpl::StageImpl::do_set_color_operation(
-	const TextureOperation& operation)
+void OglRendererImpl::StageImpl::do_set_color_op(
+	const TextureOp& color_op)
 {
 	if (!is_initialized_)
 	{
@@ -5317,31 +5361,31 @@ void OglRendererImpl::StageImpl::do_set_color_operation(
 		return;
 	}
 
-	if (!is_operation_valid(operation))
+	if (!is_op_valid(color_op))
 	{
 		return;
 	}
 
-	if (color_op_ == operation)
+	if (color_op_ == color_op)
 	{
 		return;
 	}
 
-	color_op_ = operation;
+	color_op_ = color_op;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
 	is_color_op_modified_ = true;
 }
 
-OglRenderer::TextureArgument OglRendererImpl::StageImpl::do_get_color_argument_1() const
+OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_color_arg1() const
 {
 	assert(is_initialized_);
 	return color_arg_1_;
 }
 
-void OglRendererImpl::StageImpl::do_set_color_argument_1(
-	const TextureArgument& argument_1)
+void OglRendererImpl::StageImpl::do_set_color_arg1(
+	const TextureArg& arg1)
 {
 	if (!is_initialized_)
 	{
@@ -5349,31 +5393,31 @@ void OglRendererImpl::StageImpl::do_set_color_argument_1(
 		return;
 	}
 
-	if (!is_argument_valid(argument_1))
+	if (!is_arg_valid(arg1))
 	{
 		return;
 	}
 
-	if (color_arg_1_ == argument_1)
+	if (color_arg_1_ == arg1)
 	{
 		return;
 	}
 
-	color_arg_1_ = argument_1;
+	color_arg_1_ = arg1;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
 	is_color_arg1_modified_ = true;
 }
 
-OglRenderer::TextureArgument OglRendererImpl::StageImpl::do_get_color_argument_2() const
+OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_color_arg2() const
 {
 	assert(is_initialized_);
 	return color_arg_2_;
 }
 
-void OglRendererImpl::StageImpl::do_set_color_argument_2(
-	const TextureArgument& argument_2)
+void OglRendererImpl::StageImpl::do_set_color_arg2(
+	const TextureArg& arg2)
 {
 	if (!is_initialized_)
 	{
@@ -5381,31 +5425,31 @@ void OglRendererImpl::StageImpl::do_set_color_argument_2(
 		return;
 	}
 
-	if (!is_argument_valid(argument_2))
+	if (!is_arg_valid(arg2))
 	{
 		return;
 	}
 
-	if (color_arg_2_ == argument_2)
+	if (color_arg_2_ == arg2)
 	{
 		return;
 	}
 
-	color_arg_2_ = argument_2;
+	color_arg_2_ = arg2;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
 	is_color_arg2_modified_ = true;
 }
 
-OglRenderer::TextureOperation OglRendererImpl::StageImpl::do_get_alpha_operation() const
+OglRenderer::TextureOp OglRendererImpl::StageImpl::do_get_alpha_op() const
 {
 	assert(is_initialized_);
 	return alpha_op_;
 }
 
-void OglRendererImpl::StageImpl::do_set_alpha_operation(
-	const TextureOperation& operation)
+void OglRendererImpl::StageImpl::do_set_alpha_op(
+	const TextureOp& alpha_op)
 {
 	if (!is_initialized_)
 	{
@@ -5413,31 +5457,31 @@ void OglRendererImpl::StageImpl::do_set_alpha_operation(
 		return;
 	}
 
-	if (!is_operation_valid(operation))
+	if (!is_op_valid(alpha_op))
 	{
 		return;
 	}
 
-	if (alpha_op_ == operation)
+	if (alpha_op_ == alpha_op)
 	{
 		return;
 	}
 
-	alpha_op_ = operation;
+	alpha_op_ = alpha_op;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
 	is_alpha_op_modified_ = true;
 }
 
-OglRenderer::TextureArgument OglRendererImpl::StageImpl::do_get_alpha_argument_1() const
+OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_alpha_arg1() const
 {
 	assert(is_initialized_);
 	return alpha_arg1_;
 }
 
-void OglRendererImpl::StageImpl::do_set_alpha_argument_1(
-	const TextureArgument& argument_1)
+void OglRendererImpl::StageImpl::do_set_alpha_arg1(
+	const TextureArg& alpha_arg1)
 {
 	if (!is_initialized_)
 	{
@@ -5445,31 +5489,31 @@ void OglRendererImpl::StageImpl::do_set_alpha_argument_1(
 		return;
 	}
 
-	if (!is_argument_valid(argument_1))
+	if (!is_arg_valid(alpha_arg1))
 	{
 		return;
 	}
 
-	if (alpha_arg1_ == argument_1)
+	if (alpha_arg1_ == alpha_arg1)
 	{
 		return;
 	}
 
-	alpha_arg1_ = argument_1;
+	alpha_arg1_ = alpha_arg1;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
 	is_alpha_arg1_modified_ = true;
 }
 
-OglRenderer::TextureArgument OglRendererImpl::StageImpl::do_get_alpha_argument_2() const
+OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_alpha_arg2() const
 {
 	assert(is_initialized_);
 	return alpha_arg2_;
 }
 
-void OglRendererImpl::StageImpl::do_set_alpha_argument_2(
-	const TextureArgument& argument_2)
+void OglRendererImpl::StageImpl::do_set_alpha_arg2(
+	const TextureArg& alpha_arg2)
 {
 	if (!is_initialized_)
 	{
@@ -5477,17 +5521,17 @@ void OglRendererImpl::StageImpl::do_set_alpha_argument_2(
 		return;
 	}
 
-	if (!is_argument_valid(argument_2))
+	if (!is_arg_valid(alpha_arg2))
 	{
 		return;
 	}
 
-	if (alpha_arg2_ == argument_2)
+	if (alpha_arg2_ == alpha_arg2)
 	{
 		return;
 	}
 
-	alpha_arg2_ = argument_2;
+	alpha_arg2_ = alpha_arg2;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
@@ -5526,14 +5570,14 @@ void OglRendererImpl::StageImpl::do_set_coord_index(
 	is_coord_index_modified_ = true;
 }
 
-OglRenderer::TextureTransformationFlags OglRendererImpl::StageImpl::do_get_transformation_flags() const
+OglRenderer::TextureTransFlags OglRendererImpl::StageImpl::do_get_trans_flags() const
 {
 	assert(is_initialized_);
-	return transformation_flags_;
+	return trans_flags_;
 }
 
-void OglRendererImpl::StageImpl::do_set_transformation_flags(
-	const TextureTransformationFlags& flags)
+void OglRendererImpl::StageImpl::do_set_trans_flags(
+	const TextureTransFlags& trans_flags)
 {
 	if (!is_initialized_)
 	{
@@ -5541,31 +5585,31 @@ void OglRendererImpl::StageImpl::do_set_transformation_flags(
 		return;
 	}
 
-	if (!are_transformation_flags_valid(flags))
+	if (!are_trans_flags_valid(trans_flags))
 	{
 		return;
 	}
 
-	if (transformation_flags_ == flags)
+	if (trans_flags_ == trans_flags)
 	{
 		return;
 	}
 
-	transformation_flags_ = flags;
+	trans_flags_ = trans_flags;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
-	is_transformation_flags_modified_ = true;
+	is_trans_flags_modified_ = true;
 }
 
-float OglRendererImpl::StageImpl::do_get_bump_map_luminance_scale() const
+float OglRendererImpl::StageImpl::do_get_bump_map_lum_scale() const
 {
 	assert(is_initialized_);
-	return bump_map_luminance_scale_;
+	return bump_map_lum_scale_;
 }
 
-void OglRendererImpl::StageImpl::do_set_bump_map_luminance_scale(
-	const float scale)
+void OglRendererImpl::StageImpl::do_set_bump_map_lum_scale(
+	const float lum_scale)
 {
 	if (!is_initialized_)
 	{
@@ -5573,26 +5617,26 @@ void OglRendererImpl::StageImpl::do_set_bump_map_luminance_scale(
 		return;
 	}
 
-	if (bump_map_luminance_scale_ == scale)
+	if (bump_map_lum_scale_ == lum_scale)
 	{
 		return;
 	}
 
-	bump_map_luminance_scale_ = scale;
+	bump_map_lum_scale_ = lum_scale;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
-	is_bump_map_luminance_scale_modified_ = true;
+	is_bump_map_lum_scale_modified_ = true;
 }
 
-float OglRendererImpl::StageImpl::do_get_bump_map_luminance_offset() const
+float OglRendererImpl::StageImpl::do_get_bump_map_lum_offset() const
 {
 	assert(is_initialized_);
-	return bump_map_luminance_offset_;
+	return bump_map_lum_offset_;
 }
 
-void OglRendererImpl::StageImpl::do_set_bump_map_luminance_offset(
-	const float offset)
+void OglRendererImpl::StageImpl::do_set_bump_map_lum_offset(
+	const float lum_offset)
 {
 	if (!is_initialized_)
 	{
@@ -5600,16 +5644,16 @@ void OglRendererImpl::StageImpl::do_set_bump_map_luminance_offset(
 		return;
 	}
 
-	if (bump_map_luminance_offset_ == offset)
+	if (bump_map_lum_offset_ == lum_offset)
 	{
 		return;
 	}
 
-	bump_map_luminance_offset_ = offset;
+	bump_map_lum_offset_ = lum_offset;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
-	is_bump_map_luminance_offset_modified_ = true;
+	is_bump_map_lum_offset_modified_ = true;
 }
 
 float OglRendererImpl::StageImpl::do_get_bump_map_coefficient(
@@ -5655,34 +5699,34 @@ void OglRendererImpl::StageImpl::uninitialize_internal()
 	texture_ = nullptr;
 
 	is_color_op_modified_ = false;
-	color_op_ = TextureOperation::none;
+	color_op_ = TextureOp::none;
 
 	is_color_arg1_modified_ = false;
-	color_arg_1_ = TextureArgument::none;
+	color_arg_1_ = TextureArg::none;
 
 	is_color_arg2_modified_ = false;
-	color_arg_2_ = TextureArgument::none;
+	color_arg_2_ = TextureArg::none;
 
 	is_alpha_op_modified_ = false;
-	alpha_op_ = TextureOperation::none;
+	alpha_op_ = TextureOp::none;
 
 	is_alpha_arg1_modified_ = false;
-	alpha_arg1_ = TextureArgument::none;
+	alpha_arg1_ = TextureArg::none;
 
 	is_alpha_arg2_modified_ = false;
-	alpha_arg2_ = TextureArgument::none;
+	alpha_arg2_ = TextureArg::none;
 
 	is_coord_index_modified_ = false;
 	coord_index_ = TextureCoordIndex::none;
 
-	is_transformation_flags_modified_ = false;
-	transformation_flags_ = TextureTransformationFlags::none;
+	is_trans_flags_modified_ = false;
+	trans_flags_ = TextureTransFlags::none;
 
-	is_bump_map_luminance_scale_modified_ = false;
-	bump_map_luminance_scale_ = 0.0F;
+	is_bump_map_lum_scale_modified_ = false;
+	bump_map_lum_scale_ = 0.0F;
 
-	is_bump_map_luminance_offset_modified_ = false;
-	bump_map_luminance_offset_ = 0.0F;
+	is_bump_map_lum_offset_modified_ = false;
+	bump_map_lum_offset_ = 0.0F;
 
 	is_bump_map_matrix_modified_ = false;
 	bump_map_matrix_.fill(0.0F);
@@ -5694,34 +5738,34 @@ void OglRendererImpl::StageImpl::set_defaults()
 	set_texture_internal();
 
 	color_op_ = (index_ == 0 ? default_color_op_0 : default_color_op_n);
-	set_color_operation_internal();
+	set_color_op_internal();
 
 	color_arg_1_ = default_color_arg1;
-	set_color_argument_1_internal();
+	set_color_arg1_internal();
 
 	color_arg_2_ = default_color_arg2;
-	set_color_argument_2_internal();
+	set_color_arg2_internal();
 
 	alpha_op_ = (index_ == 0 ? default_alpha_op_0 : default_alpha_op_n);
-	set_alpha_operation_internal();
+	set_alpha_op_internal();
 
 	alpha_arg1_ = default_alpha_arg1;
-	set_alpha_argument_1_internal();
+	set_alpha_arg1_internal();
 
 	alpha_arg2_ = default_alpha_arg2;
-	set_alpha_argument_2_internal();
+	set_alpha_arg2_internal();
 
 	coord_index_ = index_;
 	set_coord_index_internal();
 
-	transformation_flags_ = default_transformation_flags;
-	set_transformation_flags_internal();
+	trans_flags_ = default_trans_flags;
+	set_trans_flags_internal();
 
-	bump_map_luminance_scale_ = default_bump_map_luminance_scale;
-	set_bump_map_luminance_scale_internal();
+	bump_map_lum_scale_ = default_bump_map_lum_scale;
+	set_bump_map_lum_scale_internal();
 
-	bump_map_luminance_offset_ = default_bump_map_luminance_offset;
-	set_bump_map_luminance_offset_internal();
+	bump_map_lum_offset_ = default_bump_map_lum_offset;
+	set_bump_map_lum_offset_internal();
 
 	bump_map_matrix_ = default_bump_map_matrix;
 	set_bump_map_matrix_internal();
@@ -5731,27 +5775,27 @@ void OglRendererImpl::StageImpl::set_texture_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_color_operation_internal()
+void OglRendererImpl::StageImpl::set_color_op_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_color_argument_1_internal()
+void OglRendererImpl::StageImpl::set_color_arg1_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_color_argument_2_internal()
+void OglRendererImpl::StageImpl::set_color_arg2_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_alpha_operation_internal()
+void OglRendererImpl::StageImpl::set_alpha_op_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_alpha_argument_1_internal()
+void OglRendererImpl::StageImpl::set_alpha_arg1_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_alpha_argument_2_internal()
+void OglRendererImpl::StageImpl::set_alpha_arg2_internal()
 {
 }
 
@@ -5759,15 +5803,15 @@ void OglRendererImpl::StageImpl::set_coord_index_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_transformation_flags_internal()
+void OglRendererImpl::StageImpl::set_trans_flags_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_bump_map_luminance_scale_internal()
+void OglRendererImpl::StageImpl::set_bump_map_lum_scale_internal()
 {
 }
 
-void OglRendererImpl::StageImpl::set_bump_map_luminance_offset_internal()
+void OglRendererImpl::StageImpl::set_bump_map_lum_offset_internal()
 {
 }
 
@@ -5775,24 +5819,168 @@ void OglRendererImpl::StageImpl::set_bump_map_matrix_internal()
 {
 }
 
-bool OglRendererImpl::StageImpl::is_operation_valid(
-	const TextureOperation& operation)
+void OglRendererImpl::StageImpl::apply_texture_modifications()
 {
-	switch (operation)
+	if (!is_texture_modified_)
 	{
-	case TextureOperation::disable:
-	case TextureOperation::select_arg1:
-	case TextureOperation::select_arg2:
-	case TextureOperation::modulate:
-	case TextureOperation::modulate_2x:
-	case TextureOperation::add:
-	case TextureOperation::add_signed:
-	case TextureOperation::subtract:
-	case TextureOperation::blend_current_alpha:
-	case TextureOperation::modulate_alpha_add_color:
-	case TextureOperation::bump_envmap:
-	case TextureOperation::bump_envmap_luminance:
-	case TextureOperation::dot_product3:
+		return;
+	}
+
+	is_texture_modified_ = false;
+
+	set_texture_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_color_op_modifications()
+{
+	if (!is_color_op_modified_)
+	{
+		return;
+	}
+
+	is_color_op_modified_ = false;
+
+	set_color_op_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_color_arg1_modifications()
+{
+	if (!is_color_arg1_modified_)
+	{
+		return;
+	}
+
+	is_color_arg1_modified_ = false;
+
+	set_color_arg1_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_color_arg2_modifications()
+{
+	if (!is_color_arg2_modified_)
+	{
+		return;
+	}
+
+	is_color_arg2_modified_ = false;
+
+	set_color_arg2_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_alpha_op_modifications()
+{
+	if (!is_alpha_op_modified_)
+	{
+		return;
+	}
+
+	is_alpha_op_modified_ = false;
+
+	set_alpha_op_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_alpha_arg1_modifications()
+{
+	if (!is_alpha_arg1_modified_)
+	{
+		return;
+	}
+
+	is_alpha_arg1_modified_ = false;
+
+	set_alpha_arg1_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_alpha_arg2_modifications()
+{
+	if (!is_alpha_arg2_modified_)
+	{
+		return;
+	}
+
+	is_alpha_arg2_modified_ = false;
+
+	set_alpha_arg2_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_coord_index_modifications()
+{
+	if (!is_coord_index_modified_)
+	{
+		return;
+	}
+
+	is_coord_index_modified_ = false;
+
+	set_coord_index_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_trans_flags_modifications()
+{
+	if (!is_trans_flags_modified_)
+	{
+		return;
+	}
+
+	is_trans_flags_modified_ = false;
+
+	set_trans_flags_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_bump_map_lum_scale_modifications()
+{
+	if (!is_bump_map_lum_scale_modified_)
+	{
+		return;
+	}
+
+	is_bump_map_lum_scale_modified_ = false;
+
+	set_bump_map_lum_scale_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_bump_map_lum_offset_modifications()
+{
+	if (!is_bump_map_lum_offset_modified_)
+	{
+		return;
+	}
+
+	is_bump_map_lum_offset_modified_ = false;
+
+	set_bump_map_lum_offset_internal();
+}
+
+void OglRendererImpl::StageImpl::apply_bump_map_matrix_modifications()
+{
+	if (!is_bump_map_matrix_modified_)
+	{
+		return;
+	}
+
+	is_bump_map_matrix_modified_ = false;
+
+	set_bump_map_matrix_internal();
+}
+
+bool OglRendererImpl::StageImpl::is_op_valid(
+	const TextureOp& op)
+{
+	switch (op)
+	{
+	case TextureOp::disable:
+	case TextureOp::select_arg1:
+	case TextureOp::select_arg2:
+	case TextureOp::modulate:
+	case TextureOp::modulate_2x:
+	case TextureOp::add:
+	case TextureOp::add_signed:
+	case TextureOp::subtract:
+	case TextureOp::blend_current_alpha:
+	case TextureOp::modulate_alpha_add_color:
+	case TextureOp::bump_envmap:
+	case TextureOp::bump_envmap_luminance:
+	case TextureOp::dot_product3:
 		return true;
 
 	default:
@@ -5801,21 +5989,21 @@ bool OglRendererImpl::StageImpl::is_operation_valid(
 	}
 }
 
-bool OglRendererImpl::StageImpl::is_argument_valid(
-	const TextureArgument& argument)
+bool OglRendererImpl::StageImpl::is_arg_valid(
+	const TextureArg& arg)
 {
 	const auto value_mask = 0xF;
 	const auto flags_mask = 0xFFFFFFFF ^ value_mask;
 
-	const auto value = static_cast<TextureArgument>(argument & value_mask);
-	const auto flags = argument & flags_mask;
+	const auto value = static_cast<TextureArg>(arg & value_mask);
+	const auto flags = arg & flags_mask;
 
 	switch (value)
 	{
-	case TextureArgument::diffuse:
-	case TextureArgument::current:
-	case TextureArgument::texture:
-	case TextureArgument::factor:
+	case TextureArg::diffuse:
+	case TextureArg::current:
+	case TextureArg::texture:
+	case TextureArg::factor:
 		break;
 
 	default:
@@ -5823,7 +6011,7 @@ bool OglRendererImpl::StageImpl::is_argument_valid(
 		return false;
 	}
 
-	if (flags != 0 && flags != (TextureArgument::complement))
+	if (flags != 0 && flags != (TextureArg::complement))
 	{
 		assert(!"Unsupported flag(s).");
 		return false;
@@ -5832,19 +6020,19 @@ bool OglRendererImpl::StageImpl::is_argument_valid(
 	return true;
 }
 
-bool OglRendererImpl::StageImpl::are_transformation_flags_valid(
-	const TextureTransformationFlags& transformation_flags)
+bool OglRendererImpl::StageImpl::are_trans_flags_valid(
+	const TextureTransFlags& trans_flags)
 {
 	const auto value_mask = 0xFF;
 	const auto flags_mask = 0xFFFFFFFF ^ value_mask;
 
-	const auto value = transformation_flags & value_mask;
-	const auto flags = transformation_flags & flags_mask;
+	const auto value = trans_flags & value_mask;
+	const auto flags = trans_flags & flags_mask;
 
 	switch (value)
 	{
-	case TextureTransformationFlags::count2:
-	case TextureTransformationFlags::count3:
+	case TextureTransFlags::count2:
+	case TextureTransFlags::count3:
 		break;
 
 	default:
@@ -5853,7 +6041,7 @@ bool OglRendererImpl::StageImpl::are_transformation_flags_valid(
 	}
 
 	if (flags != 0 &&
-		flags != TextureTransformationFlags::projected)
+		flags != TextureTransFlags::projected)
 	{
 		assert(!"Unsupported flag(s).");
 		return false;
@@ -5916,70 +6104,70 @@ void OglRenderer::Stage::set_texture(
 	do_set_texture(texture);
 }
 
-OglRenderer::TextureOperation OglRenderer::Stage::get_color_operation() const
+OglRenderer::TextureOp OglRenderer::Stage::get_color_op() const
 {
-	return do_get_color_operation();
+	return do_get_color_op();
 }
 
-void OglRenderer::Stage::set_color_operation(
-	const TextureOperation& operation)
+void OglRenderer::Stage::set_color_op(
+	const TextureOp& operation)
 {
-	do_set_color_operation(operation);
+	do_set_color_op(operation);
 }
 
-OglRenderer::TextureArgument OglRenderer::Stage::get_color_argument_1() const
+OglRenderer::TextureArg OglRenderer::Stage::get_color_arg1() const
 {
-	return do_get_color_argument_1();
+	return do_get_color_arg1();
 }
 
-void OglRenderer::Stage::set_color_argument_1(
-	const TextureArgument& argument_1)
+void OglRenderer::Stage::set_color_arg1(
+	const TextureArg& argument_1)
 {
-	do_set_color_argument_1(argument_1);
+	do_set_color_arg1(argument_1);
 }
 
-OglRenderer::TextureArgument OglRenderer::Stage::get_color_argument_2() const
+OglRenderer::TextureArg OglRenderer::Stage::get_color_arg2() const
 {
-	return do_get_color_argument_2();
+	return do_get_color_arg2();
 }
 
-void OglRenderer::Stage::set_color_argument_2(
-	const TextureArgument& argument_2)
+void OglRenderer::Stage::set_color_arg2(
+	const TextureArg& argument_2)
 {
-	do_set_color_argument_2(argument_2);
+	do_set_color_arg2(argument_2);
 }
 
-OglRenderer::TextureOperation OglRenderer::Stage::get_alpha_operation() const
+OglRenderer::TextureOp OglRenderer::Stage::get_alpha_op() const
 {
-	return do_get_alpha_operation();
+	return do_get_alpha_op();
 }
 
-void OglRenderer::Stage::set_alpha_operation(
-	const TextureOperation& operation)
+void OglRenderer::Stage::set_alpha_op(
+	const TextureOp& operation)
 {
-	do_set_alpha_operation(operation);
+	do_set_alpha_op(operation);
 }
 
-OglRenderer::TextureArgument OglRenderer::Stage::get_alpha_argument_1() const
+OglRenderer::TextureArg OglRenderer::Stage::get_alpha_arg1() const
 {
-	return do_get_alpha_argument_1();
+	return do_get_alpha_arg1();
 }
 
-void OglRenderer::Stage::set_alpha_argument_1(
-	const TextureArgument& argument_1)
+void OglRenderer::Stage::set_alpha_arg1(
+	const TextureArg& argument_1)
 {
-	do_set_alpha_argument_1(argument_1);
+	do_set_alpha_arg1(argument_1);
 }
 
-OglRenderer::TextureArgument OglRenderer::Stage::get_alpha_argument_2() const
+OglRenderer::TextureArg OglRenderer::Stage::get_alpha_arg2() const
 {
-	return do_get_alpha_argument_2();
+	return do_get_alpha_arg2();
 }
 
-void OglRenderer::Stage::set_alpha_argument_2(
-	const TextureArgument& argument_2)
+void OglRenderer::Stage::set_alpha_arg2(
+	const TextureArg& argument_2)
 {
-	do_set_alpha_argument_2(argument_2);
+	do_set_alpha_arg2(argument_2);
 }
 
 OglRenderer::TextureCoordIndex OglRenderer::Stage::get_coord_index() const
@@ -5993,37 +6181,37 @@ void OglRenderer::Stage::set_coord_index(
 	do_set_coord_index(index);
 }
 
-OglRenderer::TextureTransformationFlags OglRenderer::Stage::get_transformation_flags() const
+OglRenderer::TextureTransFlags OglRenderer::Stage::get_trans_flags() const
 {
-	return do_get_transformation_flags();
+	return do_get_trans_flags();
 }
 
-void OglRenderer::Stage::set_transformation_flags(
-	const TextureTransformationFlags& flags)
+void OglRenderer::Stage::set_trans_flags(
+	const TextureTransFlags& flags)
 {
-	do_set_transformation_flags(flags);
+	do_set_trans_flags(flags);
 }
 
-float OglRenderer::Stage::get_bump_map_luminance_scale() const
+float OglRenderer::Stage::get_bump_map_lum_scale() const
 {
-	return do_get_bump_map_luminance_scale();
+	return do_get_bump_map_lum_scale();
 }
 
-void OglRenderer::Stage::set_bump_map_luminance_scale(
+void OglRenderer::Stage::set_bump_map_lum_scale(
 	const float scale)
 {
-	do_set_bump_map_luminance_scale(scale);
+	do_set_bump_map_lum_scale(scale);
 }
 
-float OglRenderer::Stage::get_bump_map_luminance_offset() const
+float OglRenderer::Stage::get_bump_map_lum_offset() const
 {
-	return do_get_bump_map_luminance_offset();
+	return do_get_bump_map_lum_offset();
 }
 
-void OglRenderer::Stage::set_bump_map_luminance_offset(
+void OglRenderer::Stage::set_bump_map_lum_offset(
 	const float offset)
 {
-	do_set_bump_map_luminance_offset(offset);
+	do_set_bump_map_lum_offset(offset);
 }
 
 float OglRenderer::Stage::get_bump_map_coefficient(
