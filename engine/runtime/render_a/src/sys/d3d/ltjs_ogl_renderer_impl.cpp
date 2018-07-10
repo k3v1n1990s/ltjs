@@ -237,9 +237,13 @@ public:
 	OglRendererImpl()
 		:
 		is_initialized_{},
+#if 0
 		is_current_context_{},
 		ogl_dc_{},
 		ogl_rc_{},
+#else
+		is_current_context_{true},
+#endif
 		extensions_{},
 		has_gl_arb_clip_control_{},
 		has_gl_ext_clip_volume_hint_{},
@@ -285,7 +289,8 @@ public:
 		texture_bindings_{},
 		samplers_{},
 		max_texture_lod_bias_{},
-		stages_{}
+		stages_{},
+		stages_bindings_{}
 	{
 	}
 
@@ -411,6 +416,10 @@ private:
 			OglRendererImpl& ogl_renderer);
 
 		~TextureImpl() override;
+
+
+		void bind_to_stage(
+			const int stage_index);
 
 
 	private:
@@ -549,7 +558,7 @@ private:
 		TextureImpl*& get_binding();
 	}; // TextureImpl
 
-	using TextureImplPtr = TextureImpl * ;
+	using TextureImplPtr = TextureImpl*;
 
 
 	class SamplerImpl :
@@ -758,30 +767,40 @@ private:
 
 		bool is_texture_modified_;
 		TextureImplPtr texture_;
+		int u_sampler_2d_;
+		int u_sampler_cube_;
 
 		bool is_color_op_modified_;
 		TextureOp color_op_;
+		int u_color_op_;
 
 		bool is_color_arg1_modified_;
-		TextureArg color_arg_1_;
+		TextureArg color_arg1_;
+		int u_color_arg1_;
 
 		bool is_color_arg2_modified_;
-		TextureArg color_arg_2_;
+		TextureArg color_arg2_;
+		int u_color_arg2_;
 
 		bool is_alpha_op_modified_;
 		TextureOp alpha_op_;
+		int u_alpha_op_;
 
 		bool is_alpha_arg1_modified_;
 		TextureArg alpha_arg1_;
+		int u_alpha_arg1_;
 
 		bool is_alpha_arg2_modified_;
 		TextureArg alpha_arg2_;
+		int u_alpha_arg2_;
 
 		bool is_coord_index_modified_;
 		TextureCoordIndex coord_index_;
+		int u_coord_index_;
 
 		bool is_trans_flags_modified_;
 		TextureTransFlags trans_flags_;
+		int u_trans_flags_;
 
 		bool is_bump_map_lum_scale_modified_;
 		float bump_map_lum_scale_;
@@ -881,6 +900,8 @@ private:
 
 		void set_defaults();
 
+		void locate_uniforms();
+
 
 		void set_texture_internal();
 
@@ -952,6 +973,7 @@ private:
 	using TextureBindings = std::array<TextureImplPtr, Texture::max_types>;
 
 	using Stages = std::vector<StageImpl>;
+	using StagesBindings = std::array<TextureImplPtr, max_stages>;
 
 
 	using ViewportSize = std::array<int, 2>;
@@ -966,10 +988,14 @@ private:
 
 
 	bool is_initialized_;
+#if 0
 	bool is_current_context_;
 
 	HDC ogl_dc_;
 	HGLRC ogl_rc_;
+#else
+	bool is_current_context_ = true;
+#endif
 
 	Extensions extensions_;
 
@@ -1039,6 +1065,7 @@ private:
 	float max_texture_lod_bias_;
 
 	Stages stages_;
+	StagesBindings stages_bindings_;
 
 
 	static int default_viewport_x;
@@ -1067,6 +1094,9 @@ private:
 	static const bool default_has_diffuse;
 
 	static const Matrix4F identity_matrix;
+
+	static const std::string shader_d3d_consts_string;
+	static const std::string shader_stage_struct_string;
 
 	static const std::string vertex_shader_source;
 	static const std::string fragment_shader_source;
@@ -1099,6 +1129,7 @@ private:
 		uninitialize_internal();
 	}
 
+#if 0
 	bool do_get_is_current_context() const override
 	{
 		assert(is_initialized_);
@@ -1110,7 +1141,7 @@ private:
 	{
 		if (!is_initialized_)
 		{
-			assert(!"Invalid state.");
+			//assert(!"Invalid state.");
 			return;
 		}
 
@@ -1121,6 +1152,7 @@ private:
 
 		set_current_context_internal(is_current);
 	}
+#endif
 
 	void do_set_clear_color(
 		const std::uint8_t r,
@@ -1608,19 +1640,21 @@ private:
 
 		const auto size_before = textures_.size();
 
+#if 0
 		auto old_is_current_context = false;
 
 		auto guard_context = ul::ScopeGuard{
 			[&]()
-		{
-			old_is_current_context = set_post_is_current_context(true);
-		},
+			{
+				old_is_current_context = set_post_is_current_context(true);
+			},
 
-			[&]()
-		{
-			set_is_current_context(old_is_current_context);
-		},
+				[&]()
+			{
+				set_is_current_context(old_is_current_context);
+			},
 		};
+#endif
 
 		textures_.remove_if(
 			[&](const auto& item_uptr)
@@ -1711,6 +1745,7 @@ private:
 		screen_width_ = screen_width;
 		screen_height_ = screen_height;
 
+#if 0
 		// Get current context (must exist).
 		//
 		ogl_dc_ = ::wglGetCurrentDC();
@@ -1720,6 +1755,7 @@ private:
 		{
 			return false;
 		}
+#endif
 
 		detect_extensions();
 		get_impl_defined_values();
@@ -1788,10 +1824,12 @@ private:
 	void uninitialize_internal()
 	{
 		is_initialized_ = false;
+#if 0
 		is_current_context_ = false;
 
 		ogl_dc_ = nullptr;
 		ogl_rc_ = nullptr;
+#endif
 
 		extensions_.clear();
 
@@ -1888,6 +1926,7 @@ private:
 		uninitialize_stages();
 	}
 
+#if 0
 	void set_current_context_internal(
 		const bool is_current)
 	{
@@ -1899,6 +1938,7 @@ private:
 
 		is_current_context_ = is_current;
 	}
+#endif
 
 	void set_default_cull_mode()
 	{
@@ -2442,6 +2482,17 @@ private:
 		return ogl_is_succeed();
 	}
 
+	int locate_uniform(
+		const std::string& uniform_name) const
+	{
+		if (!is_initialized_)
+		{
+			return -1;
+		}
+
+		return ::glGetUniformLocation(program_, uniform_name.c_str());
+	}
+
 	bool locate_uniforms()
 	{
 		u_has_diffuse_ = ::glGetUniformLocation(program_, "u_has_diffuse");
@@ -2622,6 +2673,14 @@ private:
 		}
 	}
 
+	void apply_stages_modifications()
+	{
+		for (auto& stage : stages_)
+		{
+			stage.apply_modifications();
+		}
+	}
+
 	void apply_modifications()
 	{
 		if (!is_modified_)
@@ -2634,6 +2693,7 @@ private:
 		apply_u_view_models_modifications();
 		apply_u_projection_modifications();
 		apply_samplers_modifications();
+		apply_stages_modifications();
 	}
 
 	static Matrix4F multiply_matrices(
@@ -2663,11 +2723,11 @@ private:
 	bool initialize_samplers()
 	{
 		samplers_.clear();
-		samplers_.reserve(max_samplers);
+		samplers_.reserve(max_stages);
 
 		auto index = 0;
 
-		for (auto i_sampler = 0; i_sampler < max_samplers; ++i_sampler)
+		for (auto i_sampler = 0; i_sampler < max_stages; ++i_sampler)
 		{
 			samplers_.emplace_back(*this, i_sampler);
 
@@ -2692,11 +2752,11 @@ private:
 	bool initialize_stages()
 	{
 		stages_.clear();
-		stages_.reserve(max_samplers);
+		stages_.reserve(max_stages);
 
 		auto index = 0;
 
-		for (auto i_stage = 0; i_stage < max_samplers; ++i_stage)
+		for (auto i_stage = 0; i_stage < max_stages; ++i_stage)
 		{
 			stages_.emplace_back(*this, i_stage);
 
@@ -2716,6 +2776,7 @@ private:
 	void uninitialize_stages()
 	{
 		stages_.clear();
+		stages_bindings_.fill(nullptr);
 	}
 
 	static GLbitfield get_ogl_clear_flags(
@@ -2910,10 +2971,92 @@ const OglRendererImpl::Matrix4F OglRendererImpl::identity_matrix =
 	0.0F, 0.0F, 0.0F, 1.0F,
 };
 
+const std::string OglRendererImpl::shader_d3d_consts_string =
+R"SHADER(
+// Direct3D constants
+
+// Texture operations.
+const uint D3DTOP_ADD = 7U;
+const uint D3DTOP_ADDSIGNED = 8U;
+const uint D3DTOP_BLENDCURRENTALPHA = 16U;
+const uint D3DTOP_DISABLE = 1U;
+const uint D3DTOP_MODULATE = 4U;
+const uint D3DTOP_MODULATE2X = 5U;
+const uint D3DTOP_MODULATEALPHA_ADDCOLOR = 18U;
+const uint D3DTOP_SELECTARG1 = 2U;
+const uint D3DTOP_SELECTARG2 = 3U;
+const uint D3DTOP_SUBTRACT = 10U;
+
+// Texture argument.
+const uint D3DTA_CURRENT = 0x00000001U;
+const uint D3DTA_DIFFUSE = 0x00000000U;
+const uint D3DTA_TEXTURE = 0x00000002U;
+const uint D3DTA_TFACTOR = 0x00000003U;
+const uint D3DTA_COMPLEMENT = 0x00000010U;
+
+// Texture coord index.
+const uint D3DTSS_TCI_CAMERASPACEPOSITION = 0x00020000U;
+const uint D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR = 0x00030000U;
+
+// Texture transformation flags.
+const uint D3DTTFF_COUNT2 = 2U;
+const uint D3DTTFF_COUNT3 = 3U;
+const uint D3DTTFF_PROJECTED = 256U;
+)SHADER"
+; // shader_d3d_consts_string
+
+const std::string OglRendererImpl::shader_stage_struct_string =
+R"SHADER(
+// Texture stage.
+struct Stage
+{
+	// Is texture 2D (false) or cube map (true)?
+	bool is_cube;
+
+	// 2D texture sampler.
+	sampler2D sampler_2d;
+
+	// Cube map texture sampler.
+	samplerCube sampler_cube;
+
+	// Texture coordinates index.
+	uint coord_index;
+
+	// Transformation flags.
+	uint trans_flags;
+
+	// Color operation.
+	uint color_op;
+
+	// First argument for color operation.
+	uint color_arg1;
+
+	// Second argument for color operation.
+	uint color_arg2;
+
+	// Alpha operation.
+	uint alpha_op;
+
+	// First argument for alpha operation.
+	uint alpha_arg1;
+
+	// Second argument for alpha operation.
+	uint alpha_arg2;
+}; // Stage
+)SHADER"
+; // shader_stage_struct_string
+
+
 const std::string OglRendererImpl::vertex_shader_source = std::string{
-	R"LTJS_VERTEX(
+R"SHADER(
 
 #version 330 core
+
+)SHADER"
+
++ shader_d3d_consts_string +
+
+R"SHADER(
 
 // Maximum model-view matrix count.
 const int max_model_view_count = 4;
@@ -2924,6 +3067,31 @@ const int max_tcs = 4;
 // Default diffuse color.
 const vec4 default_diffuse = vec4(1, 1, 1, 1);
 
+)SHADER"
+
++ shader_stage_struct_string + 
+
+R"SHADER(
+
+// Texture stage.
+struct Stage
+{
+	bool is_cube;
+
+	sampler2D sampler_2d;
+	samplerCube sampler_cube;
+
+	uint coord_index;
+
+	uint color_op;
+	uint color_arg1;
+	uint color_arg2;
+
+	uint alpha_op;
+	uint alpha_arg1;
+	uint alpha_arg2;
+}; // Stage
+
 
 layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec4 a_bweights;
@@ -2933,6 +3101,7 @@ layout(location = 4) in vec4 a_tcs[max_tcs];
 
 
 out vec4 v_diffuse;
+out vec4 v_tcs[max_tcs];
 
 
 // Has diffuse attribute?
@@ -2944,6 +3113,10 @@ uniform mat4 u_model_views[max_model_view_count];
 
 // Projection matrix.
 uniform mat4 u_projection;
+
+
+// Texture stages.
+uniform Stage u_stages[max_tcs];
 
 
 void main()
@@ -2960,24 +3133,46 @@ void main()
 	gl_Position = u_projection * u_model_views[0] * a_position;
 }
 
-)LTJS_VERTEX"
+)SHADER"
 }; // vertex_shader_source
 
 const std::string OglRendererImpl::fragment_shader_source = std::string{
-	R"LTJS_FRAGMENT(
+R"SHADER(
 
 #version 330 core
 
+)SHADER"
+
++ shader_d3d_consts_string +
+
+R"SHADER(
+
+// Maximum texture coordinate sets.
+const int max_tcs = 4;
+
+)SHADER"
+
++ shader_stage_struct_string +
+
+R"SHADER(
+
 in vec4 v_diffuse;
+in vec4 v_tcs[max_tcs];
+
 
 out vec4 o_fragment;
+
+
+// Texture stages.
+uniform Stage u_stages[max_tcs];
+
 
 void main()
 {
 	o_fragment = v_diffuse;
 }
 
-)LTJS_FRAGMENT"
+)SHADER"
 }; // fragment_shader_source
 
 //
@@ -3845,30 +4040,30 @@ void OglRendererImpl::SamplerImpl::set_anisotropy_internal()
 
 void OglRendererImpl::SamplerImpl::set_defaults()
 {
-	is_modified_ = false;
+	is_modified_ = true;
 
-	is_addressing_mode_u_modified_ = false;
+	is_addressing_mode_u_modified_ = true;
 	addressing_mode_u_ = default_addressing_mode_u;
 	set_addressing_mode_u_internal();
 
-	is_addressing_mode_v_modified_ = false;
+	is_addressing_mode_v_modified_ = true;
 	addressing_mode_v_ = default_addressing_mode_v;
 	set_addressing_mode_v_internal();
 
-	is_mag_filter_modified_ = false;
+	is_mag_filter_modified_ = true;
 	mag_filter_ = default_mag_filter;
 	set_mag_filter_internal();
 
-	is_minmip_filter_modified_ = false;
+	is_minmip_filter_modified_ = true;
 	min_filter_ = default_min_filter;
 	mip_filter_ = default_mip_filter;
 	set_minmip_filter_internal();
 
-	is_lod_bias_modified_ = false;
+	is_lod_bias_modified_ = true;
 	lod_bias_ = default_lod_bias;
 	set_lod_bias_internal();
 
-	is_anisotropy_modified_ = false;
+	is_anisotropy_modified_ = true;
 	anisotropy_ = default_max_anisotropy;
 	set_anisotropy_internal();
 }
@@ -4167,24 +4362,50 @@ OglRendererImpl::TextureImpl::~TextureImpl()
 	uninitialize_internal();
 }
 
+void OglRendererImpl::TextureImpl::bind_to_stage(
+	const int stage_index)
+{
+	if (stage_index < 0 || stage_index >= max_stages)
+	{
+		assert(!"Stage index out of range.");
+		return;
+	}
+
+	auto& binding = ogl_renderer_.stages_bindings_[stage_index];
+
+	if (binding == this)
+	{
+		return;
+	}
+
+	binding = this;
+
+	bind_internal(true);
+
+	::glActiveTexture(GL_TEXTURE0 + stage_index);
+	assert(ogl_is_succeed());
+}
+
 bool OglRendererImpl::TextureImpl::do_initialize(
 	const InitializeParam& param)
 {
 	uninitialize_internal();
 
+#if 0
 	auto old_is_current_context = false;
 
 	auto guard_context = ul::ScopeGuard{
 		[&]()
-	{
-		old_is_current_context = ogl_renderer_.set_post_is_current_context(true);
-	},
+		{
+			old_is_current_context = ogl_renderer_.set_post_is_current_context(true);
+		},
 
-		[&]()
-	{
-		ogl_renderer_.set_is_current_context(old_is_current_context);
-	},
+			[&]()
+		{
+			ogl_renderer_.set_is_current_context(old_is_current_context);
+		},
 	};
+#endif
 
 	if (!initialize_internal(param))
 	{
@@ -4225,19 +4446,21 @@ bool OglRendererImpl::TextureImpl::do_upload_level(
 		}
 	}
 
+#if 0
 	auto old_is_current_context = false;
 
 	auto guard_context = ul::ScopeGuard{
 		[&]()
-	{
-		old_is_current_context = ogl_renderer_.set_post_is_current_context(true);
-	},
+		{
+			old_is_current_context = ogl_renderer_.set_post_is_current_context(true);
+		},
 
-		[&]()
-	{
-		ogl_renderer_.set_is_current_context(old_is_current_context);
-	},
+			[&]()
+		{
+			ogl_renderer_.set_is_current_context(old_is_current_context);
+		},
 	};
+#endif
 
 	if (param.has_linear_filter_)
 	{
@@ -4591,6 +4814,20 @@ void OglRendererImpl::TextureImpl::uninitialize_internal()
 	if (ogl_texture_)
 	{
 		bind_internal(false);
+
+		auto stage_binding_it = std::find_if(
+			ogl_renderer_.stages_bindings_.begin(),
+			ogl_renderer_.stages_bindings_.end(),
+			[=](const auto& item)
+			{
+				return item == this;
+			}
+		);
+
+		if (stage_binding_it != ogl_renderer_.stages_bindings_.end())
+		{
+			*stage_binding_it = nullptr;
+		}
 
 		::glDeleteTextures(1, &ogl_texture_);
 		assert(ogl_is_succeed());
@@ -4984,7 +5221,7 @@ void OglRendererImpl::TextureImpl::bind_internal(
 	}
 	else
 	{
-		if (binding != this)
+		if (!binding)
 		{
 			return;
 		}
@@ -5242,22 +5479,32 @@ OglRendererImpl::StageImpl::StageImpl(
 	is_modified_{},
 	is_texture_modified_{},
 	texture_{},
+	u_sampler_2d_{},
+	u_sampler_cube_{},
 	is_color_op_modified_{},
 	color_op_{},
+	u_color_op_{},
 	is_color_arg1_modified_{},
-	color_arg_1_{},
+	color_arg1_{},
+	u_color_arg1_{},
 	is_color_arg2_modified_{},
-	color_arg_2_{},
+	color_arg2_{},
+	u_color_arg2_{},
 	is_alpha_op_modified_{},
 	alpha_op_{},
+	u_alpha_op_{},
 	is_alpha_arg1_modified_{},
 	alpha_arg1_{},
+	u_alpha_arg1_{},
 	is_alpha_arg2_modified_{},
 	alpha_arg2_{},
+	u_alpha_arg2_{},
 	is_coord_index_modified_{},
 	coord_index_{},
+	u_coord_index_{},
 	is_trans_flags_modified_{},
 	trans_flags_{},
+	u_trans_flags_{},
 	is_bump_map_lum_scale_modified_{},
 	bump_map_lum_scale_{},
 	is_bump_map_lum_offset_modified_{},
@@ -5381,7 +5628,7 @@ void OglRendererImpl::StageImpl::do_set_color_op(
 OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_color_arg1() const
 {
 	assert(is_initialized_);
-	return color_arg_1_;
+	return color_arg1_;
 }
 
 void OglRendererImpl::StageImpl::do_set_color_arg1(
@@ -5398,12 +5645,12 @@ void OglRendererImpl::StageImpl::do_set_color_arg1(
 		return;
 	}
 
-	if (color_arg_1_ == arg1)
+	if (color_arg1_ == arg1)
 	{
 		return;
 	}
 
-	color_arg_1_ = arg1;
+	color_arg1_ = arg1;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
@@ -5413,7 +5660,7 @@ void OglRendererImpl::StageImpl::do_set_color_arg1(
 OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_color_arg2() const
 {
 	assert(is_initialized_);
-	return color_arg_2_;
+	return color_arg2_;
 }
 
 void OglRendererImpl::StageImpl::do_set_color_arg2(
@@ -5430,12 +5677,12 @@ void OglRendererImpl::StageImpl::do_set_color_arg2(
 		return;
 	}
 
-	if (color_arg_2_ == arg2)
+	if (color_arg2_ == arg2)
 	{
 		return;
 	}
 
-	color_arg_2_ = arg2;
+	color_arg2_ = arg2;
 
 	ogl_renderer_.is_modified_ = true;
 	is_modified_ = true;
@@ -5687,7 +5934,13 @@ void OglRendererImpl::StageImpl::do_set_bump_map_coefficient(
 
 bool OglRendererImpl::StageImpl::initialize_internal()
 {
-	return false;
+	locate_uniforms();
+
+	set_defaults();
+
+	is_initialized_ = true;
+
+	return true;
 }
 
 void OglRendererImpl::StageImpl::uninitialize_internal()
@@ -5697,30 +5950,40 @@ void OglRendererImpl::StageImpl::uninitialize_internal()
 
 	is_texture_modified_ = false;
 	texture_ = nullptr;
+	u_sampler_2d_ = -1;
+	u_sampler_cube_ = -1;
 
 	is_color_op_modified_ = false;
 	color_op_ = TextureOp::none;
+	u_color_op_ = -1;
 
 	is_color_arg1_modified_ = false;
-	color_arg_1_ = TextureArg::none;
+	color_arg1_ = TextureArg::none;
+	u_color_arg1_ = -1;
 
 	is_color_arg2_modified_ = false;
-	color_arg_2_ = TextureArg::none;
+	color_arg2_ = TextureArg::none;
+	u_color_arg2_ = -1;
 
 	is_alpha_op_modified_ = false;
 	alpha_op_ = TextureOp::none;
+	u_alpha_op_ = -1;
 
 	is_alpha_arg1_modified_ = false;
 	alpha_arg1_ = TextureArg::none;
+	u_alpha_arg1_ = -1;
 
 	is_alpha_arg2_modified_ = false;
 	alpha_arg2_ = TextureArg::none;
+	u_alpha_arg2_ = -1;
 
 	is_coord_index_modified_ = false;
 	coord_index_ = TextureCoordIndex::none;
+	u_coord_index_ = -1;
 
 	is_trans_flags_modified_ = false;
 	trans_flags_ = TextureTransFlags::none;
+	u_trans_flags_ = -1;
 
 	is_bump_map_lum_scale_modified_ = false;
 	bump_map_lum_scale_ = 0.0F;
@@ -5734,89 +5997,145 @@ void OglRendererImpl::StageImpl::uninitialize_internal()
 
 void OglRendererImpl::StageImpl::set_defaults()
 {
+	is_modified_ = true;
+
+	is_texture_modified_ = true;
 	texture_ = default_texture;
 	set_texture_internal();
 
+	is_color_op_modified_ = true;
 	color_op_ = (index_ == 0 ? default_color_op_0 : default_color_op_n);
 	set_color_op_internal();
 
-	color_arg_1_ = default_color_arg1;
+	is_color_arg1_modified_ = true;
+	color_arg1_ = default_color_arg1;
 	set_color_arg1_internal();
 
-	color_arg_2_ = default_color_arg2;
+	is_color_arg2_modified_ = true;
+	color_arg2_ = default_color_arg2;
 	set_color_arg2_internal();
 
+	is_alpha_op_modified_ = true;
 	alpha_op_ = (index_ == 0 ? default_alpha_op_0 : default_alpha_op_n);
 	set_alpha_op_internal();
 
+	is_alpha_arg1_modified_ = true;
 	alpha_arg1_ = default_alpha_arg1;
 	set_alpha_arg1_internal();
 
+	is_alpha_arg2_modified_ = true;
 	alpha_arg2_ = default_alpha_arg2;
 	set_alpha_arg2_internal();
 
+	is_coord_index_modified_ = true;
 	coord_index_ = index_;
 	set_coord_index_internal();
 
+	is_trans_flags_modified_ = true;
 	trans_flags_ = default_trans_flags;
 	set_trans_flags_internal();
 
+	is_bump_map_lum_scale_modified_ = true;
 	bump_map_lum_scale_ = default_bump_map_lum_scale;
 	set_bump_map_lum_scale_internal();
 
+	is_bump_map_lum_offset_modified_ = true;
 	bump_map_lum_offset_ = default_bump_map_lum_offset;
 	set_bump_map_lum_offset_internal();
 
+	is_bump_map_matrix_modified_ = true;
 	bump_map_matrix_ = default_bump_map_matrix;
 	set_bump_map_matrix_internal();
 }
 
+void OglRendererImpl::StageImpl::locate_uniforms()
+{
+	const auto base_name = "u_stages[" + std::to_string(index_) + "].";
+
+	u_sampler_2d_ = ogl_renderer_.locate_uniform(base_name + "sampler_2d");
+	u_sampler_cube_ = ogl_renderer_.locate_uniform(base_name + "sampler_cube");
+
+	u_color_op_ = ogl_renderer_.locate_uniform(base_name + "color_op");
+	u_color_arg1_ = ogl_renderer_.locate_uniform(base_name + "color_arg1");
+	u_color_arg2_ = ogl_renderer_.locate_uniform(base_name + "color_arg2");
+
+	u_alpha_op_ = ogl_renderer_.locate_uniform(base_name + "alpha_op");
+	u_alpha_arg1_ = ogl_renderer_.locate_uniform(base_name + "alpha_arg1");
+	u_alpha_arg2_ = ogl_renderer_.locate_uniform(base_name + "alpha_arg2");
+
+	u_coord_index_ = ogl_renderer_.locate_uniform(base_name + "coord_index");
+	u_trans_flags_ = ogl_renderer_.locate_uniform(base_name + "trans_flags");
+}
+
 void OglRendererImpl::StageImpl::set_texture_internal()
 {
+	::glUniform1i(u_sampler_2d_, index_);
+	assert(ogl_is_succeed());
+	::glUniform1i(u_sampler_cube_, index_);
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_color_op_internal()
 {
+	::glUniform1ui(u_color_op_, static_cast<GLuint>(color_op_));
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_color_arg1_internal()
 {
+	::glUniform1ui(u_color_arg1_, static_cast<GLuint>(color_arg1_));
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_color_arg2_internal()
 {
+	::glUniform1ui(u_color_arg2_, static_cast<GLuint>(color_arg2_));
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_alpha_op_internal()
 {
+	::glUniform1ui(u_alpha_op_, static_cast<GLuint>(alpha_op_));
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_alpha_arg1_internal()
 {
+	::glUniform1ui(u_alpha_arg1_, static_cast<GLuint>(alpha_arg1_));
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_alpha_arg2_internal()
 {
+	::glUniform1ui(u_alpha_arg2_, static_cast<GLuint>(alpha_arg2_));
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_coord_index_internal()
 {
+	::glUniform1ui(u_coord_index_, static_cast<GLuint>(coord_index_));
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_trans_flags_internal()
 {
+	::glUniform1ui(u_trans_flags_, static_cast<GLuint>(trans_flags_));
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::set_bump_map_lum_scale_internal()
 {
+	assert(!"Not implemented.");
 }
 
 void OglRendererImpl::StageImpl::set_bump_map_lum_offset_internal()
 {
+	assert(!"Not implemented.");
 }
 
 void OglRendererImpl::StageImpl::set_bump_map_matrix_internal()
 {
+	assert(!"Not implemented.");
 }
 
 void OglRendererImpl::StageImpl::apply_texture_modifications()
@@ -6059,7 +6378,7 @@ bool OglRendererImpl::StageImpl::is_coord_index_valid(
 	const auto value = coord_index & value_mask;
 	const auto flags = coord_index & flags_mask;
 
-	if (value >= max_samplers)
+	if (value >= max_stages)
 	{
 		assert(!"Coord index out of range.");
 		return false;
@@ -6474,10 +6793,13 @@ bool OglRenderer::initialize(
 
 void OglRenderer::uninitialize()
 {
+#if 0
 	do_set_is_current_context(true);
+#endif
 	do_uninitialize();
 }
 
+#if 0
 bool OglRenderer::get_is_current_context() const
 {
 	return do_get_is_current_context();
@@ -6496,6 +6818,7 @@ bool OglRenderer::set_post_is_current_context(
 	do_set_is_current_context(is_current_context);
 	return old_is_current_context;
 }
+#endif
 
 void OglRenderer::set_clear_color(
 	const std::uint8_t r,

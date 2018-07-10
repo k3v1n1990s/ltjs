@@ -763,9 +763,11 @@ bool CD3D_Device::Start3D()
 	D3D_CALL(g_Device.m_pD3DDevice->SetFVF(D3DFVF_XYZ));
 
 #ifdef LTJS_WIP_OGL
+#if 0
 	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
 
 	ogl_renderer.set_is_current_context(true);
+#endif
 #endif // LTJS_WIP_OGL
 
 	return g_Device.m_bIn3D;

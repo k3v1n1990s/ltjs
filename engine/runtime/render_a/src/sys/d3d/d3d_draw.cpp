@@ -374,7 +374,9 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 	// TODO Remove "if" later
 	if (ogl_renderer.is_initialized())
 	{
+#if 0
 		ogl_renderer.set_is_current_context(true);
+#endif
 
 		auto old_viewport = ogl_renderer.get_viewport();
 

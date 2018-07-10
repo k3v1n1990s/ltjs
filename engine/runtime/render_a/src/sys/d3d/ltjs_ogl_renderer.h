@@ -18,7 +18,7 @@ namespace ul = bibendovsky::spul;
 class OglRenderer
 {
 public:
-	static constexpr auto max_samplers = 4;
+	static constexpr auto max_stages = 4;
 
 
 	struct ClearFlags :
@@ -212,7 +212,7 @@ public:
 	// Flexible vertex format.
 	struct Fvf
 	{
-		using TexCoordItemCounts = std::array<int, max_samplers>;
+		using TexCoordItemCounts = std::array<int, max_stages>;
 
 
 		// Has position? (D3DFVF_XYZ or D3DFVF_XYZRHW)
@@ -741,6 +741,7 @@ public:
 	void uninitialize();
 
 
+#if 0
 	bool get_is_current_context() const;
 
 	void set_is_current_context(
@@ -748,6 +749,7 @@ public:
 
 	bool set_post_is_current_context(
 		const bool is_current_context);
+#endif
 
 	void set_clear_color(
 		const std::uint8_t r,
@@ -896,10 +898,12 @@ private:
 
 	virtual void do_uninitialize() = 0;
 
+#if 0
 	virtual bool do_get_is_current_context() const = 0;
 
 	virtual void do_set_is_current_context(
 		const bool is_current) = 0;
+#endif
 
 	// Clearing.
 	//
