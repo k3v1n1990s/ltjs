@@ -286,11 +286,12 @@ public:
 		ui_vaos_{},
 		vaos_{},
 		textures_{},
-		texture_bindings_{},
 		samplers_{},
 		max_texture_lod_bias_{},
 		stages_{},
-		stages_bindings_{}
+		stages_bindings_{},
+		texture_units_{},
+		current_texture_unit_index_{}
 	{
 	}
 
@@ -301,6 +302,9 @@ public:
 
 
 private:
+	// Use the extra one to upload texture data.
+	static constexpr auto max_texture_units = max_stages + 1;
+
 	static constexpr auto min_anisotropy = 1.0F;
 
 	static constexpr auto max_world_matrices = 4;
@@ -966,11 +970,25 @@ private:
 			const TextureCoordIndex& coord_index);
 	}; // StageImpl
 
+	using SamplerImplPtr = SamplerImpl*;
+
+
+	struct TextureUnit
+	{
+		using Targets = std::array<TextureImplPtr, Texture::max_types>;
+
+
+		int index_;
+
+		SamplerImplPtr sampler_;
+		Targets targets_;
+	}; // TextureUnit
+
+	using TextureUnits = std::array<TextureUnit, max_texture_units>;
+
 
 	using TextureImplUPtr = std::unique_ptr<TextureImpl>;
 	using TextureImplUList = std::list<TextureImplUPtr>;
-
-	using TextureBindings = std::array<TextureImplPtr, Texture::max_types>;
 
 	using Stages = std::vector<StageImpl>;
 	using StagesBindings = std::array<TextureImplPtr, max_stages>;
@@ -1059,13 +1077,15 @@ private:
 	VertexArrayObjectUList vaos_;
 
 	TextureImplUList textures_;
-	TextureBindings texture_bindings_;
 
 	Samplers samplers_;
 	float max_texture_lod_bias_;
 
 	Stages stages_;
 	StagesBindings stages_bindings_;
+
+	TextureUnits texture_units_;
+	int current_texture_unit_index_;
 
 
 	static int default_viewport_x;
@@ -1785,6 +1805,8 @@ private:
 			return false;
 		}
 
+		initialize_texture_units();
+
 		// Set defaults.
 		//
 		if (has_gl_arb_clip_control_)
@@ -1918,12 +1940,13 @@ private:
 		vaos_.clear();
 
 		textures_.clear();
-		texture_bindings_.fill(nullptr);
 
 		uninitialize_samplers();
 		max_texture_lod_bias_ = 0.0F;
 
 		uninitialize_stages();
+
+		uninitialize_texture_units();
 	}
 
 #if 0
@@ -2777,6 +2800,34 @@ private:
 	{
 		stages_.clear();
 		stages_bindings_.fill(nullptr);
+	}
+
+	void initialize_texture_units()
+	{
+		uninitialize_texture_units();
+
+		::glActiveTexture(GL_TEXTURE0 + current_texture_unit_index_);
+		assert(ogl_is_succeed());
+	}
+
+	void uninitialize_texture_units()
+	{
+		texture_units_.fill({});
+		current_texture_unit_index_ = 0;
+	}
+
+	void set_texture_unit(
+		const int texture_unit_index)
+	{
+		if (texture_unit_index == current_texture_unit_index_)
+		{
+			return;
+		}
+
+		current_texture_unit_index_ = texture_unit_index;
+
+		::glActiveTexture(GL_TEXTURE0 + current_texture_unit_index_);
+		assert(ogl_is_succeed());
 	}
 
 	static GLbitfield get_ogl_clear_flags(
@@ -4638,6 +4689,8 @@ bool OglRendererImpl::TextureImpl::initialize_internal(
 
 bool OglRendererImpl::TextureImpl::initialize_2d_internal()
 {
+	ogl_renderer_.set_texture_unit(max_stages);
+
 	ogl_target_ = GL_TEXTURE_2D;
 
 	bind_internal(true);
@@ -4723,6 +4776,8 @@ bool OglRendererImpl::TextureImpl::initialize_cube_map_internal()
 		assert(!"Expected square texture for cube map.");
 		return false;
 	}
+
+	ogl_renderer_.set_texture_unit(max_stages);
 
 	ogl_target_ = GL_TEXTURE_CUBE_MAP;
 
@@ -5235,13 +5290,15 @@ void OglRendererImpl::TextureImpl::bind_internal(
 
 OglRendererImpl::TextureImpl*& OglRendererImpl::TextureImpl::get_binding()
 {
+	auto& current_texture_unit = ogl_renderer_.texture_units_[ogl_renderer_.current_texture_unit_index_];
+
 	switch (type_)
 	{
 	case Type::two_d:
-		return ogl_renderer_.texture_bindings_[0];
+		return current_texture_unit.targets_[0];
 
 	case Type::cube_map:
-		return ogl_renderer_.texture_bindings_[1];
+		return current_texture_unit.targets_[1];
 
 	default:
 		assert(!"Unsupported texture type.");
