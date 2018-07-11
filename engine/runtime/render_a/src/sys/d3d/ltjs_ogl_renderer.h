@@ -21,6 +21,75 @@ public:
 	static constexpr auto max_stages = 4;
 
 
+	//
+	// Direct3D 9 texture stage state values.
+	//
+
+	static constexpr std::uint32_t d3dtss_colorop = 1;
+	static constexpr std::uint32_t d3dtss_colorarg1 = 2;
+	static constexpr std::uint32_t d3dtss_colorarg2 = 3;
+	static constexpr std::uint32_t d3dtss_alphaop = 4;
+	static constexpr std::uint32_t d3dtss_alphaarg1 = 5;
+	static constexpr std::uint32_t d3dtss_alphaarg2 = 6;
+	static constexpr std::uint32_t d3dtss_bumpenvmat00 = 7;
+	static constexpr std::uint32_t d3dtss_bumpenvmat01 = 8;
+	static constexpr std::uint32_t d3dtss_bumpenvmat10 = 9;
+	static constexpr std::uint32_t d3dtss_bumpenvmat11 = 10;
+	static constexpr std::uint32_t d3dtss_texcoordindex = 11;
+	static constexpr std::uint32_t d3dtss_bumpenvlscale = 22;
+	static constexpr std::uint32_t d3dtss_bumpenvloffset = 23;
+	static constexpr std::uint32_t d3dtss_texturetransformflags = 24;
+
+
+	//
+	// Direct3D 9 texture coordinate index flags.
+	//
+
+	static constexpr std::uint32_t d3dtss_tci_passthru = 0x00000000;
+	static constexpr std::uint32_t d3dtss_tci_cameraspaceposition = 0x00020000;
+	static constexpr std::uint32_t d3dtss_tci_cameraspacereflectionvector = 0x00030000;
+
+
+	//
+	// Direct3D 9 texture operation values.
+	//
+
+	static constexpr std::uint32_t d3dtop_disable = 1;
+	static constexpr std::uint32_t d3dtop_selectarg1 = 2;
+	static constexpr std::uint32_t d3dtop_selectarg2 = 3;
+	static constexpr std::uint32_t d3dtop_modulate = 4;
+	static constexpr std::uint32_t d3dtop_modulate2x = 5;
+	static constexpr std::uint32_t d3dtop_add = 7;
+	static constexpr std::uint32_t d3dtop_addsigned = 8;
+	static constexpr std::uint32_t d3dtop_subtract = 10;
+	static constexpr std::uint32_t d3dtop_blendcurrentalpha = 16;
+	static constexpr std::uint32_t d3dtop_modulatealpha_addcolor = 18;
+	static constexpr std::uint32_t d3dtop_bumpenvmap = 22;
+	static constexpr std::uint32_t d3dtop_bumpenvmapluminance = 23;
+	static constexpr std::uint32_t d3dtop_dotproduct3 = 24;
+
+
+	//
+	// Direct3D 9 texture argument values.
+	//
+
+	static constexpr std::uint32_t d3dta_diffuse = 0x00000000;
+	static constexpr std::uint32_t d3dta_current = 0x00000001;
+	static constexpr std::uint32_t d3dta_texture = 0x00000002;
+	static constexpr std::uint32_t d3dta_tfactor = 0x00000003;
+	static constexpr std::uint32_t d3dta_complement = 0x00000010;
+
+
+	//
+	// Direct3D 9 texture transformation values.
+	//
+
+	static constexpr std::uint32_t d3dttff_disable = 0;
+	static constexpr std::uint32_t d3dttff_count2 = 2;
+	static constexpr std::uint32_t d3dttff_count3 = 3;
+	static constexpr std::uint32_t d3dttff_projected = 256;
+
+
 	struct ClearFlags :
 		public ul::EnumFlags
 	{
@@ -105,82 +174,6 @@ public:
 		linear = 2,
 		anisotropic = 3,
 	}; // TextureFilterType
-
-	enum class TextureOp :
-		std::uint32_t
-	{
-		none = 0,
-		disable = 1,
-		select_arg1 = 2,
-		select_arg2 = 3,
-		modulate = 4,
-		modulate_2x = 5,
-		add = 7,
-		add_signed = 8,
-		subtract = 10,
-		blend_current_alpha = 16,
-		modulate_alpha_add_color = 18,
-		bump_envmap = 22,
-		bump_envmap_luminance = 23,
-		dot_product3 = 24,
-	}; // TextureOp
-
-	struct TextureArg :
-		public ul::EnumFlags
-	{
-		TextureArg(
-			const Value flags = none)
-			:
-			ul::EnumFlags{flags}
-		{
-		}
-
-		enum : Value
-		{
-			diffuse = 0x00000000,
-			current = 0x00000001,
-			texture = 0x00000002,
-			factor = 0x00000003,
-			complement = 0x00000010,
-		}; // enum
-	}; // TextureArg
-
-	struct TextureTransFlags :
-		public ul::EnumFlags
-	{
-		TextureTransFlags(
-			const Value flags = none)
-			:
-			ul::EnumFlags{flags}
-		{
-		}
-
-		enum : Value
-		{
-			disable = 0,
-			count2 = 2,
-			count3 = 3,
-			projected = 256,
-		}; // enum
-	}; // TextureTransFlags
-
-	struct TextureCoordIndex :
-		public ul::EnumFlags
-	{
-		TextureCoordIndex(
-			const Value flags = none)
-			:
-			ul::EnumFlags{flags}
-		{
-		}
-
-		enum : Value
-		{
-			pass_through = 0x00000000,
-			camera_space_position = 0x00020000,
-			camera_space_reflection_vector = 0x00030000,
-		}; // enum
-	}; // TextureCoordIndex
 
 	enum class SurfaceFormat :
 		std::uint32_t
@@ -580,52 +573,52 @@ public:
 			TexturePtr texture);
 
 
-		TextureOp get_color_op() const;
+		std::uint32_t get_color_op() const;
 
 		void set_color_op(
-			const TextureOp& color_op);
+			const std::uint32_t color_op);
 
 
-		TextureArg get_color_arg1() const;
+		std::uint32_t get_color_arg1() const;
 
 		void set_color_arg1(
-			const TextureArg& color_arg1);
+			const std::uint32_t color_arg1);
 
 
-		TextureArg get_color_arg2() const;
+		std::uint32_t get_color_arg2() const;
 
 		void set_color_arg2(
-			const TextureArg& color_arg2);
+			const std::uint32_t color_arg2);
 
 
-		TextureOp get_alpha_op() const;
+		std::uint32_t get_alpha_op() const;
 
 		void set_alpha_op(
-			const TextureOp& alpha_op);
+			const std::uint32_t alpha_op);
 
 
-		TextureArg get_alpha_arg1() const;
+		std::uint32_t get_alpha_arg1() const;
 
 		void set_alpha_arg1(
-			const TextureArg& alpha_arg1);
+			const std::uint32_t alpha_arg1);
 
 
-		TextureArg get_alpha_arg2() const;
+		std::uint32_t get_alpha_arg2() const;
 
 		void set_alpha_arg2(
-			const TextureArg& alpha_arg2);
+			const std::uint32_t alpha_arg2);
 
 
-		TextureCoordIndex get_coord_index() const;
+		std::uint32_t get_coord_index() const;
 
 		void set_coord_index(
-			const TextureCoordIndex& coord_index);
+			const std::uint32_t coord_index);
 
 
-		TextureTransFlags get_trans_flags() const;
+		std::uint32_t get_trans_flags() const;
 
 		void set_trans_flags(
-			const TextureTransFlags& trans_flags);
+			const std::uint32_t trans_flags);
 
 
 		float get_bump_map_lum_scale() const;
@@ -661,52 +654,52 @@ public:
 			TexturePtr texture) = 0;
 
 
-		virtual TextureOp do_get_color_op() const = 0;
+		virtual std::uint32_t do_get_color_op() const = 0;
 
 		virtual void do_set_color_op(
-			const TextureOp& color_operation) = 0;
+			const std::uint32_t color_operation) = 0;
 
 
-		virtual TextureArg do_get_color_arg1() const = 0;
+		virtual std::uint32_t do_get_color_arg1() const = 0;
 
 		virtual void do_set_color_arg1(
-			const TextureArg& color_argument1) = 0;
+			const std::uint32_t color_argument1) = 0;
 
 
-		virtual TextureArg do_get_color_arg2() const = 0;
+		virtual std::uint32_t do_get_color_arg2() const = 0;
 
 		virtual void do_set_color_arg2(
-			const TextureArg& color_argument2) = 0;
+			const std::uint32_t color_argument2) = 0;
 
 
-		virtual TextureOp do_get_alpha_op() const = 0;
+		virtual std::uint32_t do_get_alpha_op() const = 0;
 
 		virtual void do_set_alpha_op(
-			const TextureOp& alpha_operation) = 0;
+			const std::uint32_t alpha_operation) = 0;
 
 
-		virtual TextureArg do_get_alpha_arg1() const = 0;
+		virtual std::uint32_t do_get_alpha_arg1() const = 0;
 
 		virtual void do_set_alpha_arg1(
-			const TextureArg& alpha_argument1) = 0;
+			const std::uint32_t alpha_argument1) = 0;
 
 
-		virtual TextureArg do_get_alpha_arg2() const = 0;
+		virtual std::uint32_t do_get_alpha_arg2() const = 0;
 
 		virtual void do_set_alpha_arg2(
-			const TextureArg& alpha_argument2) = 0;
+			const std::uint32_t alpha_argument2) = 0;
 
 
-		virtual TextureCoordIndex do_get_coord_index() const = 0;
+		virtual std::uint32_t do_get_coord_index() const = 0;
 
 		virtual void do_set_coord_index(
-			const TextureCoordIndex& coord_index) = 0;
+			const std::uint32_t coord_index) = 0;
 
 
-		virtual TextureTransFlags do_get_trans_flags() const = 0;
+		virtual std::uint32_t do_get_trans_flags() const = 0;
 
 		virtual void do_set_trans_flags(
-			const TextureTransFlags& transformation_flags) = 0;
+			const std::uint32_t transformation_flags) = 0;
 
 
 		virtual float do_get_bump_map_lum_scale() const = 0;

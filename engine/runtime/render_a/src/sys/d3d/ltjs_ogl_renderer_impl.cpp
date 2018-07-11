@@ -746,17 +746,17 @@ private:
 	private:
 		static TextureImplPtr default_texture;
 
-		static TextureOp default_color_op_0;
-		static TextureOp default_color_op_n;
-		static TextureArg default_color_arg1;
-		static TextureArg default_color_arg2;
+		static std::uint32_t default_color_op_0;
+		static std::uint32_t default_color_op_n;
+		static std::uint32_t default_color_arg1;
+		static std::uint32_t default_color_arg2;
 
-		static TextureOp default_alpha_op_0;
-		static TextureOp default_alpha_op_n;
-		static TextureArg default_alpha_arg1;
-		static TextureArg default_alpha_arg2;
+		static std::uint32_t default_alpha_op_0;
+		static std::uint32_t default_alpha_op_n;
+		static std::uint32_t default_alpha_arg1;
+		static std::uint32_t default_alpha_arg2;
 
-		static TextureTransFlags default_trans_flags;
+		static std::uint32_t default_trans_flags;
 
 		static float default_bump_map_lum_scale;
 		static float default_bump_map_lum_offset;
@@ -775,35 +775,35 @@ private:
 		int u_sampler_cube_;
 
 		bool is_color_op_modified_;
-		TextureOp color_op_;
+		std::uint32_t color_op_;
 		int u_color_op_;
 
 		bool is_color_arg1_modified_;
-		TextureArg color_arg1_;
+		std::uint32_t color_arg1_;
 		int u_color_arg1_;
 
 		bool is_color_arg2_modified_;
-		TextureArg color_arg2_;
+		std::uint32_t color_arg2_;
 		int u_color_arg2_;
 
 		bool is_alpha_op_modified_;
-		TextureOp alpha_op_;
+		std::uint32_t alpha_op_;
 		int u_alpha_op_;
 
 		bool is_alpha_arg1_modified_;
-		TextureArg alpha_arg1_;
+		std::uint32_t alpha_arg1_;
 		int u_alpha_arg1_;
 
 		bool is_alpha_arg2_modified_;
-		TextureArg alpha_arg2_;
+		std::uint32_t alpha_arg2_;
 		int u_alpha_arg2_;
 
 		bool is_coord_index_modified_;
-		TextureCoordIndex coord_index_;
+		std::uint32_t coord_index_;
 		int u_coord_index_;
 
 		bool is_trans_flags_modified_;
-		TextureTransFlags trans_flags_;
+		std::uint32_t trans_flags_;
 		int u_trans_flags_;
 
 		bool is_bump_map_lum_scale_modified_;
@@ -826,52 +826,52 @@ private:
 			TexturePtr texture) override;
 
 
-		TextureOp do_get_color_op() const override;
+		std::uint32_t do_get_color_op() const override;
 
 		void do_set_color_op(
-			const TextureOp& color_op) override;
+			const std::uint32_t color_op) override;
 
 
-		TextureArg do_get_color_arg1() const override;
+		std::uint32_t do_get_color_arg1() const override;
 
 		void do_set_color_arg1(
-			const TextureArg& color_arg1) override;
+			const std::uint32_t color_arg1) override;
 
 
-		TextureArg do_get_color_arg2() const override;
+		std::uint32_t do_get_color_arg2() const override;
 
 		void do_set_color_arg2(
-			const TextureArg& color_arg2) override;
+			const std::uint32_t color_arg2) override;
 
 
-		TextureOp do_get_alpha_op() const override;
+		std::uint32_t do_get_alpha_op() const override;
 
 		void do_set_alpha_op(
-			const TextureOp& alpha_op) override;
+			const std::uint32_t alpha_op) override;
 
 
-		TextureArg do_get_alpha_arg1() const override;
+		std::uint32_t do_get_alpha_arg1() const override;
 
 		void do_set_alpha_arg1(
-			const TextureArg& alpha_arg1) override;
+			const std::uint32_t alpha_arg1) override;
 
 
-		TextureArg do_get_alpha_arg2() const override;
+		std::uint32_t do_get_alpha_arg2() const override;
 
 		void do_set_alpha_arg2(
-			const TextureArg& alpha_arg2) override;
+			const std::uint32_t alpha_arg2) override;
 
 
-		TextureCoordIndex do_get_coord_index() const override;
+		std::uint32_t do_get_coord_index() const override;
 
 		void do_set_coord_index(
-			const TextureCoordIndex& coord_index) override;
+			const std::uint32_t coord_index) override;
 
 
-		TextureTransFlags do_get_trans_flags() const override;
+		std::uint32_t do_get_trans_flags() const override;
 
 		void do_set_trans_flags(
-			const TextureTransFlags& trans_flags) override;
+			const std::uint32_t trans_flags) override;
 
 
 		float do_get_bump_map_lum_scale() const override;
@@ -958,16 +958,16 @@ private:
 
 
 		static bool is_op_valid(
-			const TextureOp& op);
+			const std::uint32_t op);
 
 		static bool is_arg_valid(
-			const TextureArg& arg);
+			const std::uint32_t arg);
 
 		bool are_trans_flags_valid(
-			const TextureTransFlags& trans_flags);
+			const std::uint32_t trans_flags);
 
 		bool is_coord_index_valid(
-			const TextureCoordIndex& coord_index);
+			const std::uint32_t coord_index);
 	}; // StageImpl
 
 	using SamplerImplPtr = SamplerImpl*;
@@ -5504,17 +5504,17 @@ int OglRenderer::Texture::get_level_height(
 
 OglRendererImpl::TextureImplPtr OglRendererImpl::StageImpl::default_texture = nullptr;
 
-OglRenderer::TextureOp OglRendererImpl::StageImpl::default_color_op_0 = OglRenderer::TextureOp::modulate;
-OglRenderer::TextureOp OglRendererImpl::StageImpl::default_color_op_n = OglRenderer::TextureOp::disable;
-OglRenderer::TextureArg OglRendererImpl::StageImpl::default_color_arg1 = OglRenderer::TextureArg::texture;
-OglRenderer::TextureArg OglRendererImpl::StageImpl::default_color_arg2 = OglRenderer::TextureArg::current;
+std::uint32_t OglRendererImpl::StageImpl::default_color_op_0 = d3dtop_modulate;
+std::uint32_t OglRendererImpl::StageImpl::default_color_op_n = d3dtop_disable;
+std::uint32_t OglRendererImpl::StageImpl::default_color_arg1 = d3dta_texture;
+std::uint32_t OglRendererImpl::StageImpl::default_color_arg2 = d3dta_current;
 
-OglRenderer::TextureOp OglRendererImpl::StageImpl::default_alpha_op_0 = OglRenderer::TextureOp::select_arg1;
-OglRenderer::TextureOp OglRendererImpl::StageImpl::default_alpha_op_n = OglRenderer::TextureOp::disable;
-OglRenderer::TextureArg OglRendererImpl::StageImpl::default_alpha_arg1 = OglRenderer::TextureArg::texture;
-OglRenderer::TextureArg OglRendererImpl::StageImpl::default_alpha_arg2 = OglRenderer::TextureArg::current;
+std::uint32_t OglRendererImpl::StageImpl::default_alpha_op_0 = d3dtop_selectarg1;
+std::uint32_t OglRendererImpl::StageImpl::default_alpha_op_n = d3dtop_disable;
+std::uint32_t OglRendererImpl::StageImpl::default_alpha_arg1 = d3dta_texture;
+std::uint32_t OglRendererImpl::StageImpl::default_alpha_arg2 = d3dta_current;
 
-OglRenderer::TextureTransFlags OglRendererImpl::StageImpl::default_trans_flags = OglRenderer::TextureTransFlags::disable;
+std::uint32_t OglRendererImpl::StageImpl::default_trans_flags = d3dttff_disable;
 
 float OglRendererImpl::StageImpl::default_bump_map_lum_scale = 0.0F;
 float OglRendererImpl::StageImpl::default_bump_map_lum_offset = 0.0F;
@@ -5650,14 +5650,14 @@ void OglRendererImpl::StageImpl::do_set_texture(
 	is_texture_modified_ = true;
 }
 
-OglRenderer::TextureOp OglRendererImpl::StageImpl::do_get_color_op() const
+std::uint32_t OglRendererImpl::StageImpl::do_get_color_op() const
 {
 	assert(is_initialized_);
 	return color_op_;
 }
 
 void OglRendererImpl::StageImpl::do_set_color_op(
-	const TextureOp& color_op)
+	const std::uint32_t color_op)
 {
 	if (!is_initialized_)
 	{
@@ -5682,14 +5682,14 @@ void OglRendererImpl::StageImpl::do_set_color_op(
 	is_color_op_modified_ = true;
 }
 
-OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_color_arg1() const
+std::uint32_t OglRendererImpl::StageImpl::do_get_color_arg1() const
 {
 	assert(is_initialized_);
 	return color_arg1_;
 }
 
 void OglRendererImpl::StageImpl::do_set_color_arg1(
-	const TextureArg& arg1)
+	const std::uint32_t arg1)
 {
 	if (!is_initialized_)
 	{
@@ -5714,14 +5714,14 @@ void OglRendererImpl::StageImpl::do_set_color_arg1(
 	is_color_arg1_modified_ = true;
 }
 
-OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_color_arg2() const
+std::uint32_t OglRendererImpl::StageImpl::do_get_color_arg2() const
 {
 	assert(is_initialized_);
 	return color_arg2_;
 }
 
 void OglRendererImpl::StageImpl::do_set_color_arg2(
-	const TextureArg& arg2)
+	const std::uint32_t arg2)
 {
 	if (!is_initialized_)
 	{
@@ -5746,14 +5746,14 @@ void OglRendererImpl::StageImpl::do_set_color_arg2(
 	is_color_arg2_modified_ = true;
 }
 
-OglRenderer::TextureOp OglRendererImpl::StageImpl::do_get_alpha_op() const
+std::uint32_t OglRendererImpl::StageImpl::do_get_alpha_op() const
 {
 	assert(is_initialized_);
 	return alpha_op_;
 }
 
 void OglRendererImpl::StageImpl::do_set_alpha_op(
-	const TextureOp& alpha_op)
+	const std::uint32_t alpha_op)
 {
 	if (!is_initialized_)
 	{
@@ -5778,14 +5778,14 @@ void OglRendererImpl::StageImpl::do_set_alpha_op(
 	is_alpha_op_modified_ = true;
 }
 
-OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_alpha_arg1() const
+std::uint32_t OglRendererImpl::StageImpl::do_get_alpha_arg1() const
 {
 	assert(is_initialized_);
 	return alpha_arg1_;
 }
 
 void OglRendererImpl::StageImpl::do_set_alpha_arg1(
-	const TextureArg& alpha_arg1)
+	const std::uint32_t alpha_arg1)
 {
 	if (!is_initialized_)
 	{
@@ -5810,14 +5810,14 @@ void OglRendererImpl::StageImpl::do_set_alpha_arg1(
 	is_alpha_arg1_modified_ = true;
 }
 
-OglRenderer::TextureArg OglRendererImpl::StageImpl::do_get_alpha_arg2() const
+std::uint32_t OglRendererImpl::StageImpl::do_get_alpha_arg2() const
 {
 	assert(is_initialized_);
 	return alpha_arg2_;
 }
 
 void OglRendererImpl::StageImpl::do_set_alpha_arg2(
-	const TextureArg& alpha_arg2)
+	const std::uint32_t alpha_arg2)
 {
 	if (!is_initialized_)
 	{
@@ -5842,14 +5842,14 @@ void OglRendererImpl::StageImpl::do_set_alpha_arg2(
 	is_alpha_arg2_modified_ = true;
 }
 
-OglRenderer::TextureCoordIndex OglRendererImpl::StageImpl::do_get_coord_index() const
+std::uint32_t OglRendererImpl::StageImpl::do_get_coord_index() const
 {
 	assert(is_initialized_);
 	return coord_index_;
 }
 
 void OglRendererImpl::StageImpl::do_set_coord_index(
-	const TextureCoordIndex& coord_index)
+	const std::uint32_t coord_index)
 {
 	if (!is_initialized_)
 	{
@@ -5874,14 +5874,14 @@ void OglRendererImpl::StageImpl::do_set_coord_index(
 	is_coord_index_modified_ = true;
 }
 
-OglRenderer::TextureTransFlags OglRendererImpl::StageImpl::do_get_trans_flags() const
+std::uint32_t OglRendererImpl::StageImpl::do_get_trans_flags() const
 {
 	assert(is_initialized_);
 	return trans_flags_;
 }
 
 void OglRendererImpl::StageImpl::do_set_trans_flags(
-	const TextureTransFlags& trans_flags)
+	const std::uint32_t trans_flags)
 {
 	if (!is_initialized_)
 	{
@@ -6011,35 +6011,35 @@ void OglRendererImpl::StageImpl::uninitialize_internal()
 	u_sampler_cube_ = -1;
 
 	is_color_op_modified_ = false;
-	color_op_ = TextureOp::none;
+	color_op_ = 0;
 	u_color_op_ = -1;
 
 	is_color_arg1_modified_ = false;
-	color_arg1_ = TextureArg::none;
+	color_arg1_ = 0;
 	u_color_arg1_ = -1;
 
 	is_color_arg2_modified_ = false;
-	color_arg2_ = TextureArg::none;
+	color_arg2_ = 0;
 	u_color_arg2_ = -1;
 
 	is_alpha_op_modified_ = false;
-	alpha_op_ = TextureOp::none;
+	alpha_op_ = 0;
 	u_alpha_op_ = -1;
 
 	is_alpha_arg1_modified_ = false;
-	alpha_arg1_ = TextureArg::none;
+	alpha_arg1_ = 0;
 	u_alpha_arg1_ = -1;
 
 	is_alpha_arg2_modified_ = false;
-	alpha_arg2_ = TextureArg::none;
+	alpha_arg2_ = 0;
 	u_alpha_arg2_ = -1;
 
 	is_coord_index_modified_ = false;
-	coord_index_ = TextureCoordIndex::none;
+	coord_index_ = 0;
 	u_coord_index_ = -1;
 
 	is_trans_flags_modified_ = false;
-	trans_flags_ = TextureTransFlags::none;
+	trans_flags_ = 0;
 	u_trans_flags_ = -1;
 
 	is_bump_map_lum_scale_modified_ = false;
@@ -6340,23 +6340,23 @@ void OglRendererImpl::StageImpl::apply_bump_map_matrix_modifications()
 }
 
 bool OglRendererImpl::StageImpl::is_op_valid(
-	const TextureOp& op)
+	const std::uint32_t op)
 {
 	switch (op)
 	{
-	case TextureOp::disable:
-	case TextureOp::select_arg1:
-	case TextureOp::select_arg2:
-	case TextureOp::modulate:
-	case TextureOp::modulate_2x:
-	case TextureOp::add:
-	case TextureOp::add_signed:
-	case TextureOp::subtract:
-	case TextureOp::blend_current_alpha:
-	case TextureOp::modulate_alpha_add_color:
-	case TextureOp::bump_envmap:
-	case TextureOp::bump_envmap_luminance:
-	case TextureOp::dot_product3:
+	case d3dtop_disable:
+	case d3dtop_selectarg1:
+	case d3dtop_selectarg2:
+	case d3dtop_modulate:
+	case d3dtop_modulate2x:
+	case d3dtop_add:
+	case d3dtop_addsigned:
+	case d3dtop_subtract:
+	case d3dtop_blendcurrentalpha:
+	case d3dtop_modulatealpha_addcolor:
+	case d3dtop_bumpenvmap:
+	case d3dtop_bumpenvmapluminance:
+	case d3dtop_dotproduct3:
 		return true;
 
 	default:
@@ -6366,20 +6366,20 @@ bool OglRendererImpl::StageImpl::is_op_valid(
 }
 
 bool OglRendererImpl::StageImpl::is_arg_valid(
-	const TextureArg& arg)
+	const std::uint32_t arg)
 {
 	const auto value_mask = 0xF;
 	const auto flags_mask = 0xFFFFFFFF ^ value_mask;
 
-	const auto value = static_cast<TextureArg>(arg & value_mask);
+	const auto value = static_cast<std::uint32_t>(arg & value_mask);
 	const auto flags = arg & flags_mask;
 
 	switch (value)
 	{
-	case TextureArg::diffuse:
-	case TextureArg::current:
-	case TextureArg::texture:
-	case TextureArg::factor:
+	case d3dta_diffuse:
+	case d3dta_current:
+	case d3dta_texture:
+	case d3dta_tfactor:
 		break;
 
 	default:
@@ -6387,9 +6387,14 @@ bool OglRendererImpl::StageImpl::is_arg_valid(
 		return false;
 	}
 
-	if (flags != 0 && flags != (TextureArg::complement))
+	switch (flags)
 	{
-		assert(!"Unsupported flag(s).");
+	case 0:
+	case d3dta_complement:
+		break;
+
+	default:
+		assert(!"Unsupported flag.");
 		return false;
 	}
 
@@ -6397,7 +6402,7 @@ bool OglRendererImpl::StageImpl::is_arg_valid(
 }
 
 bool OglRendererImpl::StageImpl::are_trans_flags_valid(
-	const TextureTransFlags& trans_flags)
+	const std::uint32_t trans_flags)
 {
 	const auto value_mask = 0xFF;
 	const auto flags_mask = 0xFFFFFFFF ^ value_mask;
@@ -6407,8 +6412,9 @@ bool OglRendererImpl::StageImpl::are_trans_flags_valid(
 
 	switch (value)
 	{
-	case TextureTransFlags::count2:
-	case TextureTransFlags::count3:
+	case d3dttff_disable:
+	case d3dttff_count2:
+	case d3dttff_count3:
 		break;
 
 	default:
@@ -6416,10 +6422,14 @@ bool OglRendererImpl::StageImpl::are_trans_flags_valid(
 		return false;
 	}
 
-	if (flags != 0 &&
-		flags != TextureTransFlags::projected)
+	switch (flags)
 	{
-		assert(!"Unsupported flag(s).");
+	case 0:
+	case d3dttff_projected:
+		break;
+
+	default:
+		assert(!"Unsupported flag.");
 		return false;
 	}
 
@@ -6427,7 +6437,7 @@ bool OglRendererImpl::StageImpl::are_trans_flags_valid(
 }
 
 bool OglRendererImpl::StageImpl::is_coord_index_valid(
-	const TextureCoordIndex& coord_index)
+	const std::uint32_t coord_index)
 {
 	const auto value_mask = 0xFFFF;
 	const auto flags_mask = 0xFFFFFFFF ^ value_mask;
@@ -6441,11 +6451,15 @@ bool OglRendererImpl::StageImpl::is_coord_index_valid(
 		return false;
 	}
 
-	if (flags != TextureCoordIndex::pass_through &&
-		flags != TextureCoordIndex::camera_space_position &&
-		flags != TextureCoordIndex::camera_space_reflection_vector)
+	switch (flags)
 	{
-		assert(!"Unsupported flag(s).");
+	case d3dtss_tci_passthru:
+	case d3dtss_tci_cameraspaceposition:
+	case d3dtss_tci_cameraspacereflectionvector:
+		break;
+
+	default:
+		assert(!"Unsupported flag.");
 		return false;
 	}
 
@@ -6480,90 +6494,90 @@ void OglRenderer::Stage::set_texture(
 	do_set_texture(texture);
 }
 
-OglRenderer::TextureOp OglRenderer::Stage::get_color_op() const
+std::uint32_t OglRenderer::Stage::get_color_op() const
 {
 	return do_get_color_op();
 }
 
 void OglRenderer::Stage::set_color_op(
-	const TextureOp& operation)
+	const std::uint32_t operation)
 {
 	do_set_color_op(operation);
 }
 
-OglRenderer::TextureArg OglRenderer::Stage::get_color_arg1() const
+std::uint32_t OglRenderer::Stage::get_color_arg1() const
 {
 	return do_get_color_arg1();
 }
 
 void OglRenderer::Stage::set_color_arg1(
-	const TextureArg& argument_1)
+	const std::uint32_t argument_1)
 {
 	do_set_color_arg1(argument_1);
 }
 
-OglRenderer::TextureArg OglRenderer::Stage::get_color_arg2() const
+std::uint32_t OglRenderer::Stage::get_color_arg2() const
 {
 	return do_get_color_arg2();
 }
 
 void OglRenderer::Stage::set_color_arg2(
-	const TextureArg& argument_2)
+	const std::uint32_t argument_2)
 {
 	do_set_color_arg2(argument_2);
 }
 
-OglRenderer::TextureOp OglRenderer::Stage::get_alpha_op() const
+std::uint32_t OglRenderer::Stage::get_alpha_op() const
 {
 	return do_get_alpha_op();
 }
 
 void OglRenderer::Stage::set_alpha_op(
-	const TextureOp& operation)
+	const std::uint32_t operation)
 {
 	do_set_alpha_op(operation);
 }
 
-OglRenderer::TextureArg OglRenderer::Stage::get_alpha_arg1() const
+std::uint32_t OglRenderer::Stage::get_alpha_arg1() const
 {
 	return do_get_alpha_arg1();
 }
 
 void OglRenderer::Stage::set_alpha_arg1(
-	const TextureArg& argument_1)
+	const std::uint32_t argument_1)
 {
 	do_set_alpha_arg1(argument_1);
 }
 
-OglRenderer::TextureArg OglRenderer::Stage::get_alpha_arg2() const
+std::uint32_t OglRenderer::Stage::get_alpha_arg2() const
 {
 	return do_get_alpha_arg2();
 }
 
 void OglRenderer::Stage::set_alpha_arg2(
-	const TextureArg& argument_2)
+	const std::uint32_t argument_2)
 {
 	do_set_alpha_arg2(argument_2);
 }
 
-OglRenderer::TextureCoordIndex OglRenderer::Stage::get_coord_index() const
+std::uint32_t OglRenderer::Stage::get_coord_index() const
 {
 	return do_get_coord_index();
 }
 
 void OglRenderer::Stage::set_coord_index(
-	const TextureCoordIndex& index)
+	const std::uint32_t index)
 {
 	do_set_coord_index(index);
 }
 
-OglRenderer::TextureTransFlags OglRenderer::Stage::get_trans_flags() const
+std::uint32_t OglRenderer::Stage::get_trans_flags() const
 {
 	return do_get_trans_flags();
 }
 
 void OglRenderer::Stage::set_trans_flags(
-	const TextureTransFlags& flags)
+	const std::uint32_t flags)
 {
 	do_set_trans_flags(flags);
 }
