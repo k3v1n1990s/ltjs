@@ -22,6 +22,96 @@ public:
 
 
 	//
+	// Direct3D 9 clear flags.
+	//
+
+	static constexpr std::uint32_t d3dclear_target = 0x00000001;
+	static constexpr std::uint32_t d3dclear_zbuffer = 0x00000002;
+	static constexpr std::uint32_t d3dclear_stencil = 0x00000004;
+
+
+	//
+	// Direct3D 9 cull mode.
+	//
+
+	static constexpr std::uint32_t d3dcull_none = 1;
+	static constexpr std::uint32_t d3dcull_cw = 2;
+	static constexpr std::uint32_t d3dcull_ccw = 3;
+
+	//
+	// Direct3D 9 fill mode.
+	//
+
+	static constexpr std::uint32_t d3dfill_wireframe = 2;
+	static constexpr std::uint32_t d3dfill_solid = 3;
+
+	//
+	// Direct3D 9 compare functions.
+	//
+
+	static constexpr std::uint32_t d3dcmp_less = 2;
+	static constexpr std::uint32_t d3dcmp_equal = 3;
+	static constexpr std::uint32_t d3dcmp_lessequal = 4;
+	static constexpr std::uint32_t d3dcmp_greater = 5;
+	static constexpr std::uint32_t d3dcmp_notequal = 6;
+	static constexpr std::uint32_t d3dcmp_greaterequal = 7;
+	static constexpr std::uint32_t d3dcmp_always = 8;
+
+	//
+	// Direct3D 9 blending factors.
+	//
+
+	static constexpr std::uint32_t d3dblend_zero = 1;
+	static constexpr std::uint32_t d3dblend_one = 2;
+	static constexpr std::uint32_t d3dblend_srccolor = 3;
+	static constexpr std::uint32_t d3dblend_invsrccolor = 4;
+	static constexpr std::uint32_t d3dblend_srcalpha = 5;
+	static constexpr std::uint32_t d3dblend_invsrcalpha = 6;
+	static constexpr std::uint32_t d3dblend_destcolor = 9;
+	static constexpr std::uint32_t d3dblend_invdestcolor = 10;
+
+
+	//
+	// Direct3D 9 primitive types.
+	//
+
+	static constexpr std::uint32_t d3dpt_trianglelist = 4;
+	static constexpr std::uint32_t d3dpt_trianglestrip = 5;
+	static constexpr std::uint32_t d3dpt_trianglefan = 6;
+
+
+	//
+	// Direct3D 9 texture addressing modes.
+	//
+
+	static constexpr std::uint32_t d3dtaddress_wrap = 1;
+	static constexpr std::uint32_t d3dtaddress_clamp = 3;
+
+
+	//
+	// Direct3D 9 texture filters.
+	//
+
+	static constexpr std::uint32_t d3dtexf_none = 0;
+	static constexpr std::uint32_t d3dtexf_point = 1;
+	static constexpr std::uint32_t d3dtexf_linear = 2;
+	static constexpr std::uint32_t d3dtexf_anisotropic = 3;
+
+
+	//
+	// Direct3D 9 surface formats.
+	//
+
+	static constexpr std::uint32_t d3dfmt_unknown = 0;
+	static constexpr std::uint32_t d3dfmt_a8r8g8b8 = 21;
+	static constexpr std::uint32_t d3dfmt_a4r4g4b4 = 26;
+	static constexpr std::uint32_t d3dfmt_v8u8 = 60;
+	static constexpr std::uint32_t d3dfmt_dxt1 = ul::FourCc{"DXT1"};
+	static constexpr std::uint32_t d3dfmt_dxt3 = ul::FourCc{"DXT3"};
+	static constexpr std::uint32_t d3dfmt_dxt5 = ul::FourCc{"DXT5"};
+
+
+	//
 	// Direct3D 9 texture stage state values.
 	//
 
@@ -88,104 +178,6 @@ public:
 	static constexpr std::uint32_t d3dttff_count2 = 2;
 	static constexpr std::uint32_t d3dttff_count3 = 3;
 	static constexpr std::uint32_t d3dttff_projected = 256;
-
-
-	struct ClearFlags :
-		public ul::EnumFlags
-	{
-		ClearFlags(
-			const Value flags = none)
-			:
-			ul::EnumFlags{flags}
-		{
-		}
-
-		enum : Value
-		{
-			target = 1,
-			zbuffer = 2,
-			stencil = 4,
-		}; // enum
-	}; // ClearFlags
-
-	enum class CullMode
-	{
-		none = 1,
-		cw = 2,
-		ccw = 3,
-	}; // CullMode
-
-	enum class FillMode :
-		std::uint32_t
-	{
-		none = 0,
-		wireframe = 2,
-		solid = 3,
-	}; // FillMode
-
-	enum class CompareFunc :
-		std::uint32_t
-	{
-		none = 0,
-		always = 8,
-		equal = 3,
-		greater = 5,
-		greater_or_equal = 7,
-		less = 2,
-		less_or_equal = 4,
-		not_equal = 6,
-	}; // CompareFunc
-
-	enum class BlendingFactor :
-		std::uint32_t
-	{
-		none = 0,
-		zero = 1,
-		one = 2,
-		src_alpha = 5,
-		src_color = 3,
-		inv_src_alpha = 6,
-		inv_src_color = 4,
-		dst_color = 9,
-		inv_dst_color = 10,
-	}; // BlendingFactor
-
-	enum class PrimitiveType
-	{
-		none = 0,
-		triangle_strip = 5,
-		triangle_fan = 6,
-		triangle_list = 4,
-	}; // PrimitiveType
-
-	enum class TextureAddressingMode :
-		std::uint32_t
-	{
-		none = 0,
-		clamp = 3,
-		wrap = 1,
-	}; // TextureAddresingsMode
-
-	enum class TextureFilterType :
-		std::uint32_t
-	{
-		none = 0,
-		point = 1,
-		linear = 2,
-		anisotropic = 3,
-	}; // TextureFilterType
-
-	enum class SurfaceFormat :
-		std::uint32_t
-	{
-		none = 0,
-		a4r4g4b4 = 26,
-		a8r8g8b8 = 21,
-		v8u8 = 60,
-		dxt1 = ul::FourCc{"DXT1"},
-		dxt3 = ul::FourCc{"DXT3"},
-		dxt5 = ul::FourCc{"DXT5"},
-	}; // SurfaceFormat
 
 
 	struct Viewport
@@ -307,16 +299,16 @@ public:
 			const void* const raw_data);
 
 		void draw(
-			const PrimitiveType primitive_type,
+			const std::uint32_t primitive_type,
 			const int primitive_count);
 
 		void draw(
-			const PrimitiveType primitive_type,
+			const std::uint32_t primitive_type,
 			const int vertex_base,
 			const int primitive_count);
 
 		void draw(
-			const PrimitiveType primitive_type,
+			const std::uint32_t primitive_type,
 			const int index_base,
 			const int vertex_base,
 			const int primitive_count);
@@ -340,7 +332,7 @@ public:
 			const void* const raw_data) = 0;
 
 		virtual void do_draw(
-			const PrimitiveType primitive_type,
+			const std::uint32_t primitive_type,
 			const int index_base,
 			const int vertex_base,
 			const int primitive_count) = 0;
@@ -372,7 +364,7 @@ public:
 		struct InitializeParam
 		{
 			Type type_;
-			SurfaceFormat surface_format_;
+			std::uint32_t surface_format_;
 			int width_;
 			int height_;
 			int level_count_;
@@ -388,7 +380,7 @@ public:
 			bool has_linear_filter_;
 			int level_;
 			int cube_face_index_;
-			SurfaceFormat src_surface_format_;
+			std::uint32_t src_surface_format_;
 			int src_pitch_;
 			const void* raw_data_;
 
@@ -411,7 +403,7 @@ public:
 
 		Type get_type() const;
 
-		SurfaceFormat get_surface_format() const;
+		std::uint32_t get_surface_format() const;
 
 		bool is_compressed() const;
 
@@ -447,7 +439,7 @@ public:
 
 		virtual Type do_get_type() const = 0;
 
-		virtual SurfaceFormat do_get_surface_format() const = 0;
+		virtual std::uint32_t do_get_surface_format() const = 0;
 
 		virtual bool do_is_compressed() const = 0;
 
@@ -470,34 +462,34 @@ public:
 	class Sampler
 	{
 	public:
-		TextureAddressingMode get_addressing_mode_u() const;
+		std::uint32_t get_addressing_mode_u() const;
 
 		void set_addressing_mode_u(
-			const TextureAddressingMode addressing_mode_u);
+			const std::uint32_t addressing_mode_u);
 
 
-		TextureAddressingMode get_addressing_mode_v() const;
+		std::uint32_t get_addressing_mode_v() const;
 
 		void set_addressing_mode_v(
-			const TextureAddressingMode addressing_mode_v);
+			const std::uint32_t addressing_mode_v);
 
 
-		TextureFilterType get_mag_filter() const;
+		std::uint32_t get_mag_filter() const;
 
 		void set_mag_filter(
-			const TextureFilterType mag_filter);
+			const std::uint32_t mag_filter);
 
 
-		TextureFilterType get_min_filter() const;
+		std::uint32_t get_min_filter() const;
 
 		void set_min_filter(
-			const TextureFilterType min_filter);
+			const std::uint32_t min_filter);
 
 
-		TextureFilterType get_mip_filter() const;
+		std::uint32_t get_mip_filter() const;
 
 		void set_mip_filter(
-			const TextureFilterType mip_filter);
+			const std::uint32_t mip_filter);
 
 
 		float get_lod_bias() const;
@@ -519,34 +511,34 @@ public:
 
 
 	private:
-		virtual TextureAddressingMode do_get_addressing_mode_u() const = 0;
+		virtual std::uint32_t do_get_addressing_mode_u() const = 0;
 
 		virtual void do_set_addressing_mode_u(
-			const TextureAddressingMode address_mode_u) = 0;
+			const std::uint32_t address_mode_u) = 0;
 
 
-		virtual TextureAddressingMode do_get_addressing_mode_v() const = 0;
+		virtual std::uint32_t do_get_addressing_mode_v() const = 0;
 
 		virtual void do_set_addressing_mode_v(
-			const TextureAddressingMode address_mode_v) = 0;
+			const std::uint32_t address_mode_v) = 0;
 
 
-		virtual TextureFilterType do_get_mag_filter() const = 0;
+		virtual std::uint32_t do_get_mag_filter() const = 0;
 
 		virtual void do_set_mag_filter(
-			const TextureFilterType mag_filter) = 0;
+			const std::uint32_t mag_filter) = 0;
 
 
-		virtual TextureFilterType do_get_min_filter() const = 0;
+		virtual std::uint32_t do_get_min_filter() const = 0;
 
 		virtual void do_set_min_filter(
-			const TextureFilterType min_filter) = 0;
+			const std::uint32_t min_filter) = 0;
 
 
-		virtual TextureFilterType do_get_mip_filter() const = 0;
+		virtual std::uint32_t do_get_mip_filter() const = 0;
 
 		virtual void do_set_mip_filter(
-			const TextureFilterType mip_filter) = 0;
+			const std::uint32_t mip_filter) = 0;
 
 
 		virtual float do_get_lod_bias() const = 0;
@@ -751,7 +743,7 @@ public:
 		const std::uint8_t a = 0xFF);
 
 	void clear(
-		const ClearFlags clear_flags);
+		const std::uint32_t clear_flags);
 
 	//
 	// Notes:
@@ -767,16 +759,16 @@ public:
 		const Viewport& viewport);
 
 
-	CullMode get_cull_mode() const;
+	std::uint32_t get_cull_mode() const;
 
 	void set_cull_mode(
-		const CullMode cull_mode);
+		const std::uint32_t cull_mode);
 
 
-	FillMode get_fill_mode() const;
+	std::uint32_t get_fill_mode() const;
 
 	void set_fill_mode(
-		const FillMode fill_mode);
+		const std::uint32_t fill_mode);
 
 
 	bool get_is_clipping() const;
@@ -797,10 +789,10 @@ public:
 		const bool is_writable);
 
 
-	CompareFunc get_depth_func() const;
+	std::uint32_t get_depth_func() const;
 
 	void set_depth_func(
-		const CompareFunc depth_func);
+		const std::uint32_t depth_func);
 
 
 	bool get_is_blending_enabled() const;
@@ -809,13 +801,13 @@ public:
 		const bool is_blending_enabled);
 
 
-	BlendingFactor get_src_blending_factor() const;
+	std::uint32_t get_src_blending_factor() const;
 
-	BlendingFactor get_dst_blending_factor() const;
+	std::uint32_t get_dst_blending_factor() const;
 
 	void set_blending_factors(
-		const BlendingFactor src_factor,
-		const BlendingFactor dst_factor);
+		const std::uint32_t src_factor,
+		const std::uint32_t dst_factor);
 
 
 	const float* get_world_matrix(
@@ -855,7 +847,7 @@ public:
 
 
 	void draw(
-		const PrimitiveType primitive_type,
+		const std::uint32_t primitive_type,
 		const std::uint32_t d3d_fvf,
 		const int primitive_count,
 		const void* const raw_data);
@@ -908,7 +900,7 @@ private:
 		const std::uint8_t a) = 0;
 
 	virtual void do_clear(
-		const ClearFlags clear_flags) = 0;
+		const std::uint32_t clear_flags) = 0;
 
 	// Viewport.
 	//
@@ -921,18 +913,18 @@ private:
 	// Culling.
 	//
 
-	virtual CullMode do_get_cull_mode() const = 0;
+	virtual std::uint32_t do_get_cull_mode() const = 0;
 
 	virtual void do_set_cull_mode(
-		const CullMode cull_mode) = 0;
+		const std::uint32_t cull_mode) = 0;
 
 	// Fill mode.
 	//
 
-	virtual FillMode do_get_fill_mode() const = 0;
+	virtual std::uint32_t do_get_fill_mode() const = 0;
 
 	virtual void do_set_fill_mode(
-		const FillMode fill_mode) = 0;
+		const std::uint32_t fill_mode) = 0;
 
 	// Clipping.
 	//
@@ -955,10 +947,10 @@ private:
 	virtual void do_set_is_depth_writable(
 		const bool is_writable) = 0;
 
-	virtual CompareFunc do_get_depth_func() const = 0;
+	virtual std::uint32_t do_get_depth_func() const = 0;
 
 	virtual void do_set_depth_func(
-		const CompareFunc depth_func) = 0;
+		const std::uint32_t depth_func) = 0;
 
 	// Alpha blending.
 	//
@@ -969,13 +961,13 @@ private:
 		const bool is_blending_enabled) = 0;
 
 
-	virtual BlendingFactor do_get_src_blending_factor() const = 0;
+	virtual std::uint32_t do_get_src_blending_factor() const = 0;
 
-	virtual BlendingFactor do_get_dst_blending_factor() const = 0;
+	virtual std::uint32_t do_get_dst_blending_factor() const = 0;
 
 	virtual void do_set_blending_factors(
-		const BlendingFactor src_factor,
-		const BlendingFactor dst_factor) = 0;
+		const std::uint32_t src_factor,
+		const std::uint32_t dst_factor) = 0;
 
 	// Transformation matrices.
 	//
@@ -1024,7 +1016,7 @@ private:
 	// Primitive drawing.
 	//
 	virtual void do_draw(
-		const PrimitiveType primitive_type,
+		const std::uint32_t primitive_type,
 		const std::uint32_t d3d_fvf,
 		const int primitive_count,
 		const void* const raw_data) = 0;

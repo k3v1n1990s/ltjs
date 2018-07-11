@@ -579,8 +579,8 @@ void ogl_set_test_data()
 
 	ogl_renderer.set_projection_matrix(reinterpret_cast<const float*>(&matProj));
 
-	ogl_renderer.set_cull_mode(ltjs::OglRenderer::CullMode::none);
-	ogl_renderer.set_fill_mode(ltjs::OglRenderer::FillMode::solid);
+	ogl_renderer.set_cull_mode(ltjs::OglRenderer::d3dcull_none);
+	ogl_renderer.set_fill_mode(ltjs::OglRenderer::d3dfill_solid);
 }
 
 bool ogl_initialize_internal(
@@ -671,7 +671,7 @@ void ogl_test_draw()
 		return;
 	}
 
-	ogl_test_vao_->draw(ltjs::OglRenderer::PrimitiveType::triangle_list, 1);
+	ogl_test_vao_->draw(ltjs::OglRenderer::d3dpt_trianglelist, 1);
 }
 #endif // LTJS_WIP_OGL
 

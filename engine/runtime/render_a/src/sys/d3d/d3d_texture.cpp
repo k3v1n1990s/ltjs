@@ -890,7 +890,7 @@ bool CTextureManager::UploadRTexture(TextureData* pSrcTexture, uint32 iSrcLvl, R
 				auto param = ltjs::OglRenderer::Texture::UploadParam{};
 				param.level_ = static_cast<int>(iDstLvl);
 				param.cube_face_index_ = i;
-				param.src_surface_format_ = static_cast<ltjs::OglRenderer::SurfaceFormat>(D3DSrcFormat);
+				param.src_surface_format_ = D3DSrcFormat;
 				param.src_pitch_ = static_cast<int>(SrcPitch);
 				param.raw_data_ = pSrcData;
 
@@ -941,7 +941,7 @@ bool CTextureManager::UploadRTexture(TextureData* pSrcTexture, uint32 iSrcLvl, R
 		{
 			auto param = ltjs::OglRenderer::Texture::UploadParam{};
 			param.level_ = static_cast<int>(iDstLvl);
-			param.src_surface_format_ = static_cast<ltjs::OglRenderer::SurfaceFormat>(D3DSrcFormat);
+			param.src_surface_format_ = D3DSrcFormat;
 			param.src_pitch_ = static_cast<int>(SrcPitch);
 			param.raw_data_ = pSrcData;
 
@@ -1122,7 +1122,7 @@ RTexture* CTextureManager::CreateRTexture(SharedTexture* pSharedTexture, Texture
 
 		auto param = ltjs::OglRenderer::Texture::InitializeParam{};
 		param.type_ = type;
-		param.surface_format_ = static_cast<ltjs::OglRenderer::SurfaceFormat>(iFormat);
+		param.surface_format_ = iFormat;
 		param.width_ = static_cast<int>(iTexWidth);
 		param.height_ = static_cast<int>(iTexHeight);
 		param.level_count_ = nMipsToCreate;

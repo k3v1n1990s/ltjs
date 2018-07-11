@@ -391,16 +391,16 @@ void d3d_Clear(LTRect *pRect, uint32 flags, LTRGBColor& ClearColor)
 		ogl_renderer.set_clear_color(ClearColor.rgb.r, ClearColor.rgb.g, ClearColor.rgb.b, ClearColor.rgb.a);
 		ogl_renderer.set_viewport(viewport);
 
-		auto clear_bits = ltjs::OglRenderer::ClearFlags{};
+		auto clear_bits = std::uint32_t{};
 
 		if ((flags & CLEARSCREEN_SCREEN) != 0)
 		{
-			clear_bits |= ltjs::OglRenderer::ClearFlags::target;
+			clear_bits |= ltjs::OglRenderer::d3dclear_target;
 		}
 
 		if ((flags & CLEARSCREEN_RENDER) != 0)
 		{
-			clear_bits |= ltjs::OglRenderer::ClearFlags::zbuffer | ltjs::OglRenderer::ClearFlags::stencil;
+			clear_bits |= ltjs::OglRenderer::d3dclear_zbuffer | ltjs::OglRenderer::d3dclear_stencil;
 		}
 
 		ogl_renderer.clear(clear_bits);

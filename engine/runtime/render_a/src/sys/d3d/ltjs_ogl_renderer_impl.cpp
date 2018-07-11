@@ -204,24 +204,6 @@ GLenum usage_flags_to_ogl_usage(
 	}
 }
 
-bool is_surface_format_valid(
-	const OglRenderer::SurfaceFormat& surface_format)
-{
-	switch (surface_format)
-	{
-	case OglRenderer::SurfaceFormat::a4r4g4b4:
-	case OglRenderer::SurfaceFormat::a8r8g8b8:
-	case OglRenderer::SurfaceFormat::v8u8:
-	case OglRenderer::SurfaceFormat::dxt1:
-	case OglRenderer::SurfaceFormat::dxt3:
-	case OglRenderer::SurfaceFormat::dxt5:
-		return true;
-
-	default:
-		return false;
-	}
-}
-
 
 } // namespace
 
@@ -298,6 +280,25 @@ public:
 	~OglRendererImpl() override
 	{
 		assert(!is_initialized_);
+	}
+
+
+	static bool is_surface_format_valid(
+		const std::uint32_t surface_format)
+	{
+		switch (surface_format)
+		{
+		case d3dfmt_a4r4g4b4:
+		case d3dfmt_a8r8g8b8:
+		case d3dfmt_v8u8:
+		case d3dfmt_dxt1:
+		case d3dfmt_dxt3:
+		case d3dfmt_dxt5:
+			return true;
+
+		default:
+			return false;
+		}
 	}
 
 
@@ -400,7 +401,7 @@ private:
 			const void* const raw_data) override;
 
 		void do_draw(
-			const PrimitiveType primitive_type,
+			const std::uint32_t primitive_type,
 			const int index_base,
 			const int vertex_base,
 			const int primitive_count) override;
@@ -461,7 +462,7 @@ private:
 
 		Type type_;
 		bool is_compressed_;
-		SurfaceFormat surface_format_;
+		std::uint32_t surface_format_;
 
 		int width_;
 		int height_;
@@ -488,7 +489,7 @@ private:
 
 		Type do_get_type() const override;
 
-		SurfaceFormat do_get_surface_format() const override;
+		std::uint32_t do_get_surface_format() const override;
 
 		bool do_is_compressed() const override;
 
@@ -582,12 +583,12 @@ private:
 
 
 	private:
-		static constexpr auto default_addressing_mode_u = TextureAddressingMode::wrap;
-		static constexpr auto default_addressing_mode_v = TextureAddressingMode::wrap;
+		static constexpr auto default_addressing_mode_u = d3dtaddress_wrap;
+		static constexpr auto default_addressing_mode_v = d3dtaddress_wrap;
 
-		static constexpr auto default_mag_filter = TextureFilterType::point;
-		static constexpr auto default_min_filter = TextureFilterType::point;
-		static constexpr auto default_mip_filter = TextureFilterType::none;
+		static constexpr auto default_mag_filter = d3dtexf_point;
+		static constexpr auto default_min_filter = d3dtexf_point;
+		static constexpr auto default_mip_filter = d3dtexf_none;
 
 		static constexpr auto default_lod_bias = 0.0F;
 
@@ -603,17 +604,17 @@ private:
 		GLuint ogl_sampler_;
 
 		bool is_addressing_mode_u_modified_;
-		TextureAddressingMode addressing_mode_u_;
+		std::uint32_t addressing_mode_u_;
 
 		bool is_addressing_mode_v_modified_;
-		TextureAddressingMode addressing_mode_v_;
+		std::uint32_t addressing_mode_v_;
 
 		bool is_mag_filter_modified_;
-		TextureFilterType mag_filter_;
+		std::uint32_t mag_filter_;
 
 		bool is_minmip_filter_modified_;
-		TextureFilterType min_filter_;
-		TextureFilterType mip_filter_;
+		std::uint32_t min_filter_;
+		std::uint32_t mip_filter_;
 
 		bool is_lod_bias_modified_;
 		float lod_bias_;
@@ -629,34 +630,34 @@ private:
 		// API
 		//
 
-		TextureAddressingMode do_get_addressing_mode_u() const override;
+		std::uint32_t do_get_addressing_mode_u() const override;
 
 		void do_set_addressing_mode_u(
-			const TextureAddressingMode addressing_mode_u) override;
+			const std::uint32_t addressing_mode_u) override;
 
 
-		TextureAddressingMode do_get_addressing_mode_v() const override;
+		std::uint32_t do_get_addressing_mode_v() const override;
 
 		void do_set_addressing_mode_v(
-			const TextureAddressingMode addressing_mode_v) override;
+			const std::uint32_t addressing_mode_v) override;
 
 
-		TextureFilterType do_get_mag_filter() const override;
+		std::uint32_t do_get_mag_filter() const override;
 
 		void do_set_mag_filter(
-			const TextureFilterType mag_filter) override;
+			const std::uint32_t mag_filter) override;
 
 
-		TextureFilterType do_get_min_filter() const override;
+		std::uint32_t do_get_min_filter() const override;
 
 		void do_set_min_filter(
-			const TextureFilterType min_filter) override;
+			const std::uint32_t min_filter) override;
 
 
-		TextureFilterType do_get_mip_filter() const override;
+		std::uint32_t do_get_mip_filter() const override;
 
 		void do_set_mip_filter(
-			const TextureFilterType mip_filter) override;
+			const std::uint32_t mip_filter) override;
 
 
 		float do_get_lod_bias() const override;
@@ -709,14 +710,14 @@ private:
 
 
 		static GLenum get_ogl_addressing_mode(
-			const TextureAddressingMode d3d_addressing_mode);
+			const std::uint32_t d3d_addressing_mode);
 
 		static GLenum get_ogl_mag_filter(
-			const TextureFilterType d3d_mag_filter);
+			const std::uint32_t d3d_mag_filter);
 
 		static GLenum get_ogl_min_filter(
-			const TextureFilterType d3d_min_filter,
-			const TextureFilterType d3d_mip_filter);
+			const std::uint32_t d3d_min_filter,
+			const std::uint32_t d3d_mip_filter);
 	}; // SamplerImpl
 
 	using Samplers = std::vector<SamplerImpl>;
@@ -1038,18 +1039,18 @@ private:
 	Viewport viewport_;
 	ViewportSize max_viewport_size_;
 
-	CullMode cull_mode_;
-	FillMode fill_mode_;
+	std::uint32_t cull_mode_;
+	std::uint32_t fill_mode_;
 
 	bool is_clipping_;
 
 	bool is_depth_enabled_;
 	bool is_depth_writable_;
-	CompareFunc depth_func_;
+	std::uint32_t depth_func_;
 
 	bool is_blending_enabled_;
-	BlendingFactor src_blending_factor_;
-	BlendingFactor dst_blending_factor_;
+	std::uint32_t src_blending_factor_;
+	std::uint32_t dst_blending_factor_;
 
 
 	GLuint vertex_shader_;
@@ -1098,18 +1099,18 @@ private:
 	static std::uint8_t default_clear_color_b;
 	static std::uint8_t default_clear_color_a;
 
-	static const CullMode default_cull_mode;
-	static const FillMode default_fill_mode;
+	static const std::uint32_t default_cull_mode;
+	static const std::uint32_t default_fill_mode;
 
 	static const bool default_is_clipping;
 
 	static const bool default_is_depth_enabled;
 	static const bool default_is_depth_writable;
-	static const CompareFunc default_depth_func;
+	static const std::uint32_t default_depth_func;
 
 	static const bool default_is_blending_enabled;
-	static const BlendingFactor default_src_blending_factor;
-	static const BlendingFactor default_dst_blending_factor;
+	static const std::uint32_t default_src_blending_factor;
+	static const std::uint32_t default_dst_blending_factor;
 
 	static const bool default_has_diffuse;
 
@@ -1203,7 +1204,7 @@ private:
 	}
 
 	void do_clear(
-		const ClearFlags clear_flags) override
+		const std::uint32_t clear_flags) override
 	{
 		if (!is_initialized_ || !is_current_context_)
 		{
@@ -1275,14 +1276,14 @@ private:
 		}
 	}
 
-	CullMode do_get_cull_mode() const override
+	std::uint32_t do_get_cull_mode() const override
 	{
 		assert(is_initialized_);
 		return cull_mode_;
 	}
 
 	void do_set_cull_mode(
-		const CullMode cull_mode) override
+		const std::uint32_t cull_mode) override
 	{
 		if (!is_initialized_ || !is_current_context_)
 		{
@@ -1295,22 +1296,22 @@ private:
 			return;
 		}
 
-		const auto is_old_enabled = (cull_mode_ != CullMode::none);
-		const auto is_new_enabled = (cull_mode != CullMode::none);
+		const auto is_old_enabled = (cull_mode_ != d3dcull_none);
+		const auto is_new_enabled = (cull_mode != d3dcull_none);
 
 		cull_mode_ = cull_mode;
 
 		set_cull_mode_internal(is_old_enabled != is_new_enabled);
 	}
 
-	FillMode do_get_fill_mode() const override
+	std::uint32_t do_get_fill_mode() const override
 	{
 		assert(is_initialized_);
 		return fill_mode_;
 	}
 
 	void do_set_fill_mode(
-		const FillMode fill_mode) override
+		const std::uint32_t fill_mode) override
 	{
 		if (!is_initialized_ || !is_current_context_)
 		{
@@ -1420,14 +1421,14 @@ private:
 		set_is_depth_writable_internal();
 	}
 
-	CompareFunc do_get_depth_func() const override
+	std::uint32_t do_get_depth_func() const override
 	{
 		assert(is_initialized_);
 		return depth_func_;
 	}
 
 	void do_set_depth_func(
-		const CompareFunc depth_func) override
+		const std::uint32_t depth_func) override
 	{
 		if (!is_initialized_ || !is_current_context_)
 		{
@@ -1468,21 +1469,21 @@ private:
 		set_is_blending_enabled_internal();
 	}
 
-	BlendingFactor do_get_src_blending_factor() const override
+	std::uint32_t do_get_src_blending_factor() const override
 	{
 		assert(is_initialized_);
 		return src_blending_factor_;
 	}
 
-	BlendingFactor do_get_dst_blending_factor() const override
+	std::uint32_t do_get_dst_blending_factor() const override
 	{
 		assert(is_initialized_);
 		return dst_blending_factor_;
 	}
 
 	void do_set_blending_factors(
-		const BlendingFactor src_factor,
-		const BlendingFactor dst_factor) override
+		const std::uint32_t src_factor,
+		const std::uint32_t dst_factor) override
 	{
 		if (!is_initialized_ || !is_current_context_)
 		{
@@ -1689,7 +1690,7 @@ private:
 	}
 
 	void do_draw(
-		const PrimitiveType primitive_type,
+		const std::uint32_t primitive_type,
 		const std::uint32_t d3d_fvf,
 		const int primitive_count,
 		const void* const raw_data) override
@@ -1876,18 +1877,18 @@ private:
 		viewport_ = {};
 		max_viewport_size_ = {};
 
-		cull_mode_ = CullMode::none;
-		fill_mode_ = FillMode::none;
+		cull_mode_ = d3dcull_none;
+		fill_mode_ = 0;
 
 		is_clipping_ = false;
 
 		is_depth_enabled_ = false;
 		is_depth_writable_ = false;
-		depth_func_ = CompareFunc::none;
+		depth_func_ = 0;
 
 		is_blending_enabled_ = false;
-		src_blending_factor_ = BlendingFactor::none;
-		dst_blending_factor_ = BlendingFactor::none;
+		src_blending_factor_ = 0;
+		dst_blending_factor_ = 0;
 
 		if (program_)
 		{
@@ -1975,19 +1976,19 @@ private:
 	void set_cull_mode_internal(
 		const bool enforce_cull_face)
 	{
-		const auto is_cull_face_enabled = (cull_mode_ != CullMode::none);
+		const auto is_cull_face_enabled = (cull_mode_ != d3dcull_none);
 
 		switch (cull_mode_)
 		{
-		case CullMode::none:
+		case d3dcull_none:
 			break;
 
-		case CullMode::cw:
+		case d3dcull_cw:
 			::glCullFace(GL_FRONT);
 			assert(ogl_is_succeed());
 			break;
 
-		case CullMode::ccw:
+		case d3dcull_ccw:
 			::glCullFace(GL_BACK);
 			assert(ogl_is_succeed());
 			break;
@@ -2831,21 +2832,21 @@ private:
 	}
 
 	static GLbitfield get_ogl_clear_flags(
-		const ClearFlags d3d_clear_flags)
+		const std::uint32_t d3d_clear_flags)
 	{
 		auto ogl_clear_flags = GLbitfield{};
 
-		if ((d3d_clear_flags & ClearFlags::target) != 0)
+		if ((d3d_clear_flags & d3dclear_target) != 0)
 		{
 			ogl_clear_flags |= GL_COLOR_BUFFER_BIT;
 		}
 
-		if ((d3d_clear_flags & ClearFlags::zbuffer) != 0)
+		if ((d3d_clear_flags & d3dclear_zbuffer) != 0)
 		{
 			ogl_clear_flags |= GL_DEPTH_BUFFER_BIT;
 		}
 
-		if ((d3d_clear_flags & ClearFlags::stencil) != 0)
+		if ((d3d_clear_flags & d3dclear_stencil) != 0)
 		{
 			ogl_clear_flags |= GL_STENCIL_BUFFER_BIT;
 		}
@@ -2854,14 +2855,14 @@ private:
 	}
 
 	static GLenum get_ogl_fill_mode(
-		const FillMode d3d_fill_mode)
+		const std::uint32_t d3d_fill_mode)
 	{
 		switch (d3d_fill_mode)
 		{
-		case FillMode::wireframe:
+		case d3dfill_wireframe:
 			return GL_LINE;
 
-		case FillMode::solid:
+		case d3dfill_solid:
 			return GL_FILL;
 
 		default:
@@ -2871,29 +2872,29 @@ private:
 	}
 
 	static GLenum get_ogl_compare_func(
-		const CompareFunc d3d_depth_func)
+		const std::uint32_t d3d_depth_func)
 	{
 		switch (d3d_depth_func)
 		{
-		case CompareFunc::always:
+		case d3dcmp_always:
 			return GL_ALWAYS;
 
-		case CompareFunc::equal:
+		case d3dcmp_equal:
 			return GL_EQUAL;
 
-		case CompareFunc::greater:
+		case d3dcmp_greater:
 			return GL_GREATER;
 
-		case CompareFunc::greater_or_equal:
+		case d3dcmp_greaterequal:
 			return GL_GEQUAL;
 
-		case CompareFunc::less:
+		case d3dcmp_less:
 			return GL_LESS;
 
-		case CompareFunc::less_or_equal:
+		case d3dcmp_lessequal:
 			return GL_LEQUAL;
 
-		case CompareFunc::not_equal:
+		case d3dcmp_notequal:
 			return GL_NOTEQUAL;
 
 		default:
@@ -2903,32 +2904,32 @@ private:
 	}
 
 	static GLenum get_ogl_blending_factor(
-		const BlendingFactor blending_factor)
+		const std::uint32_t blending_factor)
 	{
 		switch (blending_factor)
 		{
-		case OglRenderer::BlendingFactor::zero:
+		case d3dblend_zero:
 			return GL_ZERO;
 
-		case OglRenderer::BlendingFactor::one:
+		case d3dblend_one:
 			return GL_ONE;
 
-		case OglRenderer::BlendingFactor::src_alpha:
+		case d3dblend_srcalpha:
 			return GL_SRC_ALPHA;
 
-		case OglRenderer::BlendingFactor::src_color:
+		case d3dblend_srccolor:
 			return GL_SRC_COLOR;
 
-		case OglRenderer::BlendingFactor::inv_src_alpha:
+		case d3dblend_invsrcalpha:
 			return GL_ONE_MINUS_SRC_ALPHA;
 
-		case OglRenderer::BlendingFactor::inv_src_color:
+		case d3dblend_invsrccolor:
 			return GL_ONE_MINUS_SRC_COLOR;
 
-		case OglRenderer::BlendingFactor::dst_color:
+		case d3dblend_destcolor:
 			return GL_DST_COLOR;
 
-		case OglRenderer::BlendingFactor::inv_dst_color:
+		case d3dblend_invdestcolor:
 			return GL_ONE_MINUS_DST_COLOR;
 
 		default:
@@ -2938,7 +2939,7 @@ private:
 	}
 
 	static int calculate_vertex_count(
-		const PrimitiveType primitive_type,
+		const std::uint32_t primitive_type,
 		const int primitive_count)
 	{
 		if (primitive_count <= 0)
@@ -2954,11 +2955,11 @@ private:
 
 		switch (primitive_type)
 		{
-		case PrimitiveType::triangle_fan:
-		case PrimitiveType::triangle_strip:
+		case d3dpt_trianglefan:
+		case d3dpt_trianglestrip:
 			return 3 + (primitive_count - 1);
 
-		case PrimitiveType::triangle_list:
+		case d3dpt_trianglelist:
 			return 3 * primitive_count;
 
 		default:
@@ -2968,17 +2969,17 @@ private:
 	}
 
 	static GLenum get_ogl_primitive_type(
-		const PrimitiveType primitive_type)
+		const std::uint32_t primitive_type)
 	{
 		switch (primitive_type)
 		{
-		case PrimitiveType::triangle_fan:
+		case d3dpt_trianglefan:
 			return GL_TRIANGLE_FAN;
 
-		case PrimitiveType::triangle_strip:
+		case d3dpt_trianglestrip:
 			return GL_TRIANGLE_STRIP;
 
-		case PrimitiveType::triangle_list:
+		case d3dpt_trianglelist:
 			return GL_TRIANGLES;
 
 		default:
@@ -2999,18 +3000,18 @@ std::uint8_t OglRendererImpl::default_clear_color_g = 0;
 std::uint8_t OglRendererImpl::default_clear_color_b = 0;
 std::uint8_t OglRendererImpl::default_clear_color_a = 0;
 
-const OglRenderer::CullMode OglRendererImpl::default_cull_mode = OglRenderer::CullMode::ccw;
-const OglRenderer::FillMode OglRendererImpl::default_fill_mode = OglRenderer::FillMode::solid;
+const std::uint32_t OglRendererImpl::default_cull_mode = d3dcull_ccw;
+const std::uint32_t OglRendererImpl::default_fill_mode = d3dfill_solid;
 
 const bool OglRendererImpl::default_is_clipping = true;
 
 const bool OglRendererImpl::default_is_depth_enabled = true;
 const bool OglRendererImpl::default_is_depth_writable = true;
-const OglRendererImpl::CompareFunc OglRendererImpl::default_depth_func = OglRenderer::CompareFunc::less_or_equal;
+const std::uint32_t OglRendererImpl::default_depth_func = d3dcmp_lessequal;
 
 const bool OglRendererImpl::default_is_blending_enabled = false;
-const OglRenderer::BlendingFactor OglRendererImpl::default_src_blending_factor = OglRenderer::BlendingFactor::one;
-const OglRenderer::BlendingFactor OglRendererImpl::default_dst_blending_factor = OglRenderer::BlendingFactor::zero;
+const std::uint32_t OglRendererImpl::default_src_blending_factor = d3dblend_one;
+const std::uint32_t OglRendererImpl::default_dst_blending_factor = d3dblend_zero;
 
 const bool OglRendererImpl::default_has_diffuse = false;
 
@@ -3478,7 +3479,7 @@ void OglRendererImpl::VertexArrayObjectImpl::do_set_vertex_data(
 }
 
 void OglRendererImpl::VertexArrayObjectImpl::do_draw(
-	const PrimitiveType primitive_type,
+	const std::uint32_t primitive_type,
 	const int index_base,
 	const int vertex_base,
 	const int primitive_count)
@@ -3661,14 +3662,14 @@ void OglRendererImpl::VertexArrayObject::set_vertex_data(
 }
 
 void OglRendererImpl::VertexArrayObject::draw(
-	const PrimitiveType primitive_type,
+	const std::uint32_t primitive_type,
 	const int primitive_count)
 {
 	do_draw(primitive_type, 0, 0, primitive_count);
 }
 
 void OglRendererImpl::VertexArrayObject::draw(
-	const PrimitiveType primitive_type,
+	const std::uint32_t primitive_type,
 	const int vertex_base,
 	const int primitive_count)
 {
@@ -3676,7 +3677,7 @@ void OglRendererImpl::VertexArrayObject::draw(
 }
 
 void OglRendererImpl::VertexArrayObject::draw(
-	const PrimitiveType primitive_type,
+	const std::uint32_t primitive_type,
 	const int index_base,
 	const int vertex_base,
 	const int primitive_count)
@@ -3762,17 +3763,17 @@ void OglRendererImpl::SamplerImpl::uninitialize_internal()
 	}
 
 	is_addressing_mode_u_modified_ = false;
-	addressing_mode_u_ = TextureAddressingMode::none;
+	addressing_mode_u_ = 0;
 
 	is_addressing_mode_v_modified_ = false;
-	addressing_mode_v_ = TextureAddressingMode::none;
+	addressing_mode_v_ = 0;
 
 	is_mag_filter_modified_ = false;
-	mag_filter_ = TextureFilterType::none;
+	mag_filter_ = d3dtexf_none;
 
 	is_minmip_filter_modified_ = false;
-	min_filter_ = TextureFilterType::none;
-	mip_filter_ = TextureFilterType::none;
+	min_filter_ = d3dtexf_none;
+	mip_filter_ = d3dtexf_none;
 
 	is_lod_bias_modified_ = false;
 	lod_bias_ = 0.0F;
@@ -3806,14 +3807,14 @@ void OglRendererImpl::SamplerImpl::apply_modifications()
 	apply_anisotropy_modifications();
 }
 
-OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerImpl::do_get_addressing_mode_u() const
+std::uint32_t OglRendererImpl::SamplerImpl::do_get_addressing_mode_u() const
 {
 	assert(is_initialized_);
 	return addressing_mode_u_;
 }
 
 void OglRendererImpl::SamplerImpl::do_set_addressing_mode_u(
-	const TextureAddressingMode addressing_mode_u)
+	const std::uint32_t addressing_mode_u)
 {
 	if (!is_initialized_)
 	{
@@ -3823,8 +3824,8 @@ void OglRendererImpl::SamplerImpl::do_set_addressing_mode_u(
 
 	switch (addressing_mode_u)
 	{
-	case TextureAddressingMode::clamp:
-	case TextureAddressingMode::wrap:
+	case d3dtaddress_clamp:
+	case d3dtaddress_wrap:
 		break;
 
 	default:
@@ -3843,14 +3844,14 @@ void OglRendererImpl::SamplerImpl::do_set_addressing_mode_u(
 	addressing_mode_u_ = addressing_mode_u;
 }
 
-OglRendererImpl::TextureAddressingMode OglRendererImpl::SamplerImpl::do_get_addressing_mode_v() const
+std::uint32_t OglRendererImpl::SamplerImpl::do_get_addressing_mode_v() const
 {
 	assert(is_initialized_);
 	return addressing_mode_v_;
 }
 
 void OglRendererImpl::SamplerImpl::do_set_addressing_mode_v(
-	const TextureAddressingMode addressing_mode_v)
+	const std::uint32_t addressing_mode_v)
 {
 	if (!is_initialized_)
 	{
@@ -3860,8 +3861,8 @@ void OglRendererImpl::SamplerImpl::do_set_addressing_mode_v(
 
 	switch (addressing_mode_v)
 	{
-	case TextureAddressingMode::clamp:
-	case TextureAddressingMode::wrap:
+	case d3dtaddress_clamp:
+	case d3dtaddress_wrap:
 		break;
 
 	default:
@@ -3880,14 +3881,14 @@ void OglRendererImpl::SamplerImpl::do_set_addressing_mode_v(
 	addressing_mode_v_ = addressing_mode_v;
 }
 
-OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_mag_filter() const
+std::uint32_t OglRendererImpl::SamplerImpl::do_get_mag_filter() const
 {
 	assert(is_initialized_);
 	return mag_filter_;
 }
 
 void OglRendererImpl::SamplerImpl::do_set_mag_filter(
-	const TextureFilterType mag_filter)
+	const std::uint32_t mag_filter)
 {
 	if (!is_initialized_)
 	{
@@ -3906,14 +3907,14 @@ void OglRendererImpl::SamplerImpl::do_set_mag_filter(
 	mag_filter_ = mag_filter;
 }
 
-OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_min_filter() const
+std::uint32_t OglRendererImpl::SamplerImpl::do_get_min_filter() const
 {
 	assert(is_initialized_);
 	return min_filter_;
 }
 
 void OglRendererImpl::SamplerImpl::do_set_min_filter(
-	const TextureFilterType min_filter)
+	const std::uint32_t min_filter)
 {
 	if (!is_initialized_)
 	{
@@ -3932,14 +3933,14 @@ void OglRendererImpl::SamplerImpl::do_set_min_filter(
 	min_filter_ = min_filter;
 }
 
-OglRendererImpl::TextureFilterType OglRendererImpl::SamplerImpl::do_get_mip_filter() const
+std::uint32_t OglRendererImpl::SamplerImpl::do_get_mip_filter() const
 {
 	assert(is_initialized_);
 	return mip_filter_;
 }
 
 void OglRendererImpl::SamplerImpl::do_set_mip_filter(
-	const TextureFilterType mip_filter)
+	const std::uint32_t mip_filter)
 {
 	if (!is_initialized_)
 	{
@@ -4186,14 +4187,14 @@ void OglRendererImpl::SamplerImpl::apply_anisotropy_modifications()
 }
 
 GLenum OglRendererImpl::SamplerImpl::get_ogl_addressing_mode(
-	const TextureAddressingMode d3d_addressing_mode)
+	const std::uint32_t d3d_addressing_mode)
 {
 	switch (d3d_addressing_mode)
 	{
-	case OglRenderer::TextureAddressingMode::clamp:
+	case d3dtaddress_clamp:
 		return GL_CLAMP_TO_EDGE;
 
-	case OglRenderer::TextureAddressingMode::wrap:
+	case d3dtaddress_wrap:
 		return GL_REPEAT;
 
 	default:
@@ -4203,15 +4204,15 @@ GLenum OglRendererImpl::SamplerImpl::get_ogl_addressing_mode(
 }
 
 GLenum OglRendererImpl::SamplerImpl::get_ogl_mag_filter(
-	const TextureFilterType d3d_mag_filter)
+	const std::uint32_t d3d_mag_filter)
 {
 	switch (d3d_mag_filter)
 	{
-	case TextureFilterType::point:
+	case d3dtexf_point:
 		return GL_NEAREST;
 
-	case TextureFilterType::linear:
-	case TextureFilterType::anisotropic:
+	case d3dtexf_linear:
+	case d3dtexf_anisotropic:
 		return GL_LINEAR;
 
 	default:
@@ -4221,18 +4222,18 @@ GLenum OglRendererImpl::SamplerImpl::get_ogl_mag_filter(
 }
 
 GLenum OglRendererImpl::SamplerImpl::get_ogl_min_filter(
-	const TextureFilterType d3d_min_filter,
-	const TextureFilterType d3d_mip_filter)
+	const std::uint32_t d3d_min_filter,
+	const std::uint32_t d3d_mip_filter)
 {
 	switch (d3d_min_filter)
 	{
-	case TextureFilterType::point:
+	case d3dtexf_point:
 		switch (d3d_mip_filter)
 		{
-		case TextureFilterType::none:
+		case d3dtexf_none:
 			return GL_NEAREST;
 
-		case TextureFilterType::point:
+		case d3dtexf_point:
 			return GL_NEAREST_MIPMAP_NEAREST;
 
 		default:
@@ -4241,13 +4242,13 @@ GLenum OglRendererImpl::SamplerImpl::get_ogl_min_filter(
 		}
 		break;
 
-	case TextureFilterType::linear:
+	case d3dtexf_linear:
 		switch (d3d_mip_filter)
 		{
-		case TextureFilterType::none:
+		case d3dtexf_none:
 			return GL_LINEAR;
 
-		case TextureFilterType::point:
+		case d3dtexf_point:
 			return GL_LINEAR_MIPMAP_NEAREST;
 
 		default:
@@ -4256,13 +4257,13 @@ GLenum OglRendererImpl::SamplerImpl::get_ogl_min_filter(
 		}
 		break;
 
-	case TextureFilterType::anisotropic:
+	case d3dtexf_anisotropic:
 		switch (d3d_mip_filter)
 		{
-		case TextureFilterType::none:
+		case d3dtexf_none:
 			return GL_LINEAR;
 
-		case TextureFilterType::point:
+		case d3dtexf_point:
 			return GL_LINEAR_MIPMAP_LINEAR;
 
 		default:
@@ -4294,57 +4295,57 @@ OglRenderer::Sampler::~Sampler()
 {
 }
 
-OglRenderer::TextureAddressingMode OglRenderer::Sampler::get_addressing_mode_u() const
+std::uint32_t OglRenderer::Sampler::get_addressing_mode_u() const
 {
 	return do_get_addressing_mode_u();
 }
 
 void OglRenderer::Sampler::set_addressing_mode_u(
-	const TextureAddressingMode addressing_mode_u)
+	const std::uint32_t addressing_mode_u)
 {
 	do_set_addressing_mode_u(addressing_mode_u);
 }
 
-OglRenderer::TextureAddressingMode OglRenderer::Sampler::get_addressing_mode_v() const
+std::uint32_t OglRenderer::Sampler::get_addressing_mode_v() const
 {
 	return do_get_addressing_mode_v();
 }
 
 void OglRenderer::Sampler::set_addressing_mode_v(
-	const TextureAddressingMode addressing_mode_v)
+	const std::uint32_t addressing_mode_v)
 {
 	do_set_addressing_mode_v(addressing_mode_v);
 }
 
-OglRenderer::TextureFilterType OglRenderer::Sampler::get_mag_filter() const
+std::uint32_t OglRenderer::Sampler::get_mag_filter() const
 {
 	return do_get_mag_filter();
 }
 
 void OglRenderer::Sampler::set_mag_filter(
-	const TextureFilterType mag_filter)
+	const std::uint32_t mag_filter)
 {
 	do_set_mag_filter(mag_filter);
 }
 
-OglRenderer::TextureFilterType OglRenderer::Sampler::get_min_filter() const
+std::uint32_t OglRenderer::Sampler::get_min_filter() const
 {
 	return do_get_min_filter();
 }
 
 void OglRenderer::Sampler::set_min_filter(
-	const TextureFilterType min_filter)
+	const std::uint32_t min_filter)
 {
 	do_set_min_filter(min_filter);
 }
 
-OglRenderer::TextureFilterType OglRenderer::Sampler::get_mip_filter() const
+std::uint32_t OglRenderer::Sampler::get_mip_filter() const
 {
 	return do_get_mip_filter();
 }
 
 void OglRenderer::Sampler::set_mip_filter(
-	const TextureFilterType mip_filter)
+	const std::uint32_t mip_filter)
 {
 	do_set_mip_filter(mip_filter);
 }
@@ -4515,11 +4516,11 @@ bool OglRendererImpl::TextureImpl::do_upload_level(
 
 	if (param.has_linear_filter_)
 	{
-		if (param.src_surface_format_ == SurfaceFormat::a4r4g4b4 && surface_format_ == SurfaceFormat::a4r4g4b4)
+		if (param.src_surface_format_ == d3dfmt_a4r4g4b4 && surface_format_ == d3dfmt_a4r4g4b4)
 		{
 			return upload_level_a4r4g4b4_linear(param);
 		}
-		else if (param.src_surface_format_ == SurfaceFormat::a8r8g8b8 && surface_format_ == SurfaceFormat::v8u8)
+		else if (param.src_surface_format_ == d3dfmt_a8r8g8b8 && surface_format_ == d3dfmt_v8u8)
 		{
 			return upload_level_a8r8g8b8_to_v8u8_linear(param);
 		}
@@ -4549,7 +4550,7 @@ OglRenderer::Texture::Type OglRendererImpl::TextureImpl::do_get_type() const
 	return type_;
 }
 
-OglRenderer::SurfaceFormat OglRendererImpl::TextureImpl::do_get_surface_format() const
+std::uint32_t OglRendererImpl::TextureImpl::do_get_surface_format() const
 {
 	assert(is_initialized_);
 	return surface_format_;
@@ -4611,15 +4612,15 @@ bool OglRendererImpl::TextureImpl::initialize_internal(
 
 	switch (surface_format_)
 	{
-	case SurfaceFormat::a4r4g4b4:
-	case SurfaceFormat::a8r8g8b8:
-	case SurfaceFormat::v8u8:
+	case d3dfmt_a4r4g4b4:
+	case d3dfmt_a8r8g8b8:
+	case d3dfmt_v8u8:
 		is_compressed_ = false;
 		break;
 
-	case SurfaceFormat::dxt1:
-	case SurfaceFormat::dxt3:
-	case SurfaceFormat::dxt5:
+	case d3dfmt_dxt1:
+	case d3dfmt_dxt3:
+	case d3dfmt_dxt5:
 		if (!ogl_renderer_.has_gl_ext_texture_compression_s3tc_)
 		{
 			assert(!"DXTC not supported.");
@@ -4894,7 +4895,7 @@ void OglRendererImpl::TextureImpl::uninitialize_internal()
 
 	type_ = Type::none;
 	is_compressed_ = false;
-	surface_format_ = SurfaceFormat::none;
+	surface_format_ = d3dfmt_unknown;
 	width_ = 0;
 	height_ = 0;
 	level_count_ = 0;
@@ -4930,16 +4931,16 @@ int OglRendererImpl::TextureImpl::get_ogl_internal_pixel_format() const
 {
 	switch (surface_format_)
 	{
-	case SurfaceFormat::a4r4g4b4:
+	case d3dfmt_a4r4g4b4:
 		return GL_RGBA4;
 
-	case SurfaceFormat::a8r8g8b8:
+	case d3dfmt_a8r8g8b8:
 		return GL_RGBA8;
 
-	case SurfaceFormat::v8u8:
+	case d3dfmt_v8u8:
 		return GL_RG8_SNORM;
 
-	case SurfaceFormat::dxt1:
+	case d3dfmt_dxt1:
 		if (!ogl_renderer_.has_gl_ext_texture_compression_s3tc_)
 		{
 			return invalid_ogl_format;
@@ -4947,7 +4948,7 @@ int OglRendererImpl::TextureImpl::get_ogl_internal_pixel_format() const
 
 		return GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
 
-	case SurfaceFormat::dxt3:
+	case d3dfmt_dxt3:
 		if (!ogl_renderer_.has_gl_ext_texture_compression_s3tc_)
 		{
 			return invalid_ogl_format;
@@ -4955,7 +4956,7 @@ int OglRendererImpl::TextureImpl::get_ogl_internal_pixel_format() const
 
 		return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
 
-	case SurfaceFormat::dxt5:
+	case d3dfmt_dxt5:
 		if (!ogl_renderer_.has_gl_ext_texture_compression_s3tc_)
 		{
 			return invalid_ogl_format;
@@ -4978,23 +4979,26 @@ void OglRendererImpl::TextureImpl::get_ogl_pixel_format_and_type(
 
 	switch (surface_format_)
 	{
-	case SurfaceFormat::a4r4g4b4:
+	case d3dfmt_a4r4g4b4:
 		format = GL_BGRA;
 		type = GL_UNSIGNED_SHORT_4_4_4_4;
 		break;
 
-	case SurfaceFormat::a8r8g8b8:
+	case d3dfmt_a8r8g8b8:
 		format = GL_BGRA;
 		type = GL_UNSIGNED_BYTE;
 		break;
 
-	case SurfaceFormat::v8u8:
+	case d3dfmt_v8u8:
 		format = GL_RG;
 		type = GL_UNSIGNED_BYTE;
 
-	case SurfaceFormat::dxt1:
-	case SurfaceFormat::dxt3:
-	case SurfaceFormat::dxt5:
+	case d3dfmt_dxt1:
+	case d3dfmt_dxt3:
+	case d3dfmt_dxt5:
+		assert(!"Compressed surface formats not supported.");
+		break;
+
 	default:
 		assert(!"Unsupported surface format.");
 		break;
@@ -5009,12 +5013,12 @@ int OglRendererImpl::TextureImpl::calculate_compressed_image_size(
 
 	switch (surface_format_)
 	{
-	case SurfaceFormat::dxt1:
+	case d3dfmt_dxt1:
 		block_size = 8;
 		break;
 
-	case SurfaceFormat::dxt3:
-	case SurfaceFormat::dxt5:
+	case d3dfmt_dxt3:
+	case d3dfmt_dxt5:
 		block_size = 16;
 		break;
 
@@ -5338,17 +5342,8 @@ bool OglRenderer::Texture::InitializeParam::is_valid() const
 		return false;
 	}
 
-	switch (surface_format_)
+	if (!OglRendererImpl::is_surface_format_valid(surface_format_))
 	{
-	case SurfaceFormat::a4r4g4b4:
-	case SurfaceFormat::a8r8g8b8:
-	case SurfaceFormat::v8u8:
-	case SurfaceFormat::dxt1:
-	case SurfaceFormat::dxt3:
-	case SurfaceFormat::dxt5:
-		break;
-
-	default:
 		assert(!"Unsupported surface format.");
 		return false;
 	}
@@ -5396,7 +5391,7 @@ bool OglRenderer::Texture::UploadParam::is_valid() const
 		return false;
 	}
 
-	if (!is_surface_format_valid(src_surface_format_))
+	if (!OglRendererImpl::is_surface_format_valid(src_surface_format_))
 	{
 		assert(!"Unsupported source surface format.");
 		return false;
@@ -5456,7 +5451,7 @@ OglRenderer::Texture::Type OglRenderer::Texture::get_type() const
 	return do_get_type();
 }
 
-OglRenderer::SurfaceFormat OglRenderer::Texture::get_surface_format() const
+std::uint32_t OglRenderer::Texture::get_surface_format() const
 {
 	return do_get_surface_format();
 }
@@ -6906,7 +6901,7 @@ const OglRenderer::Viewport& OglRenderer::get_viewport() const
 }
 
 void OglRenderer::clear(
-	const ClearFlags clear_flags)
+	const std::uint32_t clear_flags)
 {
 	do_clear(clear_flags);
 }
@@ -6917,24 +6912,24 @@ void OglRenderer::set_viewport(
 	do_set_viewport(viewport);
 }
 
-OglRenderer::CullMode OglRenderer::get_cull_mode() const
+std::uint32_t OglRenderer::get_cull_mode() const
 {
 	return do_get_cull_mode();
 }
 
 void OglRenderer::set_cull_mode(
-	const CullMode cull_mode)
+	const std::uint32_t cull_mode)
 {
 	do_set_cull_mode(cull_mode);
 }
 
-OglRenderer::FillMode OglRenderer::get_fill_mode() const
+std::uint32_t OglRenderer::get_fill_mode() const
 {
 	return do_get_fill_mode();
 }
 
 void OglRenderer::set_fill_mode(
-	const FillMode fill_mode)
+	const std::uint32_t fill_mode)
 {
 	do_set_fill_mode(fill_mode);
 }
@@ -6972,13 +6967,13 @@ void OglRenderer::set_is_depth_writable(
 	do_set_is_depth_writable(is_writable);
 }
 
-OglRenderer::CompareFunc OglRenderer::get_depth_func() const
+std::uint32_t OglRenderer::get_depth_func() const
 {
 	return do_get_depth_func();
 }
 
 void OglRenderer::set_depth_func(
-	const CompareFunc depth_func)
+	const std::uint32_t depth_func)
 {
 	do_set_depth_func(depth_func);
 }
@@ -6994,19 +6989,19 @@ void OglRenderer::set_is_blending_enabled(
 	do_set_is_blending_enabled(is_blending_enabled);
 }
 
-OglRenderer::BlendingFactor OglRenderer::get_src_blending_factor() const
+std::uint32_t OglRenderer::get_src_blending_factor() const
 {
 	return do_get_src_blending_factor();
 }
 
-OglRenderer::BlendingFactor OglRenderer::get_dst_blending_factor() const
+std::uint32_t OglRenderer::get_dst_blending_factor() const
 {
 	return do_get_dst_blending_factor();
 }
 
 void OglRenderer::set_blending_factors(
-	const BlendingFactor src_blending_function,
-	const BlendingFactor dst_blending_function)
+	const std::uint32_t src_blending_function,
+	const std::uint32_t dst_blending_function)
 {
 	do_set_blending_factors(src_blending_function, dst_blending_function);
 }
@@ -7075,7 +7070,7 @@ void OglRenderer::remove_texture(
 }
 
 void OglRenderer::draw(
-	const PrimitiveType primitive_type,
+	const std::uint32_t primitive_type,
 	const std::uint32_t d3d_fvf,
 	const int primitive_count,
 	const void* const raw_data)
