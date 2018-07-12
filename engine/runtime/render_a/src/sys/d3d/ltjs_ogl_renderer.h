@@ -179,9 +179,50 @@ public:
 	static constexpr std::uint32_t d3dttff_count3 = 3;
 	static constexpr std::uint32_t d3dttff_projected = 256;
 
+
+	//
 	// Direct3D 9 usage flags.
+	//
+
 	static constexpr std::uint32_t d3dusage_writeonly = 0x00000008;
 	static constexpr std::uint32_t d3dusage_dynamic = 0x00000200;
+
+
+	//
+	// Direct3D 9 flexible vertex formats.
+	//
+	static constexpr std::uint32_t d3dfvf_xyz = 0x002;
+	static constexpr std::uint32_t d3dfvf_xyzrhw = 0x004;
+	static constexpr std::uint32_t d3dfvf_xyzb1 = 0x006;
+	static constexpr std::uint32_t d3dfvf_xyzb2 = 0x008;
+	static constexpr std::uint32_t d3dfvf_xyzb3 = 0x00A;
+	static constexpr std::uint32_t d3dfvf_normal = 0x010;
+	static constexpr std::uint32_t d3dfvf_diffuse = 0x040;
+	static constexpr std::uint32_t d3dfvf_tex1 = 0x100;
+	static constexpr std::uint32_t d3dfvf_tex2 = 0x200;
+	static constexpr std::uint32_t d3dfvf_tex3 = 0x300;
+	static constexpr std::uint32_t d3dfvf_tex4 = 0x400;
+	static constexpr std::uint32_t d3dfvf_textureformat2 = 0;
+	static constexpr std::uint32_t d3dfvf_textureformat3 = 1;
+	static constexpr std::uint32_t d3dfvf_textureformat4 = 2;
+
+	static constexpr std::uint32_t d3dfvf_texcoordsize2(
+		const int index)
+	{
+		return d3dfvf_textureformat2;
+	}
+
+	static constexpr std::uint32_t d3dfvf_texcoordsize3(
+		const int index)
+	{
+		return d3dfvf_textureformat3 << ((index * 2) + 16);
+	}
+
+	static constexpr std::uint32_t d3dfvf_texcoordsize4(
+		const int index)
+	{
+		return d3dfvf_textureformat4 << ((index * 2) + 16);
+	}
 
 
 	struct Viewport
@@ -198,56 +239,6 @@ public:
 		Viewport();
 	}; // Viewport
 
-	// Flexible vertex format.
-	struct Fvf
-	{
-		using TexCoordItemCounts = std::array<int, max_stages>;
-
-
-		// Has position? (D3DFVF_XYZ or D3DFVF_XYZRHW)
-		bool has_position_;
-
-		// Is position already transformed? (D3DFVF_XYZRHW)
-		bool is_position_transformed_;
-
-
-		// Geometry blending weight count.
-		int blending_weight_count_;
-
-		// Has normals? (D3DFVF_NORMAL)
-		bool has_normal_;
-
-		// Has diffuse color? (D3DFVF_DIFFUSE)
-		bool has_diffuse_;
-
-		// Texture coordinate set count.
-		int tex_coord_set_count_;
-
-		// Component count per texture coordinate set.
-		TexCoordItemCounts tex_coord_item_counts_;
-
-		// Total vertex size.
-		int vertex_size_;
-
-
-		Fvf();
-
-		Fvf(
-			const std::uint32_t d3d_fvf);
-
-		// Has geometry blending weights? (D3DFVF_XYZB#)
-		bool has_blending_weights() const;
-
-		// Has texture coordinate set? (D3DFVF_TEX#)
-		bool has_tex_coord_sets() const;
-
-
-		bool is_valid() const;
-
-
-		static Fvf from_d3d(
-			const std::uint32_t d3d_fvf);
-	}; // Fvf
 
 	class VertexArrayObject
 	{
@@ -255,7 +246,7 @@ public:
 		struct InitializeParam
 		{
 			bool has_index_;
-			Fvf vertex_format_;
+			std::uint32_t fvf_;
 			std::uint32_t vertex_usage_flags_;
 			int vertex_count_;
 			const void* raw_vertex_data_;

@@ -108,25 +108,8 @@ namespace
 {
 
 
-constexpr std::uint32_t d3dfvf_xyz = 0x002;
-constexpr std::uint32_t d3dfvf_xyzrhw = 0x004;
-
-constexpr std::uint32_t d3dfvf_xyzb1 = 0x006;
-constexpr std::uint32_t d3dfvf_xyzb2 = 0x008;
-constexpr std::uint32_t d3dfvf_xyzb3 = 0x00A;
-
-constexpr std::uint32_t d3dfvf_normal = 0x010;
-
-constexpr std::uint32_t d3dfvf_diffuse = 0x040;
-
-constexpr std::uint32_t d3dfvf_tex1 = 0x100;
-constexpr std::uint32_t d3dfvf_tex2 = 0x200;
-constexpr std::uint32_t d3dfvf_tex3 = 0x300;
-constexpr std::uint32_t d3dfvf_tex4 = 0x400;
-
-constexpr std::uint32_t d3dfvf_textureformat2 = 0; // Two floating point values
-constexpr std::uint32_t d3dfvf_textureformat3 = 1; // Three floating point values
-constexpr std::uint32_t d3dfvf_textureformat4 = 2; // Four floating point values
+constexpr auto invalid_ogl_enum = GLenum{0xFFFFFFFF};
+constexpr auto invalid_ogl_format = GLint{-1};
 
 
 template<typename T>
@@ -135,46 +118,6 @@ T ogl_resolve_symbol(
 {
 	return reinterpret_cast<T>(::wglGetProcAddress(symbol_name));
 }
-
-
-constexpr std::uint32_t d3dfvf_texcoordsize2(
-	const int index)
-{
-	return d3dfvf_textureformat2;
-}
-
-constexpr std::uint32_t d3dfvf_texcoordsize3(
-	const int index)
-{
-	return d3dfvf_textureformat3 << ((index * 2) + 16);
-}
-
-constexpr std::uint32_t d3dfvf_texcoordsize4(
-	const int index)
-{
-	return d3dfvf_textureformat4 << ((index * 2) + 16);
-}
-
-constexpr auto d3dfvf_valid_flags =
-d3dfvf_xyz |
-d3dfvf_xyzrhw |
-d3dfvf_xyzb1 |
-d3dfvf_xyzb2 |
-d3dfvf_xyzb3 |
-d3dfvf_normal |
-d3dfvf_diffuse |
-d3dfvf_tex1 |
-d3dfvf_tex2 |
-d3dfvf_tex4 |
-d3dfvf_texcoordsize3(0) |
-d3dfvf_texcoordsize3(1) |
-d3dfvf_texcoordsize4(1) |
-d3dfvf_texcoordsize4(2) |
-d3dfvf_texcoordsize4(3) |
-0;
-
-constexpr auto invalid_ogl_enum = GLenum{0xFFFFFFFF};
-constexpr auto invalid_ogl_format = GLint{-1};
 
 
 } // namespace
@@ -188,6 +131,10 @@ class OglRendererImpl final :
 	public OglRenderer
 {
 public:
+	static constexpr auto float_size = 4;
+	static constexpr auto dword_size = 4;
+
+
 	OglRendererImpl()
 		:
 		is_initialized_{},
@@ -300,6 +247,239 @@ public:
 		}
 	}
 
+	static bool is_fvf_valid(
+		const std::uint32_t fvf)
+	{
+		constexpr auto all_valid_flags =
+			d3dfvf_xyz |
+			d3dfvf_xyzrhw |
+			d3dfvf_xyzb1 |
+			d3dfvf_xyzb2 |
+			d3dfvf_xyzb3 |
+			d3dfvf_normal |
+			d3dfvf_diffuse |
+			d3dfvf_tex1 |
+			d3dfvf_tex2 |
+			d3dfvf_tex4 |
+			d3dfvf_texcoordsize3(0) |
+			d3dfvf_texcoordsize3(1) |
+			d3dfvf_texcoordsize4(1) |
+			d3dfvf_texcoordsize4(2) |
+			d3dfvf_texcoordsize4(3) |
+			0;
+
+		if ((fvf & ~all_valid_flags) != 0)
+		{
+			assert(!"Unsupported flag.");
+			return false;
+		}
+
+		const auto has_position = (
+			((fvf & d3dfvf_xyz) == d3dfvf_xyz && (fvf & d3dfvf_xyzrhw) != d3dfvf_xyzrhw) ||
+			(fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1 ||
+			(fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2 ||
+			(fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3
+		);
+
+		const auto has_transformed_position = ((fvf & d3dfvf_xyzrhw) == d3dfvf_xyzrhw);
+
+		if (!has_position && !has_transformed_position)
+		{
+			assert(!"No position.");
+			return false;
+		}
+
+		if (has_position && has_transformed_position)
+		{
+			assert(!"Position and transformed position are mutually exclusive.");
+			return false;
+		}
+
+		const auto has_normal = ((fvf & d3dfvf_normal) == d3dfvf_normal);
+
+		if (has_normal && has_transformed_position)
+		{
+			assert(!"Normal for transformed position not supported.");
+			return false;
+		}
+
+		return true;
+	}
+
+	static int get_fvf_tex_coord_count(
+		const std::uint32_t fvf)
+	{
+		if ((fvf & d3dfvf_tex4) != 0)
+		{
+			return 4;
+		}
+		else if ((fvf & d3dfvf_tex3) != 0)
+		{
+			return 3;
+		}
+		else if ((fvf & d3dfvf_tex2) != 0)
+		{
+			return 2;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	static int get_fvf_tex_coord_item_count(
+		const std::uint32_t fvf,
+		const int set_index)
+	{
+		if ((fvf & d3dfvf_texcoordsize4(set_index)) == d3dfvf_texcoordsize4(set_index))
+		{
+			return 4;
+		}
+		else if ((fvf & d3dfvf_texcoordsize3(set_index)) == d3dfvf_texcoordsize3(set_index))
+		{
+			return 3;
+		}
+		else
+		{
+			return 2;
+		}
+	}
+
+	static int get_fvf_position_item_count(
+		const std::uint32_t fvf)
+	{
+		const auto has_position = (
+			((fvf & d3dfvf_xyz) == d3dfvf_xyz && (fvf & d3dfvf_xyzrhw) != d3dfvf_xyzrhw) ||
+			(fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1 ||
+			(fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2 ||
+			(fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3
+		);
+
+		const auto has_transformed_position = ((fvf & d3dfvf_xyzrhw) == d3dfvf_xyzrhw);
+
+		if (has_position)
+		{
+			return 3;
+		}
+		else if (has_transformed_position)
+		{
+			return 4;
+		}
+		else
+		{
+			assert(!"No position.");
+			return 0;
+		}
+	}
+
+	static int calculate_fvf_position_size(
+		const std::uint32_t fvf)
+	{
+		return get_fvf_position_item_count(fvf) * float_size;
+	}
+
+	static int get_fvf_blending_weight_count(
+		const std::uint32_t fvf)
+	{
+		if ((fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
+		{
+			return 3;
+		}
+		else if ((fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2)
+		{
+			return 2;
+		}
+		else if ((fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1)
+		{
+			return 1;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	static int calculate_fvf_blending_weights_size(
+		const std::uint32_t fvf)
+	{
+		return get_fvf_blending_weight_count(fvf) * float_size;
+	}
+
+	static int get_fvf_normal_item_count(
+		const std::uint32_t fvf)
+	{
+		if ((fvf & d3dfvf_normal) == d3dfvf_normal)
+		{
+			return 3;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	static int calculate_fvf_normal_size(
+		const std::uint32_t fvf)
+	{
+		return get_fvf_normal_item_count(fvf) * float_size;
+	}
+
+	static int calculate_fvf_diffuse_size(
+		const std::uint32_t fvf)
+	{
+		if ((fvf & d3dfvf_diffuse) == d3dfvf_diffuse)
+		{
+			return 1 * dword_size;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	static int calculate_fvf_tex_coord_set_size(
+		const std::uint32_t fvf,
+		const int set_index)
+	{
+		const auto item_count = get_fvf_tex_coord_item_count(fvf, set_index);
+		return item_count * float_size;
+	}
+
+	static int calculate_fvf_tex_coord_sets_size(
+		const std::uint32_t fvf)
+	{
+		const auto set_count = get_fvf_tex_coord_count(fvf);
+
+		auto sets_size = 0;
+
+		for (auto i = 0; i < set_count; ++i)
+		{
+			sets_size += calculate_fvf_tex_coord_set_size(fvf, i);
+		}
+
+		return sets_size;
+	}
+
+	static int calculate_fvf_vertex_size(
+		const std::uint32_t fvf)
+	{
+		const auto position_size = calculate_fvf_position_size(fvf);
+		const auto bweights_size = calculate_fvf_blending_weights_size(fvf);
+		const auto normal_size = calculate_fvf_normal_size(fvf);
+		const auto diffuse_size = calculate_fvf_diffuse_size(fvf);
+		const auto tex_sets_size = calculate_fvf_tex_coord_sets_size(fvf);
+
+		const auto vertex_size =
+			position_size +
+			bweights_size +
+			normal_size +
+			diffuse_size +
+			tex_sets_size +
+			0;
+
+		return vertex_size;
+	}
+
 
 private:
 	// Use the extra one to upload texture data.
@@ -375,9 +555,10 @@ private:
 
 		bool is_initialized_;
 
-		Fvf vertex_format_;
+		std::uint32_t fvf_;
 		std::uint32_t vertex_usage_flags_;
 		std::uint32_t index_usage_flags_;
+		int vertex_size_;
 		int vertex_count_;
 		int index_count_;
 
@@ -2186,7 +2367,7 @@ private:
 			{
 				ui_vaos_[i].vao_ = vao;
 
-				param.vertex_format_ = ui_vao_d3d_fvfs[i];
+				param.fvf_ = ui_vao_d3d_fvfs[i];
 
 				if (vao->initialize(param))
 				{
@@ -3124,26 +3305,6 @@ const vec4 default_diffuse = vec4(1, 1, 1, 1);
 
 R"SHADER(
 
-// Texture stage.
-struct Stage
-{
-	bool is_cube;
-
-	sampler2D sampler_2d;
-	samplerCube sampler_cube;
-
-	uint coord_index;
-
-	uint color_op;
-	uint color_arg1;
-	uint color_arg2;
-
-	uint alpha_op;
-	uint alpha_arg1;
-	uint alpha_arg2;
-}; // Stage
-
-
 layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec4 a_bweights;
 layout(location = 2) in vec4 a_normal;
@@ -3240,9 +3401,10 @@ OglRendererImpl::VertexArrayObjectImpl::VertexArrayObjectImpl(
 	:
 	ogl_renderer_{impl},
 	is_initialized_{},
-	vertex_format_{},
+	fvf_{},
 	vertex_usage_flags_{},
 	index_usage_flags_{},
+	vertex_size_{},
 	vertex_count_{},
 	index_count_{},
 	ogl_vao_{},
@@ -3292,8 +3454,9 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 
 	// Vertex buffer.
 	//
+	const auto fvf = param.fvf_;
 	const auto ogl_vertex_usage = usage_flags_to_ogl_usage(param.vertex_usage_flags_);
-	const auto vertex_size = param.vertex_format_.vertex_size_;
+	const auto vertex_size = calculate_fvf_vertex_size(fvf);
 	const auto vertex_buffer_size = vertex_size * param.vertex_count_;
 
 	::glBindBuffer(GL_ARRAY_BUFFER, ogl_vertex_buffer_);
@@ -3322,9 +3485,7 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 
 	// Record the state.
 	//
-	vertex_format_ = param.vertex_format_;
-
-	const auto float_size = static_cast<int>(sizeof(float));
+	fvf_ = param.fvf_;
 
 	auto component_offset_ptr = static_cast<const char*>(nullptr);
 
@@ -3347,7 +3508,7 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 	// Position
 	//
 	{
-		const auto position_item_count = 3 + (vertex_format_.is_position_transformed_);
+		const auto position_item_count = get_fvf_position_item_count(fvf);
 		const auto position_size = position_item_count * float_size;
 
 		::glEnableVertexAttribArray(0);
@@ -3361,9 +3522,10 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 
 	// Blending weights.
 	//
-	if (vertex_format_.has_blending_weights())
+	const auto blending_weights_item_count = get_fvf_blending_weight_count(param.fvf_);
+
+	if (blending_weights_item_count > 0)
 	{
-		const auto blending_weights_item_count = vertex_format_.blending_weight_count_;
 		const auto blending_weights_size = blending_weights_item_count * float_size;
 
 		::glEnableVertexAttribArray(1);
@@ -3376,9 +3538,10 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 
 	// Normal.
 	//
-	if (vertex_format_.has_normal_)
+	const auto normal_item_count = get_fvf_normal_item_count(fvf);
+
+	if (normal_item_count > 0)
 	{
-		const auto normal_item_count = 3;
 		const auto normals_size = normal_item_count * float_size;
 
 		::glEnableVertexAttribArray(2);
@@ -3389,10 +3552,12 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 		component_offset_ptr += normals_size;
 	}
 
-	if (vertex_format_.has_diffuse_)
-	{
-		const auto diffuse_size = float_size;
+	// Diffuse.
+	//
+	const auto diffuse_size = calculate_fvf_diffuse_size(fvf);
 
+	if (diffuse_size > 0)
+	{
 		::glEnableVertexAttribArray(3);
 		assert(ogl_is_succeed());
 		::glVertexAttribPointer(3, GL_BGRA, GL_UNSIGNED_BYTE, GL_TRUE, vertex_size, component_offset_ptr);
@@ -3401,14 +3566,18 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 		component_offset_ptr += diffuse_size;
 	}
 
-	if (vertex_format_.has_tex_coord_sets())
+	// Texture coordinate sets.
+	//
+	const auto tex_coord_set_count = get_fvf_tex_coord_count(fvf);
+
+	if (tex_coord_set_count > 0)
 	{
 		auto base_array_index = 4;
 
-		for (auto i = 0; i < vertex_format_.tex_coord_set_count_; ++i)
+		for (auto i = 0; i < tex_coord_set_count; ++i)
 		{
 			const auto array_index = base_array_index + i;
-			const auto tex_coord_set_item_count = vertex_format_.tex_coord_item_counts_[i];
+			const auto tex_coord_set_item_count = get_fvf_tex_coord_item_count(fvf, i);
 			const auto tex_coord_set_size = tex_coord_set_item_count * float_size;
 
 			::glEnableVertexAttribArray(array_index);
@@ -3439,6 +3608,7 @@ bool OglRendererImpl::VertexArrayObjectImpl::initialize_internal(
 
 	vertex_usage_flags_ = param.vertex_usage_flags_;
 	index_usage_flags_ = param.index_usage_flags_;
+	vertex_size_ = vertex_size;
 	vertex_count_ = param.vertex_count_;
 	index_count_ = param.index_count_;
 
@@ -3466,8 +3636,8 @@ void OglRendererImpl::VertexArrayObjectImpl::do_set_vertex_data(
 		return;
 	}
 
-	const auto data_offset = vertex_index * vertex_format_.vertex_size_;
-	const auto data_size = vertex_count * vertex_format_.vertex_size_;
+	const auto data_offset = vertex_index * vertex_size_;
+	const auto data_size = vertex_count * vertex_size_;
 
 	::glBindBuffer(GL_ARRAY_BUFFER, ogl_vertex_buffer_);
 	assert(ogl_is_succeed());
@@ -3488,8 +3658,11 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 		return;
 	}
 
-	ogl_renderer_.set_has_diffuse(vertex_format_.has_diffuse_);
-	ogl_renderer_.set_is_position_transformed(vertex_format_.is_position_transformed_);
+	const auto has_diffuse = ((fvf_ & d3dfvf_diffuse) == d3dfvf_diffuse);
+	ogl_renderer_.set_has_diffuse(has_diffuse);
+
+	const auto is_position_transformed = ((fvf_ & d3dfvf_xyzrhw) == d3dfvf_xyzrhw);
+	ogl_renderer_.set_is_position_transformed(is_position_transformed);
 	ogl_renderer_.apply_modifications();
 
 	if (ogl_renderer_.current_vao_ != this)
@@ -3529,9 +3702,10 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 void OglRendererImpl::VertexArrayObjectImpl::uninitialize_internal()
 {
 	is_initialized_ = false;
-	vertex_format_ = {};
+	fvf_ = 0;
 	vertex_usage_flags_ = 0;
 	index_usage_flags_ = 0;
+	vertex_size_ = 0;
 	vertex_count_ = 0;
 	index_count_ = 0;
 
@@ -3580,7 +3754,7 @@ void OglRendererImpl::VertexArrayObjectImpl::uninitialize_internal()
 OglRenderer::VertexArrayObject::InitializeParam::InitializeParam()
 	:
 	has_index_{},
-	vertex_format_{},
+	fvf_{},
 	vertex_usage_flags_{},
 	vertex_count_{},
 	raw_vertex_data_{},
@@ -3592,7 +3766,7 @@ OglRenderer::VertexArrayObject::InitializeParam::InitializeParam()
 
 bool OglRenderer::VertexArrayObject::InitializeParam::is_valid() const
 {
-	if (!vertex_format_.is_valid())
+	if (!OglRendererImpl::is_fvf_valid(fvf_))
 	{
 		return false;
 	}
@@ -6176,17 +6350,17 @@ void OglRendererImpl::StageImpl::set_trans_flags_internal()
 
 void OglRendererImpl::StageImpl::set_bump_map_lum_scale_internal()
 {
-	assert(!"Not implemented.");
+	//assert(!"Not implemented.");
 }
 
 void OglRendererImpl::StageImpl::set_bump_map_lum_offset_internal()
 {
-	assert(!"Not implemented.");
+	//assert(!"Not implemented.");
 }
 
 void OglRendererImpl::StageImpl::set_bump_map_matrix_internal()
 {
-	assert(!"Not implemented.");
+	//assert(!"Not implemented.");
 }
 
 void OglRendererImpl::StageImpl::apply_texture_modifications()
@@ -6633,202 +6807,6 @@ OglRenderer::Viewport::Viewport()
 
 //
 // OglRenderer::Viewport
-// ==========================================================================
-
-
-// ==========================================================================
-// OglRenderer::Fvf
-//
-
-OglRenderer::Fvf::Fvf()
-	:
-	has_position_{},
-	is_position_transformed_{},
-	blending_weight_count_{},
-	has_normal_{},
-	has_diffuse_{},
-	tex_coord_set_count_{},
-	tex_coord_item_counts_{},
-	vertex_size_{}
-{
-}
-
-OglRenderer::Fvf::Fvf(
-	const std::uint32_t d3d_fvf)
-{
-	*this = from_d3d(d3d_fvf);
-}
-
-bool OglRenderer::Fvf::has_blending_weights() const
-{
-	return blending_weight_count_ > 0;
-}
-
-bool OglRenderer::Fvf::has_tex_coord_sets() const
-{
-	return tex_coord_set_count_ > 0;
-}
-
-bool OglRenderer::Fvf::is_valid() const
-{
-	return has_position_ && vertex_size_ > 0;
-}
-
-OglRenderer::Fvf OglRenderer::Fvf::from_d3d(
-	const std::uint32_t d3d_fvf)
-{
-	auto is_zero = false;
-
-	if (d3d_fvf == 0)
-	{
-		is_zero = true;
-	}
-
-	if ((d3d_fvf & d3dfvf_valid_flags) != d3d_fvf)
-	{
-		assert(!"Unsupported flags.");
-		is_zero = true;
-	}
-
-	if (is_zero)
-	{
-		return {};
-	}
-
-	auto has_transformed = false;
-	auto has_untransformed = false;
-
-	if (((d3d_fvf & d3dfvf_xyz) == d3dfvf_xyz && (d3d_fvf & d3dfvf_xyzrhw) != d3dfvf_xyzrhw) ||
-		(d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1 ||
-		(d3d_fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2 ||
-		(d3d_fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
-	{
-		has_untransformed = true;
-	}
-
-	if ((d3d_fvf & d3dfvf_xyzrhw) == d3dfvf_xyzrhw)
-	{
-		has_transformed = true;
-	}
-
-	if (has_transformed && has_untransformed)
-	{
-		assert(!"Transformed and untransformed are mutual exclusive.");
-		return {};
-	}
-
-	auto has_normal = false;
-
-	if ((d3d_fvf & d3dfvf_normal) == d3dfvf_normal)
-	{
-		has_normal = true;
-	}
-
-	if (has_transformed && has_normal)
-	{
-		assert(!"Transformed and normal are prohibited.");
-		return {};
-	}
-
-
-	auto fvf = Fvf{};
-
-	if (has_transformed)
-	{
-		fvf.has_position_ = true;
-		fvf.is_position_transformed_ = true;
-	}
-
-	if (has_untransformed)
-	{
-		fvf.has_position_ = true;
-		fvf.is_position_transformed_ = false;
-	}
-
-	if ((d3d_fvf & d3dfvf_xyzb1) == d3dfvf_xyzb1)
-	{
-		fvf.has_position_ = true;
-		fvf.blending_weight_count_ = 1;
-	}
-
-	if ((d3d_fvf & d3dfvf_xyzb2) == d3dfvf_xyzb2)
-	{
-		fvf.has_position_ = true;
-		fvf.blending_weight_count_ = 2;
-	}
-
-	if ((d3d_fvf & d3dfvf_xyzb3) == d3dfvf_xyzb3)
-	{
-		fvf.has_position_ = true;
-		fvf.blending_weight_count_ = 3;
-	}
-
-	if ((d3d_fvf & d3dfvf_normal) == d3dfvf_normal)
-	{
-		fvf.has_normal_ = true;
-	}
-
-	if ((d3d_fvf & d3dfvf_diffuse) == d3dfvf_diffuse)
-	{
-		fvf.has_diffuse_ = true;
-	}
-
-	if ((d3d_fvf & d3dfvf_tex1) == d3dfvf_tex1)
-	{
-		fvf.tex_coord_set_count_ = 1;
-	}
-
-	if ((d3d_fvf & d3dfvf_tex2) == d3dfvf_tex2)
-	{
-		fvf.tex_coord_set_count_ = 2;
-	}
-
-	if ((d3d_fvf & d3dfvf_tex3) == d3dfvf_tex3)
-	{
-		fvf.tex_coord_set_count_ = 3;
-	}
-
-	if ((d3d_fvf & d3dfvf_tex4) == d3dfvf_tex4)
-	{
-		fvf.tex_coord_set_count_ = 4;
-	}
-
-	for (auto i = 0; i < fvf.tex_coord_set_count_; ++i)
-	{
-		if ((d3d_fvf & d3dfvf_texcoordsize4(i)) == d3dfvf_texcoordsize4(i))
-		{
-			fvf.tex_coord_item_counts_[i] = 4;
-		}
-		else if ((d3d_fvf & d3dfvf_texcoordsize3(i)) == d3dfvf_texcoordsize3(i))
-		{
-			fvf.tex_coord_item_counts_[i] = 3;
-		}
-		else
-		{
-			fvf.tex_coord_item_counts_[i] = 2;
-		}
-	}
-
-
-	// Calculate a size of the vertex.
-	// Each component item has four byte size (float, DWORD).
-	//
-	fvf.vertex_size_ = 4 * (
-		(fvf.has_position_ ? (fvf.is_position_transformed_ ? 4 : 3) : 0) +
-		fvf.blending_weight_count_ +
-		(fvf.has_normal_ ? 3 : 0) +
-		(fvf.has_diffuse_ ? 1 : 0) +
-		std::accumulate(
-			fvf.tex_coord_item_counts_.cbegin(),
-			fvf.tex_coord_item_counts_.cbegin() + fvf.tex_coord_set_count_,
-			0) +
-		0);
-
-	return fvf;
-}
-
-//
-// OglRenderer::Fvf
 // ==========================================================================
 
 
