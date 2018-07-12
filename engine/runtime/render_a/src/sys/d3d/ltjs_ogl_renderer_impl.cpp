@@ -177,34 +177,6 @@ constexpr auto invalid_ogl_enum = GLenum{0xFFFFFFFF};
 constexpr auto invalid_ogl_format = GLint{-1};
 
 
-GLenum usage_flags_to_ogl_usage(
-	const OglRenderer::VertexArrayObject::UsageFlags usage_flags)
-{
-	if ((usage_flags & OglRenderer::VertexArrayObject::UsageFlags::is_dynamic) != 0)
-	{
-		if ((usage_flags & OglRenderer::VertexArrayObject::UsageFlags::is_readable) != 0)
-		{
-			return GL_DYNAMIC_COPY;
-		}
-		else
-		{
-			return GL_DYNAMIC_DRAW;
-		}
-	}
-	else
-	{
-		if ((usage_flags & OglRenderer::VertexArrayObject::UsageFlags::is_readable) != 0)
-		{
-			return GL_STATIC_COPY;
-		}
-		else
-		{
-			return GL_STATIC_DRAW;
-		}
-	}
-}
-
-
 } // namespace
 
 
@@ -301,6 +273,33 @@ public:
 		}
 	}
 
+	static GLenum usage_flags_to_ogl_usage(
+		const std::uint32_t usage_flags)
+	{
+		if ((usage_flags & OglRenderer::d3dusage_dynamic) != 0)
+		{
+			if ((usage_flags & OglRenderer::d3dusage_writeonly) == 0)
+			{
+				return GL_DYNAMIC_COPY;
+			}
+			else
+			{
+				return GL_DYNAMIC_DRAW;
+			}
+		}
+		else
+		{
+			if ((usage_flags & OglRenderer::d3dusage_writeonly) == 0)
+			{
+				return GL_STATIC_COPY;
+			}
+			else
+			{
+				return GL_STATIC_DRAW;
+			}
+		}
+	}
+
 
 private:
 	// Use the extra one to upload texture data.
@@ -377,8 +376,8 @@ private:
 		bool is_initialized_;
 
 		Fvf vertex_format_;
-		UsageFlags vertex_usage_flags_;
-		UsageFlags index_usage_flags_;
+		std::uint32_t vertex_usage_flags_;
+		std::uint32_t index_usage_flags_;
 		int vertex_count_;
 		int index_count_;
 
@@ -2177,7 +2176,7 @@ private:
 	{
 		auto param = VertexArrayObject::InitializeParam{};
 		param.vertex_count_ = max_ui_vao_vertices;
-		param.vertex_usage_flags_ = VertexArrayObject::UsageFlags::is_dynamic;
+		param.vertex_usage_flags_ = d3dusage_dynamic;
 
 		for (auto i = 0; i < max_ui_vaos; ++i)
 		{
@@ -3531,8 +3530,8 @@ void OglRendererImpl::VertexArrayObjectImpl::uninitialize_internal()
 {
 	is_initialized_ = false;
 	vertex_format_ = {};
-	vertex_usage_flags_ = UsageFlags::none;
-	index_usage_flags_ = UsageFlags::none;
+	vertex_usage_flags_ = 0;
+	index_usage_flags_ = 0;
 	vertex_count_ = 0;
 	index_count_ = 0;
 
@@ -3598,7 +3597,7 @@ bool OglRenderer::VertexArrayObject::InitializeParam::is_valid() const
 		return false;
 	}
 
-	const auto ogl_vertex_usage = usage_flags_to_ogl_usage(vertex_usage_flags_);
+	const auto ogl_vertex_usage = OglRendererImpl::usage_flags_to_ogl_usage(vertex_usage_flags_);
 
 	if (!ogl_vertex_usage || vertex_count_ <= 0)
 	{
@@ -3607,7 +3606,7 @@ bool OglRenderer::VertexArrayObject::InitializeParam::is_valid() const
 
 	if (has_index_)
 	{
-		const auto ogl_index_usage = usage_flags_to_ogl_usage(index_usage_flags_);
+		const auto ogl_index_usage = OglRendererImpl::usage_flags_to_ogl_usage(index_usage_flags_);
 
 		if (!ogl_index_usage || index_count_ <= 0 || !raw_index_data_)
 		{

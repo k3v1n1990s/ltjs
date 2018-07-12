@@ -179,6 +179,10 @@ public:
 	static constexpr std::uint32_t d3dttff_count3 = 3;
 	static constexpr std::uint32_t d3dttff_projected = 256;
 
+	// Direct3D 9 usage flags.
+	static constexpr std::uint32_t d3dusage_writeonly = 0x00000008;
+	static constexpr std::uint32_t d3dusage_dynamic = 0x00000200;
+
 
 	struct Viewport
 	{
@@ -248,31 +252,14 @@ public:
 	class VertexArrayObject
 	{
 	public:
-		struct UsageFlags :
-			public ul::EnumFlags
-		{
-			UsageFlags(
-				const Value flags = none)
-				:
-				ul::EnumFlags{flags}
-			{
-			}
-
-			enum : Value
-			{
-				is_dynamic = 1 << 0,
-				is_readable = 1 << 1,
-			}; // enum
-		}; // VertexFormatFlags
-
 		struct InitializeParam
 		{
 			bool has_index_;
 			Fvf vertex_format_;
-			UsageFlags vertex_usage_flags_;
+			std::uint32_t vertex_usage_flags_;
 			int vertex_count_;
 			const void* raw_vertex_data_;
-			UsageFlags index_usage_flags_;
+			std::uint32_t index_usage_flags_;
 			int index_count_;
 			const void* raw_index_data_;
 
