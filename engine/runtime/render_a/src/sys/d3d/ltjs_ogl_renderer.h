@@ -792,6 +792,12 @@ public:
 		const std::uint32_t dst_factor);
 
 
+	std::uint32_t get_texture_factor() const;
+
+	void set_texture_factor(
+		const std::uint32_t d3d_texture_factor);
+
+
 	const float* get_world_matrix(
 		const int index) const;
 
@@ -951,6 +957,14 @@ private:
 		const std::uint32_t src_factor,
 		const std::uint32_t dst_factor) = 0;
 
+	// Texture global state.
+	//
+
+	virtual std::uint32_t do_get_texture_factor() const = 0;
+
+	virtual void do_set_texture_factor(
+		const std::uint32_t d3d_texture_factor) = 0;
+
 	// Transformation matrices.
 	//
 
@@ -980,8 +994,10 @@ private:
 	virtual SamplerPtr do_get_sampler(
 		const int index) = 0;
 
+
 	// Vertex array objects.
 	//
+
 	virtual VertexArrayObjectPtr do_add_vertex_array_object() = 0;
 
 	virtual void do_remove_vertex_array_object(
@@ -989,6 +1005,7 @@ private:
 
 	// Textures.
 	//
+
 	virtual TexturePtr do_add_texture() = 0;
 
 	virtual void do_remove_texture(
@@ -997,6 +1014,7 @@ private:
 
 	// Primitive drawing.
 	//
+
 	virtual void do_draw(
 		const std::uint32_t primitive_type,
 		const std::uint32_t d3d_fvf,

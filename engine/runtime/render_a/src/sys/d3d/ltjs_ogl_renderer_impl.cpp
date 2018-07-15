@@ -133,6 +133,7 @@ class OglRendererImpl final :
 public:
 	static constexpr auto float_size = 4;
 	static constexpr auto dword_size = 4;
+	static constexpr auto inv_255_f = 1.0F / 255.0F;
 
 
 	OglRendererImpl()
@@ -170,6 +171,8 @@ public:
 		is_blending_enabled_{},
 		src_blending_factor_{},
 		dst_blending_factor_{},
+		texture_factor_{},
+		u_texture_factor_{},
 		vertex_shader_{},
 		fragment_shader_{},
 		program_{},
@@ -503,6 +506,8 @@ private:
 		d3dfvf_xyzrhw | d3dfvf_diffuse | d3dfvf_tex1,
 	};
 
+
+	using Vector4F = std::array<float, 4>;
 
 	using Matrix4F = std::array<float, 16>;
 	using Matrix2F = std::array<float, 4>;
@@ -1233,6 +1238,8 @@ private:
 	std::uint32_t src_blending_factor_;
 	std::uint32_t dst_blending_factor_;
 
+	std::uint32_t texture_factor_;
+	GLint u_texture_factor_;
 
 	GLuint vertex_shader_;
 	GLuint fragment_shader_;
@@ -1294,6 +1301,8 @@ private:
 	static const bool default_is_blending_enabled;
 	static const std::uint32_t default_src_blending_factor;
 	static const std::uint32_t default_dst_blending_factor;
+
+	static const std::uint32_t default_texture_factor;
 
 	static const bool default_has_diffuse;
 
@@ -1687,6 +1696,31 @@ private:
 		set_blending_factors_internal();
 	}
 
+	std::uint32_t do_get_texture_factor() const override
+	{
+		assert(is_initialized_);
+		return texture_factor_;
+	}
+
+	void do_set_texture_factor(
+		const std::uint32_t d3d_texture_factor) override
+	{
+		if (!is_initialized_ || !is_current_context_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (d3d_texture_factor == texture_factor_)
+		{
+			return;
+		}
+
+		texture_factor_ = d3d_texture_factor;
+
+		set_texture_factor_internal();
+	}
+
 	const float* do_get_world_matrix(
 		const int index) const override
 	{
@@ -2010,6 +2044,7 @@ private:
 		set_default_is_depth_writable();
 		set_default_depth_func();
 		set_default_blending();
+		set_default_texture_factor();
 		set_default_world_matrices();
 		set_default_view_matrix();
 		set_default_projection_matrix();
@@ -2074,6 +2109,9 @@ private:
 		is_blending_enabled_ = false;
 		src_blending_factor_ = 0;
 		dst_blending_factor_ = 0;
+
+		texture_factor_ = 0;
+		u_texture_factor_ = -1;
 
 		if (program_)
 		{
@@ -2243,10 +2281,10 @@ private:
 	void set_clear_color_internal()
 	{
 		::glClearColor(
-			clear_color_r_ / 255.0F,
-			clear_color_g_ / 255.0F,
-			clear_color_b_ / 255.0F,
-			clear_color_a_ / 255.0F);
+			clear_color_r_ * inv_255_f,
+			clear_color_g_ * inv_255_f,
+			clear_color_b_ * inv_255_f,
+			clear_color_a_ * inv_255_f);
 
 		assert(ogl_is_succeed());
 	}
@@ -2349,6 +2387,26 @@ private:
 		src_blending_factor_ = default_src_blending_factor;
 		dst_blending_factor_ = default_dst_blending_factor;
 		set_blending_factors_internal();
+	}
+
+	void set_texture_factor_internal()
+	{
+		const auto ogl_color = Vector4F
+		{
+			((texture_factor_ >> 16) & 0xFF) * inv_255_f,
+			((texture_factor_ >> 8) & 0xFF) * inv_255_f,
+			((texture_factor_ >> 0) & 0xFF) * inv_255_f,
+			((texture_factor_ >> 24) & 0xFF) * inv_255_f,
+		};
+
+		::glUniform4fv(u_texture_factor_, 1, ogl_color.data());
+		assert(ogl_is_succeed());
+	}
+
+	void set_default_texture_factor()
+	{
+		texture_factor_ = default_texture_factor;
+		set_texture_factor_internal();
 	}
 
 	void set_uniform_defaults()
@@ -2706,6 +2764,10 @@ private:
 
 	bool locate_uniforms()
 	{
+		u_texture_factor_ = ::glGetUniformLocation(program_, "u_texture_factor");
+		assert(ogl_is_succeed());
+		assert(u_texture_factor_ >= 0);
+
 		u_has_diffuse_ = ::glGetUniformLocation(program_, "u_has_diffuse");
 		assert(ogl_is_succeed());
 		assert(u_has_diffuse_ >= 0);
@@ -3257,6 +3319,8 @@ const bool OglRendererImpl::default_is_blending_enabled = false;
 const std::uint32_t OglRendererImpl::default_src_blending_factor = d3dblend_one;
 const std::uint32_t OglRendererImpl::default_dst_blending_factor = d3dblend_zero;
 
+const std::uint32_t OglRendererImpl::default_texture_factor = 0xFFFFFFFF;
+
 const bool OglRendererImpl::default_has_diffuse = false;
 
 const int OglRendererImpl::default_tcs_count = 0;
@@ -3466,6 +3530,8 @@ bool apply_texture_stage(
 
 void apply_texture_stages()
 {
+	v_stage_count = 0;
+
 	for (int i = 0; i < max_stages; ++i)
 	{
 		if (!apply_texture_stage(i))
@@ -3524,6 +3590,9 @@ flat in int v_stage_count;
 out vec4 o_fragment;
 
 
+// Texture factor.
+uniform vec4 u_texture_factor;
+
 // Texture stages.
 uniform Stage u_stages[max_stages];
 
@@ -3538,9 +3607,207 @@ uniform samplerCube u_samplers_cube[max_stages];
 vec4 tx_current = v_diffuse;
 
 
+sampler2D get_sampler_2d(
+	int index)
+{
+	switch (index)
+	{
+	case 0:
+		return u_samplers_2d[0];
+
+	case 1:
+		return u_samplers_2d[1];
+
+	case 2:
+		return u_samplers_2d[2];
+
+	case 3:
+		return u_samplers_2d[3];
+	}
+}
+
+samplerCube get_sampler_cube(
+	int index)
+{
+	switch (index)
+	{
+	case 0:
+		return u_samplers_cube[0];
+
+	case 1:
+		return u_samplers_cube[1];
+
+	case 2:
+		return u_samplers_cube[2];
+
+	case 3:
+		return u_samplers_cube[3];
+	}
+}
+
+vec4 get_texture_color_arg(
+	int stage_index,
+	uint color_arg)
+{
+	switch (color_arg & 0xFU)
+	{
+	case d3dta_current:
+		return tx_current;
+
+	case d3dta_diffuse:
+		return v_diffuse;
+
+	case d3dta_texture:
+	{
+		if (u_stages[stage_index].is_2d)
+		{
+			return texture(get_sampler_2d(stage_index), v_tcss[stage_index].st);
+		}
+		else
+		{
+			return texture(get_sampler_cube(stage_index), v_tcss[stage_index].stp);
+		}
+
+		break;
+	}
+
+	case d3dta_tfactor:
+		return u_texture_factor;
+
+	default:
+		return vec4(0);
+	}
+}
+
+float get_texture_alpha_arg(
+	int stage_index,
+	uint alpha_arg)
+{
+	uint alpha_arg_value = alpha_arg & 0xFU;
+	bool is_complement = ((alpha_arg & d3dta_complement) != 0U);
+
+	float result;
+
+	switch (alpha_arg)
+	{
+	case d3dta_current:
+		result = tx_current.a;
+		break;
+
+	case d3dta_diffuse:
+		result = v_diffuse.a;
+		break;
+
+	case d3dta_texture:
+	{
+		if (u_stages[stage_index].is_2d)
+		{
+			result = texture(get_sampler_2d(stage_index), v_tcss[stage_index].st).a;
+		}
+		else
+		{
+			result = texture(get_sampler_cube(stage_index), v_tcss[stage_index].stp).a;
+		}
+
+		break;
+	}
+
+	case d3dta_tfactor:
+		result = u_texture_factor.a;
+		break;
+
+	default:
+		result = 0;
+		break;
+	}
+
+	if (is_complement)
+	{
+		result = 1 - result;
+	}
+
+	return result;
+}
+
+
+vec4 apply_texture_color_stage(
+	int stage_index)
+{
+	Stage stage = u_stages[stage_index];
+
+	vec4 color_arg1 = get_texture_color_arg(stage_index, stage.color_arg1);
+	vec4 color_arg2 = get_texture_color_arg(stage_index, stage.color_arg2);
+
+	switch (stage.color_op)
+	{
+	case d3dtop_selectarg1:
+		return color_arg1;
+
+	case d3dtop_selectarg2:
+		return color_arg2;
+
+	case d3dtop_modulate:
+		return color_arg1 * color_arg2;
+
+	case d3dtop_modulate2x:
+		return 2 * color_arg1 * color_arg2;
+
+	case d3dtop_add:
+		return color_arg1 + color_arg2;
+
+	case d3dtop_addsigned:
+		return color_arg1 + color_arg2 - 0.5;
+
+	case d3dtop_blendcurrentalpha:
+		return mix(color_arg2, color_arg1, tx_current.a);
+
+	case d3dtop_modulatealpha_addcolor:
+		return color_arg1 + (color_arg1.a * color_arg2);
+
+	default:
+		return tx_current;
+	}
+}
+
+float apply_texture_alpha_stage(
+	int stage_index)
+{
+	Stage stage = u_stages[stage_index];
+
+	float alpha_arg1 = get_texture_alpha_arg(stage_index, stage.alpha_arg1);
+	float alpha_arg2 = get_texture_alpha_arg(stage_index, stage.alpha_arg2);
+
+	switch (stage.alpha_op)
+	{
+	case d3dtop_selectarg1:
+		return alpha_arg1;
+
+	case d3dtop_selectarg2:
+		return alpha_arg2;
+
+	case d3dtop_modulate:
+		return alpha_arg1 * alpha_arg2;
+
+	case d3dtop_modulate2x:
+		return 2 * alpha_arg1 * alpha_arg2;
+
+	case d3dtop_add:
+		return alpha_arg1 + alpha_arg2;
+
+	case d3dtop_subtract:
+		return alpha_arg1 - alpha_arg2;
+
+	default:
+		return tx_current.a;
+	}
+}
+
 void apply_texture_stage(
 	int stage_index)
 {
+	vec4 color = apply_texture_color_stage(stage_index);
+	float alpha = apply_texture_alpha_stage(stage_index);
+	tx_current = vec4(color.xyz, clamp(alpha, 0, 1));
 }
 
 void apply_texture_stages()
@@ -3553,7 +3820,7 @@ void apply_texture_stages()
 
 void main()
 {
-	//apply_texture_stages();
+	apply_texture_stages();
 
 	o_fragment = tx_current;
 }
@@ -7160,6 +7427,17 @@ void OglRenderer::set_blending_factors(
 	const std::uint32_t dst_blending_function)
 {
 	do_set_blending_factors(src_blending_function, dst_blending_function);
+}
+
+std::uint32_t OglRenderer::get_texture_factor() const
+{
+	return do_get_texture_factor();
+}
+
+void OglRenderer::set_texture_factor(
+	const std::uint32_t d3d_texture_factor)
+{
+	do_set_texture_factor(d3d_texture_factor);
 }
 
 const float* OglRenderer::get_world_matrix(
