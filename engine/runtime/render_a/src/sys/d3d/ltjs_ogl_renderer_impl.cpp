@@ -190,7 +190,6 @@ public:
 		samplers_{},
 		max_texture_lod_bias_{},
 		stages_{},
-		stages_bindings_{},
 		texture_units_{},
 		current_texture_unit_index_{}
 	{
@@ -592,6 +591,8 @@ private:
 	using VertexArrayObjectUPtr = std::unique_ptr<VertexArrayObjectImpl>;
 	using VertexArrayObjectUList = std::list<VertexArrayObjectUPtr>;
 
+	class TextureImpl;
+	using TextureImplPtr = TextureImpl*;
 
 	class TextureImpl :
 		public Texture
@@ -602,9 +603,8 @@ private:
 
 		~TextureImpl() override;
 
-
-		void bind_to_stage(
-			const int stage_index);
+		void bind(
+			const bool is_binded);
 
 
 	private:
@@ -623,7 +623,7 @@ private:
 		static constexpr InterpolationSampleDeltas interpolation_sample_deltas =
 		{{
 			{0, -1}, {-1, 0}, {0, 1}, {1, 0},
-			}}; // interpolation_sample_deltas
+		}}; // interpolation_sample_deltas
 
 
 		using Buffer = std::vector<ul::UnValue<std::uint8_t>>;
@@ -742,8 +742,6 @@ private:
 
 		TextureImpl*& get_binding();
 	}; // TextureImpl
-
-	using TextureImplPtr = TextureImpl*;
 
 
 	class SamplerImpl :
@@ -952,6 +950,7 @@ private:
 
 		bool is_texture_modified_;
 		TextureImplPtr texture_;
+		int u_is_2d_;
 		int u_sampler_2d_;
 		int u_sampler_cube_;
 
@@ -1263,7 +1262,6 @@ private:
 	float max_texture_lod_bias_;
 
 	Stages stages_;
-	StagesBindings stages_bindings_;
 
 	TextureUnits texture_units_;
 	int current_texture_unit_index_;
@@ -2120,14 +2118,10 @@ private:
 		ui_vaos_.fill({});
 		vaos_.clear();
 
-		textures_.clear();
-
 		uninitialize_samplers();
-		max_texture_lod_bias_ = 0.0F;
-
 		uninitialize_stages();
-
 		uninitialize_texture_units();
+		uninitialize_textures();
 	}
 
 #if 0
@@ -2948,9 +2942,15 @@ private:
 		return true;
 	}
 
+	void uninitialize_textures()
+	{
+		textures_.clear();
+	}
+
 	void uninitialize_samplers()
 	{
 		samplers_.clear();
+		max_texture_lod_bias_ = 0.0F;
 	}
 
 	bool initialize_stages()
@@ -2980,7 +2980,6 @@ private:
 	void uninitialize_stages()
 	{
 		stages_.clear();
-		stages_bindings_.fill(nullptr);
 	}
 
 	void initialize_texture_units()
@@ -3009,6 +3008,30 @@ private:
 
 		::glActiveTexture(GL_TEXTURE0 + current_texture_unit_index_);
 		assert(ogl_is_succeed());
+	}
+
+	void set_texture_for_unit(
+		const int texture_unit_index,
+		TextureImplPtr texture)
+	{
+		set_texture_unit(texture_unit_index);
+
+		if (texture)
+		{
+			texture->bind(true);
+		}
+		else
+		{
+			auto& targets = texture_units_[current_texture_unit_index_].targets_;
+
+			for (auto& target : targets)
+			{
+				if (target)
+				{
+					target->bind(false);
+				}
+			}
+		}
 	}
 
 	static GLbitfield get_ogl_clear_flags(
@@ -3205,35 +3228,55 @@ const OglRendererImpl::Matrix4F OglRendererImpl::identity_matrix =
 
 const std::string OglRendererImpl::shader_d3d_consts_string =
 R"SHADER(
-// Direct3D constants
 
-// Texture operations.
-const uint D3DTOP_ADD = 7U;
-const uint D3DTOP_ADDSIGNED = 8U;
-const uint D3DTOP_BLENDCURRENTALPHA = 16U;
-const uint D3DTOP_DISABLE = 1U;
-const uint D3DTOP_MODULATE = 4U;
-const uint D3DTOP_MODULATE2X = 5U;
-const uint D3DTOP_MODULATEALPHA_ADDCOLOR = 18U;
-const uint D3DTOP_SELECTARG1 = 2U;
-const uint D3DTOP_SELECTARG2 = 3U;
-const uint D3DTOP_SUBTRACT = 10U;
+//
+// Direct3D 9 texture coordinate index flags.
+//
 
-// Texture argument.
-const uint D3DTA_CURRENT = 0x00000001U;
-const uint D3DTA_DIFFUSE = 0x00000000U;
-const uint D3DTA_TEXTURE = 0x00000002U;
-const uint D3DTA_TFACTOR = 0x00000003U;
-const uint D3DTA_COMPLEMENT = 0x00000010U;
+const uint d3dtss_tci_passthru = 0x00000000U;
+const uint d3dtss_tci_cameraspaceposition = 0x00020000U;
+const uint d3dtss_tci_cameraspacereflectionvector = 0x00030000U;
 
-// Texture coord index.
-const uint D3DTSS_TCI_CAMERASPACEPOSITION = 0x00020000U;
-const uint D3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR = 0x00030000U;
 
-// Texture transformation flags.
-const uint D3DTTFF_COUNT2 = 2U;
-const uint D3DTTFF_COUNT3 = 3U;
-const uint D3DTTFF_PROJECTED = 256U;
+//
+// Direct3D 9 texture operation values.
+//
+
+const uint d3dtop_disable = 1U;
+const uint d3dtop_selectarg1 = 2U;
+const uint d3dtop_selectarg2 = 3U;
+const uint d3dtop_modulate = 4U;
+const uint d3dtop_modulate2x = 5U;
+const uint d3dtop_add = 7U;
+const uint d3dtop_addsigned = 8U;
+const uint d3dtop_subtract = 10U;
+const uint d3dtop_blendcurrentalpha = 16U;
+const uint d3dtop_modulatealpha_addcolor = 18U;
+const uint d3dtop_bumpenvmap = 22U;
+const uint d3dtop_bumpenvmapluminance = 23U;
+const uint d3dtop_dotproduct3 = 24U;
+
+
+//
+// Direct3D 9 texture argument values.
+//
+
+const uint d3dta_diffuse = 0x00000000U;
+const uint d3dta_current = 0x00000001U;
+const uint d3dta_texture = 0x00000002U;
+const uint d3dta_tfactor = 0x00000003U;
+const uint d3dta_complement = 0x00000010U;
+
+
+//
+// Direct3D 9 texture transformation values.
+//
+
+const uint d3dttff_disable = 0U;
+const uint d3dttff_count2 = 2U;
+const uint d3dttff_count3 = 3U;
+const uint d3dttff_projected = 256U;
+
 )SHADER"
 ; // shader_d3d_consts_string
 
@@ -3242,8 +3285,8 @@ R"SHADER(
 // Texture stage.
 struct Stage
 {
-	// Is texture 2D (false) or cube map (true)?
-	bool is_cube;
+	// Is texture 2D (true) or cube map (false)?
+	bool is_2d;
 
 	// 2D texture sampler.
 	sampler2D sampler_2d;
@@ -4587,28 +4630,10 @@ OglRendererImpl::TextureImpl::~TextureImpl()
 	uninitialize_internal();
 }
 
-void OglRendererImpl::TextureImpl::bind_to_stage(
-	const int stage_index)
+void OglRendererImpl::TextureImpl::bind(
+	const bool is_binded)
 {
-	if (stage_index < 0 || stage_index >= max_stages)
-	{
-		assert(!"Stage index out of range.");
-		return;
-	}
-
-	auto& binding = ogl_renderer_.stages_bindings_[stage_index];
-
-	if (binding == this)
-	{
-		return;
-	}
-
-	binding = this;
-
-	bind_internal(true);
-
-	::glActiveTexture(GL_TEXTURE0 + stage_index);
-	assert(ogl_is_succeed());
+	bind_internal(is_binded);
 }
 
 bool OglRendererImpl::TextureImpl::do_initialize(
@@ -5043,20 +5068,6 @@ void OglRendererImpl::TextureImpl::uninitialize_internal()
 	if (ogl_texture_)
 	{
 		bind_internal(false);
-
-		auto stage_binding_it = std::find_if(
-			ogl_renderer_.stages_bindings_.begin(),
-			ogl_renderer_.stages_bindings_.end(),
-			[=](const auto& item)
-			{
-				return item == this;
-			}
-		);
-
-		if (stage_binding_it != ogl_renderer_.stages_bindings_.end())
-		{
-			*stage_binding_it = nullptr;
-		}
 
 		::glDeleteTextures(1, &ogl_texture_);
 		assert(ogl_is_succeed());
@@ -5624,6 +5635,16 @@ OglRenderer::Texture::Type OglRenderer::Texture::get_type() const
 	return do_get_type();
 }
 
+bool OglRenderer::Texture::is_2d() const
+{
+	return do_get_type() == Type::two_d;
+}
+
+bool OglRenderer::Texture::is_cube_map() const
+{
+	return do_get_type() == Type::cube_map;
+}
+
 std::uint32_t OglRenderer::Texture::get_surface_format() const
 {
 	return do_get_surface_format();
@@ -5704,6 +5725,7 @@ OglRendererImpl::StageImpl::StageImpl(
 	is_modified_{},
 	is_texture_modified_{},
 	texture_{},
+	u_is_2d_{},
 	u_sampler_2d_{},
 	u_sampler_cube_{},
 	is_color_op_modified_{},
@@ -6170,11 +6192,14 @@ bool OglRendererImpl::StageImpl::initialize_internal()
 
 void OglRendererImpl::StageImpl::uninitialize_internal()
 {
+	ogl_renderer_.set_texture_for_unit(index_, nullptr);
+
 	is_initialized_ = false;
 	is_modified_ = false;
 
 	is_texture_modified_ = false;
 	texture_ = nullptr;
+	u_is_2d_ = -1;
 	u_sampler_2d_ = -1;
 	u_sampler_cube_ = -1;
 
@@ -6271,12 +6296,20 @@ void OglRendererImpl::StageImpl::set_defaults()
 	is_bump_map_matrix_modified_ = true;
 	bump_map_matrix_ = default_bump_map_matrix;
 	set_bump_map_matrix_internal();
+
+
+	::glUniform1i(u_sampler_2d_, index_);
+	assert(ogl_is_succeed());
+
+	::glUniform1i(u_sampler_cube_, index_);
+	assert(ogl_is_succeed());
 }
 
 void OglRendererImpl::StageImpl::locate_uniforms()
 {
 	const auto base_name = "u_stages[" + std::to_string(index_) + "].";
 
+	u_is_2d_ = ogl_renderer_.locate_uniform(base_name + "is_2d");
 	u_sampler_2d_ = ogl_renderer_.locate_uniform(base_name + "sampler_2d");
 	u_sampler_cube_ = ogl_renderer_.locate_uniform(base_name + "sampler_cube");
 
@@ -6294,9 +6327,16 @@ void OglRendererImpl::StageImpl::locate_uniforms()
 
 void OglRendererImpl::StageImpl::set_texture_internal()
 {
-	::glUniform1i(u_sampler_2d_, index_);
-	assert(ogl_is_succeed());
-	::glUniform1i(u_sampler_cube_, index_);
+	ogl_renderer_.set_texture_for_unit(index_, texture_);
+
+	auto is_2d = true;
+
+	if (texture_ && texture_->is_cube_map())
+	{
+		is_2d = false;
+	}
+
+	::glUniform1i(u_is_2d_, is_2d);
 	assert(ogl_is_succeed());
 }
 

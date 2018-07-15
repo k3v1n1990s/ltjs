@@ -381,6 +381,10 @@ public:
 
 		Type get_type() const;
 
+		bool is_2d() const;
+
+		bool is_cube_map() const;
+
 		std::uint32_t get_surface_format() const;
 
 		bool is_compressed() const;
