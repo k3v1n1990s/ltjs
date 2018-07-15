@@ -175,6 +175,8 @@ public:
 		program_{},
 		has_diffuse_{},
 		u_has_diffuse_{},
+		tcs_count_{},
+		u_tcs_count_{},
 		is_position_transformed_{},
 		are_u_model_views_modified_{},
 		is_u_projection_modified_{},
@@ -1239,6 +1241,9 @@ private:
 	bool has_diffuse_;
 	GLint u_has_diffuse_;
 
+	int tcs_count_;
+	GLint u_tcs_count_;
+
 	bool is_position_transformed_;
 
 	ModelViewMatrixModificationFlags are_u_model_views_modified_;
@@ -1291,6 +1296,8 @@ private:
 	static const std::uint32_t default_dst_blending_factor;
 
 	static const bool default_has_diffuse;
+
+	static const int default_tcs_count;
 
 	static const Matrix4F identity_matrix;
 
@@ -2085,6 +2092,9 @@ private:
 		has_diffuse_ = false;
 		u_has_diffuse_ = -1;
 
+		tcs_count_ = 0;
+		u_tcs_count_ = -1;
+
 		is_position_transformed_ = false;
 
 		are_u_model_views_modified_ = {};
@@ -2345,6 +2355,9 @@ private:
 	{
 		has_diffuse_ = default_has_diffuse;
 		set_has_diffuse_internal();
+
+		tcs_count_ = default_tcs_count;
+		set_tcs_count_internal();
 	}
 
 	void add_ui_vaos()
@@ -2697,6 +2710,10 @@ private:
 		assert(ogl_is_succeed());
 		assert(u_has_diffuse_ >= 0);
 
+		u_tcs_count_ = ::glGetUniformLocation(program_, "u_tcs_count");
+		assert(ogl_is_succeed());
+		assert(u_tcs_count_ >= 0);
+
 		for (auto i = 0; i < max_world_matrices; ++i)
 		{
 			const auto uniform_name = "u_model_views[" + std::to_string(i) + "]";
@@ -2734,6 +2751,30 @@ private:
 	{
 		::glUniform1i(u_has_diffuse_, has_diffuse_);
 		assert(ogl_is_succeed());
+	}
+
+	void set_tcs_count_internal()
+	{
+		::glUniform1i(u_tcs_count_, tcs_count_);
+		assert(ogl_is_succeed());
+	}
+
+	void set_tcs_count(
+		const int tcs_count)
+	{
+		if (!is_initialized_)
+		{
+			return;
+		}
+
+		if (tcs_count == tcs_count_)
+		{
+			return;
+		}
+
+		tcs_count_ = tcs_count;
+
+		set_tcs_count_internal();
 	}
 
 	void set_is_position_transformed(
@@ -3218,6 +3259,8 @@ const std::uint32_t OglRendererImpl::default_dst_blending_factor = d3dblend_zero
 
 const bool OglRendererImpl::default_has_diffuse = false;
 
+const int OglRendererImpl::default_tcs_count = 0;
+
 const OglRendererImpl::Matrix4F OglRendererImpl::identity_matrix =
 {
 	1.0F, 0.0F, 0.0F, 0.0F,
@@ -3288,12 +3331,6 @@ struct Stage
 	// Is texture 2D (true) or cube map (false)?
 	bool is_2d;
 
-	// 2D texture sampler.
-	sampler2D sampler_2d;
-
-	// Cube map texture sampler.
-	samplerCube sampler_cube;
-
 	// Texture coordinates index.
 	uint coord_index;
 
@@ -3336,8 +3373,8 @@ R"SHADER(
 // Maximum model-view matrix count.
 const int max_model_view_count = 4;
 
-// Maximum texture coordinate sets.
-const int max_tcs = 4;
+// Maximum stages.
+const int max_stages = 4;
 
 // Default diffuse color.
 const vec4 default_diffuse = vec4(1, 1, 1, 1);
@@ -3352,16 +3389,19 @@ layout(location = 0) in vec4 a_position;
 layout(location = 1) in vec4 a_bweights;
 layout(location = 2) in vec4 a_normal;
 layout(location = 3) in vec4 a_diffuse;
-layout(location = 4) in vec4 a_tcs[max_tcs];
+layout(location = 4) in vec4 a_tcss[max_stages];
 
 
 out vec4 v_diffuse;
-out vec4 v_tcs[max_tcs];
+out vec4 v_tcss[max_stages];
+flat out int v_stage_count;
 
 
 // Has diffuse attribute?
 uniform bool u_has_diffuse = false;
 
+// Current count of texture coordinate set.
+uniform int u_tcs_count = 0;
 
 // Model-view matrices.
 uniform mat4 u_model_views[max_model_view_count];
@@ -3371,8 +3411,69 @@ uniform mat4 u_projection;
 
 
 // Texture stages.
-uniform Stage u_stages[max_tcs];
+uniform Stage u_stages[max_stages];
 
+// 2D texture samplers.
+uniform sampler2D u_samplers_2d[max_stages];
+
+// Cube map texture samplers.
+uniform samplerCube u_samplers_cube[max_stages];
+
+
+vec4 model_view_position;
+
+
+bool apply_texture_stage(
+	int stage_index)
+{
+	Stage stage = u_stages[stage_index];
+
+	if (stage.color_op == d3dtop_disable)
+	{
+		return false;
+	}
+
+	v_stage_count += 1;
+
+	uint tci_index = stage.coord_index & 0x0000FFFFU;
+	uint tci_flags = stage.coord_index & 0xFFFF0000U;
+
+	switch (tci_flags)
+	{
+	case d3dtss_tci_passthru:
+		if (tci_index < uint(u_tcs_count))
+		{
+			v_tcss[stage_index] = a_tcss[tci_index];
+		}
+		else
+		{
+			v_tcss[stage_index] = vec4(0);
+		}
+
+		break;
+
+	case d3dtss_tci_cameraspaceposition:
+		v_tcss[stage_index] = model_view_position;
+		break;
+
+	case d3dtss_tci_cameraspacereflectionvector:
+		v_tcss[stage_index] = vec4(reflect(model_view_position.xyz, a_normal.xyz), 1);
+		break;
+	}
+
+	return true;
+}
+
+void apply_texture_stages()
+{
+	for (int i = 0; i < max_stages; ++i)
+	{
+		if (!apply_texture_stage(i))
+		{
+			break;
+		}
+	}
+}
 
 void main()
 {
@@ -3385,7 +3486,11 @@ void main()
 		v_diffuse = default_diffuse;
 	}
 
-	gl_Position = u_projection * u_model_views[0] * a_position;
+	model_view_position = u_model_views[0] * a_position;
+
+	apply_texture_stages();
+
+	gl_Position = u_projection * model_view_position;
 }
 
 )SHADER"
@@ -3402,8 +3507,8 @@ R"SHADER(
 
 R"SHADER(
 
-// Maximum texture coordinate sets.
-const int max_tcs = 4;
+// Maximum stages.
+const int max_stages = 4;
 
 )SHADER"
 
@@ -3412,19 +3517,45 @@ const int max_tcs = 4;
 R"SHADER(
 
 in vec4 v_diffuse;
-in vec4 v_tcs[max_tcs];
+in vec4 v_tcss[max_stages];
+flat in int v_stage_count;
 
 
 out vec4 o_fragment;
 
 
 // Texture stages.
-uniform Stage u_stages[max_tcs];
+uniform Stage u_stages[max_stages];
 
+// 2D texture samplers.
+uniform sampler2D u_samplers_2d[max_stages];
+
+// Cube map texture samplers.
+uniform samplerCube u_samplers_cube[max_stages];
+
+
+// Texture blending result.
+vec4 tx_current = v_diffuse;
+
+
+void apply_texture_stage(
+	int stage_index)
+{
+}
+
+void apply_texture_stages()
+{
+	for (int i = 0; i < v_stage_count; ++i)
+	{
+		apply_texture_stage(i);
+	}
+}
 
 void main()
 {
-	o_fragment = v_diffuse;
+	//apply_texture_stages();
+
+	o_fragment = tx_current;
 }
 
 )SHADER"
@@ -3701,11 +3832,23 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 		return;
 	}
 
+	const auto vertex_count = calculate_vertex_count(primitive_type, primitive_count);
+	const auto ogl_primitive_type = get_ogl_primitive_type(primitive_type);
+
+	if (vertex_count <= 0 || ogl_primitive_type == invalid_ogl_enum)
+	{
+		return;
+	}
+
 	const auto has_diffuse = ((fvf_ & d3dfvf_diffuse) == d3dfvf_diffuse);
 	ogl_renderer_.set_has_diffuse(has_diffuse);
 
+	const auto tcs_count = get_fvf_tex_coord_count(fvf_);
+	ogl_renderer_.set_tcs_count(tcs_count);
+
 	const auto is_position_transformed = ((fvf_ & d3dfvf_xyzrhw) == d3dfvf_xyzrhw);
 	ogl_renderer_.set_is_position_transformed(is_position_transformed);
+
 	ogl_renderer_.apply_modifications();
 
 	if (ogl_renderer_.current_vao_ != this)
@@ -3714,14 +3857,6 @@ void OglRendererImpl::VertexArrayObjectImpl::do_draw(
 
 		::glBindVertexArray(ogl_vao_);
 		assert(ogl_is_succeed());
-	}
-
-	const auto vertex_count = calculate_vertex_count(primitive_type, primitive_count);
-	const auto ogl_primitive_type = get_ogl_primitive_type(primitive_type);
-
-	if (vertex_count <= 0 || ogl_primitive_type == GL_NONE)
-	{
-		return;
 	}
 
 	if (index_count_ > 0)
@@ -6307,11 +6442,15 @@ void OglRendererImpl::StageImpl::set_defaults()
 
 void OglRendererImpl::StageImpl::locate_uniforms()
 {
-	const auto base_name = "u_stages[" + std::to_string(index_) + "].";
+	const auto index_string = std::to_string(index_);
+
+	u_sampler_2d_ = ogl_renderer_.locate_uniform("samplers_2d[" + index_string + "]");
+	u_sampler_cube_ = ogl_renderer_.locate_uniform("samplers_cube[" + index_string + "]");
+
+
+	const auto base_name = "u_stages[" + index_string + "].";
 
 	u_is_2d_ = ogl_renderer_.locate_uniform(base_name + "is_2d");
-	u_sampler_2d_ = ogl_renderer_.locate_uniform(base_name + "sampler_2d");
-	u_sampler_cube_ = ogl_renderer_.locate_uniform(base_name + "sampler_cube");
 
 	u_color_op_ = ogl_renderer_.locate_uniform(base_name + "color_op");
 	u_color_arg1_ = ogl_renderer_.locate_uniform(base_name + "color_arg1");
