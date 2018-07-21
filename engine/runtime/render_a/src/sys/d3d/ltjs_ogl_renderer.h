@@ -818,6 +818,14 @@ public:
 		const float* const projection_matrix_ptr);
 
 
+	const float* get_texture_matrix(
+		const int index) const;
+
+	void set_texture_matrix(
+		const int index,
+		const float* const texture_matrix_ptr);
+
+
 	SamplerPtr get_sampler(
 		const int index);
 
@@ -832,6 +840,9 @@ public:
 
 	void remove_texture(
 		TexturePtr texture);
+
+	StagePtr get_stage(
+		const int stage_index);
 
 
 	void draw(
@@ -988,6 +999,14 @@ private:
 		const float* const projection_matrix_ptr) = 0;
 
 
+	virtual const float* do_get_texture_matrix(
+		const int index) const = 0;
+
+	virtual void do_set_texture_matrix(
+		const int index,
+		const float* const texture_matrix_ptr) = 0;
+
+
 	// Sampler.
 	//
 
@@ -1010,6 +1029,9 @@ private:
 
 	virtual void do_remove_texture(
 		TexturePtr texture) = 0;
+
+	virtual StagePtr do_get_stage(
+		const int stage_index) = 0;
 
 
 	// Primitive drawing.

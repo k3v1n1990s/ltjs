@@ -581,6 +581,9 @@ void ogl_set_test_data()
 
 	ogl_renderer.set_cull_mode(ltjs::OglRenderer::d3dcull_none);
 	ogl_renderer.set_fill_mode(ltjs::OglRenderer::d3dfill_solid);
+
+	auto stage = ogl_renderer.get_stage(0);
+	stage->set_color_op(ltjs::OglRenderer::d3dtop_disable);
 }
 
 bool ogl_initialize_internal(
