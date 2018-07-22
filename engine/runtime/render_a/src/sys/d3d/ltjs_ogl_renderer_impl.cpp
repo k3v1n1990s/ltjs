@@ -171,6 +171,16 @@ public:
 		is_blending_enabled_{},
 		src_blending_factor_{},
 		dst_blending_factor_{},
+		is_alpha_test_modified_{},
+		is_alpha_test_enabled_modified_{},
+		is_alpha_test_enabled_{},
+		u_is_alpha_test_enabled_{},
+		is_alpha_test_func_modified_{},
+		alpha_test_func_{},
+		u_alpha_test_func_{},
+		is_alpha_test_ref_modified_{},
+		alpha_test_ref_{},
+		u_alpha_test_ref_{},
 		texture_factor_{},
 		u_texture_factor_{},
 		vertex_shader_{},
@@ -1246,6 +1256,20 @@ private:
 	std::uint32_t src_blending_factor_;
 	std::uint32_t dst_blending_factor_;
 
+	bool is_alpha_test_modified_;
+
+	bool is_alpha_test_enabled_modified_;
+	bool is_alpha_test_enabled_;
+	GLint u_is_alpha_test_enabled_;
+
+	bool is_alpha_test_func_modified_;
+	std::uint32_t alpha_test_func_;
+	GLint u_alpha_test_func_;
+
+	bool is_alpha_test_ref_modified_;
+	std::uint32_t alpha_test_ref_;
+	GLint u_alpha_test_ref_;
+
 	std::uint32_t texture_factor_;
 	GLint u_texture_factor_;
 
@@ -1313,6 +1337,10 @@ private:
 	static const bool default_is_blending_enabled;
 	static const std::uint32_t default_src_blending_factor;
 	static const std::uint32_t default_dst_blending_factor;
+
+	static const bool default_is_alpha_test_enabled;
+	static const std::uint32_t default_alpha_test_func;
+	static const std::uint32_t default_alpha_test_ref;
 
 	static const std::uint32_t default_texture_factor;
 
@@ -1706,6 +1734,87 @@ private:
 		dst_blending_factor_ = dst_factor;
 
 		set_blending_factors_internal();
+	}
+
+	bool do_get_is_alpha_test_enabled() const override
+	{
+		assert(!is_initialized_);
+		return is_alpha_test_enabled_;
+	}
+
+	void do_set_is_alpha_test_enabled(
+		const bool is_alpha_test_enabled) override
+	{
+		if (!is_initialized_ || !is_current_context_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (is_alpha_test_enabled == is_alpha_test_enabled_)
+		{
+			return;
+		}
+
+		is_alpha_test_enabled_ = is_alpha_test_enabled;
+
+		is_modified_ = true;
+		is_alpha_test_modified_ = true;
+		is_alpha_test_enabled_modified_ = true;
+	}
+
+	std::uint32_t do_get_alpha_test_func() const override
+	{
+		assert(!is_initialized_);
+		return alpha_test_func_;
+	}
+
+	void do_set_alpha_test_func(
+		const std::uint32_t d3d9_alpha_test_func) override
+	{
+		if (!is_initialized_ || !is_current_context_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (d3d9_alpha_test_func == alpha_test_func_)
+		{
+			return;
+		}
+
+		alpha_test_func_ = d3d9_alpha_test_func;
+
+		is_modified_ = true;
+		is_alpha_test_modified_ = true;
+		is_alpha_test_func_modified_ = true;
+	}
+
+	std::uint32_t do_get_alpha_test_ref() const override
+	{
+		assert(!is_initialized_);
+		return alpha_test_ref_;
+	}
+
+	void do_set_alpha_test_ref(
+		const std::uint32_t d3d9_alpha_test_ref) override
+	{
+		if (!is_initialized_ || !is_current_context_)
+		{
+			assert(!"Invalid state.");
+			return;
+		}
+
+		if (d3d9_alpha_test_ref == alpha_test_ref_)
+		{
+			return;
+		}
+
+		alpha_test_ref_ = d3d9_alpha_test_ref;
+
+		is_modified_ = true;
+		is_alpha_test_modified_ = true;
+		is_alpha_test_ref_modified_ = true;
 	}
 
 	std::uint32_t do_get_texture_factor() const override
@@ -2117,6 +2226,7 @@ private:
 		set_default_is_depth_writable();
 		set_default_depth_func();
 		set_default_blending();
+		set_default_alpha_test();
 		set_default_texture_factor();
 		set_default_world_matrices();
 		set_default_view_matrix();
@@ -2183,6 +2293,20 @@ private:
 		is_blending_enabled_ = false;
 		src_blending_factor_ = 0;
 		dst_blending_factor_ = 0;
+
+		is_alpha_test_modified_ = false;
+
+		is_alpha_test_enabled_modified_ = false;
+		is_alpha_test_enabled_ = false;
+		u_is_alpha_test_enabled_ = -1;
+
+		is_alpha_test_func_modified_ = false;
+		alpha_test_func_ = 0;
+		u_alpha_test_func_ = -1;
+
+		is_alpha_test_ref_modified_ = false;
+		alpha_test_ref_ = 0;
+		u_alpha_test_ref_ = -1;
 
 		texture_factor_ = 0;
 		u_texture_factor_ = -1;
@@ -2465,6 +2589,108 @@ private:
 		src_blending_factor_ = default_src_blending_factor;
 		dst_blending_factor_ = default_dst_blending_factor;
 		set_blending_factors_internal();
+	}
+
+	void set_alpha_test_is_enabled_internal()
+	{
+		::glUniform1i(u_is_alpha_test_enabled_, is_alpha_test_enabled_);
+		assert(ogl_is_succeed());
+	}
+
+	void set_default_alpha_test_is_enabled()
+	{
+		is_modified_ = true;
+		is_alpha_test_modified_ = true;
+		is_alpha_test_enabled_modified_ = true;
+
+		is_alpha_test_enabled_ = default_is_alpha_test_enabled;
+	}
+
+	void set_alpha_test_func_internal()
+	{
+		::glUniform1ui(u_alpha_test_func_, alpha_test_func_);
+		assert(ogl_is_succeed());
+	}
+
+	void set_default_alpha_test_func()
+	{
+		is_modified_ = true;
+		is_alpha_test_modified_ = true;
+		is_alpha_test_func_modified_ = true;
+
+		alpha_test_func_ = default_alpha_test_func;
+	}
+
+	void set_alpha_test_ref_internal()
+	{
+		::glUniform1ui(u_alpha_test_ref_, alpha_test_ref_);
+		assert(ogl_is_succeed());
+	}
+
+	void set_default_alpha_test_ref()
+	{
+		is_modified_ = true;
+		is_alpha_test_modified_ = true;
+		is_alpha_test_ref_modified_ = true;
+
+		alpha_test_ref_ = default_alpha_test_ref;
+	}
+
+	void set_default_alpha_test()
+	{
+		set_default_alpha_test_is_enabled();
+		set_default_alpha_test_func();
+		set_default_alpha_test_ref();
+	}
+
+	void apply_is_alpha_test_enabled_modifications()
+	{
+		if (!is_alpha_test_enabled_modified_)
+		{
+			return;
+		}
+
+		set_alpha_test_is_enabled_internal();
+
+		is_alpha_test_enabled_modified_ = false;
+	}
+
+	void apply_alpha_test_func_modifications()
+	{
+		if (!is_alpha_test_func_modified_)
+		{
+			return;
+		}
+
+		set_alpha_test_func_internal();
+
+		is_alpha_test_func_modified_ = false;
+	}
+
+	void apply_alpha_test_ref_modifications()
+	{
+		if (!is_alpha_test_ref_modified_)
+		{
+			return;
+		}
+
+		set_alpha_test_ref_internal();
+
+		is_alpha_test_ref_modified_ = false;
+	}
+
+	void apply_alpha_test_modifications()
+	{
+		if (!is_alpha_test_modified_)
+		{
+			return;
+		}
+
+		apply_is_alpha_test_enabled_modifications();
+		apply_alpha_test_func_modifications();
+		apply_alpha_test_ref_modifications();
+
+		is_alpha_test_modified_ = false;
 	}
 
 	void set_texture_factor_internal()
@@ -2869,6 +3095,18 @@ private:
 			assert(u_tx_mats_[i] >= 0);
 		}
 
+		u_is_alpha_test_enabled_ = ::glGetUniformLocation(program_, "u_is_alpha_test_enabled");
+		assert(ogl_is_succeed());
+		assert(u_is_alpha_test_enabled_ >= 0);
+
+		u_alpha_test_func_ = ::glGetUniformLocation(program_, "u_alpha_test_func");
+		assert(ogl_is_succeed());
+		assert(u_alpha_test_func_ >= 0);
+
+		u_alpha_test_ref_ = ::glGetUniformLocation(program_, "u_alpha_test_ref");
+		assert(ogl_is_succeed());
+		assert(u_alpha_test_ref_ >= 0);
+
 		return ogl_is_succeed();
 	}
 
@@ -3110,6 +3348,7 @@ private:
 		apply_texture_matrices_modifications();
 		apply_samplers_modifications();
 		apply_stages_modifications();
+		apply_alpha_test_modifications();
 	}
 
 	static Matrix4F multiply_matrices(
@@ -3434,6 +3673,10 @@ const bool OglRendererImpl::default_is_blending_enabled = false;
 const std::uint32_t OglRendererImpl::default_src_blending_factor = d3dblend_one;
 const std::uint32_t OglRendererImpl::default_dst_blending_factor = d3dblend_zero;
 
+const bool OglRendererImpl::default_is_alpha_test_enabled = false;
+const std::uint32_t OglRendererImpl::default_alpha_test_func = d3dcmp_greater;
+const std::uint32_t OglRendererImpl::default_alpha_test_ref = 0x00000000;
+
 const std::uint32_t OglRendererImpl::default_texture_factor = 0xFFFFFFFF;
 
 const bool OglRendererImpl::default_has_diffuse = false;
@@ -3463,6 +3706,19 @@ const int max_stages = 4;
 
 // Default diffuse color.
 const vec4 default_diffuse = vec4(1, 1, 1, 1);
+
+
+//
+// Direct3D 9 compare functions.
+//
+
+const uint d3dcmp_less = 2U;
+const uint d3dcmp_equal = 3U;
+const uint d3dcmp_lessequal = 4U;
+const uint d3dcmp_greater = 5U;
+const uint d3dcmp_notequal = 6U;
+const uint d3dcmp_greaterequal = 7U;
+const uint d3dcmp_always = 8U;
 
 
 //
@@ -3706,6 +3962,19 @@ const vec4 default_diffuse = vec4(1, 1, 1, 1);
 
 
 //
+// Direct3D 9 compare functions.
+//
+
+const uint d3dcmp_less = 2U;
+const uint d3dcmp_equal = 3U;
+const uint d3dcmp_lessequal = 4U;
+const uint d3dcmp_greater = 5U;
+const uint d3dcmp_notequal = 6U;
+const uint d3dcmp_greaterequal = 7U;
+const uint d3dcmp_always = 8U;
+
+
+//
 // Direct3D 9 texture coordinate index flags.
 //
 
@@ -3805,6 +4074,15 @@ uniform sampler2D u_samplers_2d[max_stages];
 
 // Cube map texture samplers.
 uniform samplerCube u_samplers_cube[max_stages];
+
+// Is alpha test enabled?
+uniform bool u_is_alpha_test_enabled = false;
+
+// Alpha test function.
+uniform uint u_alpha_test_func;
+
+// Alpha test reference value.
+uniform uint u_alpha_test_ref;
 
 
 // Texture blending result.
@@ -4021,6 +4299,11 @@ void apply_texture_stage(
 	vec4 color = apply_texture_color_stage(stage_index);
 	float alpha = apply_texture_alpha_stage(stage_index);
 	tx_current = vec4(color.xyz, clamp(alpha, 0, 1));
+
+	if (!is_tx_succeed)
+	{
+		tx_current = vec4(1, 0, 0, 1);
+	}
 }
 
 void apply_texture_stages()
@@ -4033,14 +4316,70 @@ void apply_texture_stages()
 	}
 }
 
+void apply_alpha_test()
+{
+	if (!u_is_alpha_test_enabled)
+	{
+		return;
+	}
+
+	uint alpha = uint(clamp(tx_current.a * 255.0, 0.0, 255.0));
+	uint alpha_ref = clamp(u_alpha_test_ref, 0U, 255U);
+
+	switch (u_alpha_test_func)
+	{
+	case d3dcmp_equal:
+		if (alpha != alpha_ref)
+		{
+			discard;
+		}
+		break;
+
+	case d3dcmp_greater:
+		if (alpha <= alpha_ref)
+		{
+			discard;
+		}
+		break;
+
+	case d3dcmp_greaterequal:
+		if (alpha < alpha_ref)
+		{
+			discard;
+		}
+		break;
+
+	case d3dcmp_less:
+		if (alpha >= alpha_ref)
+		{
+			discard;
+		}
+		break;
+
+	case d3dcmp_lessequal:
+		if (alpha > alpha_ref)
+		{
+			discard;
+		}
+		break;
+
+	case d3dcmp_notequal:
+		if (alpha == alpha_ref)
+		{
+			discard;
+		}
+		break;
+
+	default:
+		break;
+	}
+}
+
 void main()
 {
 	apply_texture_stages();
 
-	if (!is_tx_succeed)
-	{
-		tx_current = vec4(1, 0, 0, 1);
-	}
+	apply_alpha_test();
 
 	o_fragment = tx_current;
 }
@@ -7649,6 +7988,39 @@ void OglRenderer::set_blending_factors(
 	do_set_blending_factors(src_blending_function, dst_blending_function);
 }
 
+bool OglRenderer::get_is_alpha_test_enabled() const
+{
+	return do_get_is_alpha_test_enabled();
+}
+
+void OglRenderer::set_is_alpha_test_enabled(
+	const bool is_alpha_test_enabled)
+{
+	do_set_is_alpha_test_enabled(is_alpha_test_enabled);
+}
+
+std::uint32_t OglRenderer::get_alpha_test_func() const
+{
+	return do_get_alpha_test_func();
+}
+
+void OglRenderer::set_alpha_test_func(
+	const std::uint32_t d3d9_alpha_test_func)
+{
+	do_set_alpha_test_func(d3d9_alpha_test_func);
+}
+
+std::uint32_t OglRenderer::get_alpha_test_ref() const
+{
+	return do_get_alpha_test_ref();
+}
+
+void OglRenderer::set_alpha_test_ref(
+	const std::uint32_t d3d9_alpha_test_ref)
+{
+	do_set_alpha_test_ref(d3d9_alpha_test_ref);
+}
+
 std::uint32_t OglRenderer::get_texture_factor() const
 {
 	return do_get_texture_factor();
@@ -7705,7 +8077,7 @@ void OglRenderer::set_texture_matrix(
 	const int index,
 	const float* const texture_matrix_ptr)
 {
-	set_texture_matrix(index, texture_matrix_ptr);
+	do_set_texture_matrix(index, texture_matrix_ptr);
 }
 
 OglRenderer::SamplerPtr OglRenderer::get_sampler(

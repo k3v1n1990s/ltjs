@@ -783,6 +783,24 @@ public:
 		const bool is_blending_enabled);
 
 
+	bool get_is_alpha_test_enabled() const;
+
+	void set_is_alpha_test_enabled(
+		const bool is_alpha_test_enabled);
+
+
+	std::uint32_t get_alpha_test_func() const;
+
+	void set_alpha_test_func(
+		const std::uint32_t d3d9_alpha_test_func);
+
+
+	std::uint32_t get_alpha_test_ref() const;
+
+	void set_alpha_test_ref(
+		const std::uint32_t d3d9_alpha_test_ref);
+
+
 	std::uint32_t get_src_blending_factor() const;
 
 	std::uint32_t get_dst_blending_factor() const;
@@ -951,6 +969,7 @@ private:
 	virtual void do_set_depth_func(
 		const std::uint32_t depth_func) = 0;
 
+
 	// Alpha blending.
 	//
 
@@ -967,6 +986,28 @@ private:
 	virtual void do_set_blending_factors(
 		const std::uint32_t src_factor,
 		const std::uint32_t dst_factor) = 0;
+
+
+	// Alpha test.
+	//
+
+	virtual bool do_get_is_alpha_test_enabled() const = 0;
+
+	virtual void do_set_is_alpha_test_enabled(
+		const bool is_alpha_test_enabled) = 0;
+
+
+	virtual std::uint32_t do_get_alpha_test_func() const = 0;
+
+	virtual void do_set_alpha_test_func(
+		const std::uint32_t d3d9_alpha_test_func) = 0;
+
+
+	virtual std::uint32_t do_get_alpha_test_ref() const = 0;
+
+	virtual void do_set_alpha_test_ref(
+		const std::uint32_t d3d9_alpha_test_ref) = 0;
+
 
 	// Texture global state.
 	//
