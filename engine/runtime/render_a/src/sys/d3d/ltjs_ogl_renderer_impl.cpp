@@ -3608,13 +3608,11 @@ private:
 			return 0;
 		}
 
-		if (primitive_count == 1)
-		{
-			return 3;
-		}
-
 		switch (primitive_type)
 		{
+		case d3dpt_linelist:
+			return 2 * primitive_count;
+
 		case d3dpt_trianglefan:
 		case d3dpt_trianglestrip:
 			return 3 + (primitive_count - 1);
@@ -3633,6 +3631,9 @@ private:
 	{
 		switch (primitive_type)
 		{
+		case d3dpt_linelist:
+			return GL_LINES;
+
 		case d3dpt_trianglefan:
 			return GL_TRIANGLE_FAN;
 

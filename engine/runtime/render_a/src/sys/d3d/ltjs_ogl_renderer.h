@@ -75,6 +75,7 @@ public:
 	// Direct3D 9 primitive types.
 	//
 
+	static constexpr std::uint32_t d3dpt_linelist = 2;
 	static constexpr std::uint32_t d3dpt_trianglelist = 4;
 	static constexpr std::uint32_t d3dpt_trianglestrip = 5;
 	static constexpr std::uint32_t d3dpt_trianglefan = 6;

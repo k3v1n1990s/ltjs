@@ -278,17 +278,43 @@ void CD3DDrawPrim::SaveStates(LPDIRECT3DDEVICE9 pDevice)
 //sets up the appropriate state for the each section
 void CD3DDrawPrim::SetClipMode(LPDIRECT3DDEVICE9 pDevice)
 {
-	switch (m_eClipType) 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
+	switch (m_eClipType)
 	{
-	case DRAWPRIM_NOCLIP	: pDevice->SetRenderState(D3DRS_CLIPPING,false); break;
-	case DRAWPRIM_FASTCLIP	: pDevice->SetRenderState(D3DRS_CLIPPING,true);  break;
-	case DRAWPRIM_FULLCLIP  : pDevice->SetRenderState(D3DRS_CLIPPING,true);  break; 
+	case DRAWPRIM_NOCLIP:
+		pDevice->SetRenderState(D3DRS_CLIPPING, false);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_clipping(false);
+#endif // LTJS_WIP_OGL
+
+		break;
+
+	case DRAWPRIM_FASTCLIP:
+		pDevice->SetRenderState(D3DRS_CLIPPING, true);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_clipping(true);
+#endif // LTJS_WIP_OGL
+
+		break;
+
+	case DRAWPRIM_FULLCLIP:
+		pDevice->SetRenderState(D3DRS_CLIPPING, true);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_clipping(true);
+#endif // LTJS_WIP_OGL
+
+		break;
 
 	default:
 		assert(false);
 		break;
-	} 
-
+	}
 }
 void CD3DDrawPrim::SetTexture(LPDIRECT3DDEVICE9 pDevice)
 {
@@ -333,6 +359,10 @@ LTRESULT CD3DDrawPrim::SetEffectShaderID(uint32 nEffectShaderID)
 
 void CD3DDrawPrim::SetCamera(LPDIRECT3DDEVICE9 pDevice)
 {
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	// Check the current viewport, may need to get changed...
 	D3DVIEWPORT9 PrevViewport;
 	pDevice->GetViewport(&PrevViewport);
@@ -362,6 +392,10 @@ void CD3DDrawPrim::SetCamera(LPDIRECT3DDEVICE9 pDevice)
 
 			PD3DDEVICE->SetViewport(&vp);
 
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.set_viewport(reinterpret_cast<const ltjs::OglRenderer::Viewport&>(vp));
+#endif // LTJS_WIP_OGL
+
 			m_bResetViewport = true; 
 		} 
 	}
@@ -381,6 +415,10 @@ void CD3DDrawPrim::SetCamera(LPDIRECT3DDEVICE9 pDevice)
 
 			PD3DDEVICE->SetViewport(&vp);
 
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.set_viewport(reinterpret_cast<const ltjs::OglRenderer::Viewport&>(vp));
+#endif // LTJS_WIP_OGL
+
 			m_bResetViewport = true; 
 		} 
 	}
@@ -388,6 +426,10 @@ void CD3DDrawPrim::SetCamera(LPDIRECT3DDEVICE9 pDevice)
 
 void CD3DDrawPrim::SetTransformMode(LPDIRECT3DDEVICE9 pDevice)
 {
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	DX::XMFLOAT4X4 mIdentity;
 	DX::XMStoreFloat4x4(&mIdentity, DX::XMMatrixIdentity());
 
@@ -417,6 +459,11 @@ void CD3DDrawPrim::SetTransformMode(LPDIRECT3DDEVICE9 pDevice)
 		ViewportData.MaxZ	= 0.1f;
 
 		PD3DDEVICE->SetViewport(&ViewportData);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_viewport(reinterpret_cast<const ltjs::OglRenderer::Viewport&>(ViewportData));
+#endif // LTJS_WIP_OGL
+
 		m_bResetViewport = true;
 
 		//setup our new projection based on player view parameters.
@@ -436,6 +483,11 @@ void CD3DDrawPrim::SetTransformMode(LPDIRECT3DDEVICE9 pDevice)
 		//setup the new matrices
 		PD3DDEVICE->SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&NewProj));
 		PD3DDEVICE->SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&mIdentity));
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_projection_matrix(NewProj.m);
+		ogl_renderer.set_view_matrix(mIdentity.m);
+#endif // LTJS_WIP_OGL
 	}
 	else
 	{
@@ -470,11 +522,21 @@ void CD3DDrawPrim::SetTransformMode(LPDIRECT3DDEVICE9 pDevice)
 
 				d3d_SetD3DTransformStates(cDrawPrimParams);
 			} 
-			g_RenderStateMgr.SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&mIdentity)); 
+			g_RenderStateMgr.SetTransform(D3DTS_VIEW, reinterpret_cast<const D3DMATRIX*>(&mIdentity));
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.set_view_matrix(mIdentity.m);
+#endif // LTJS_WIP_OGL
+
 			break;
 			
 		case DRAWPRIM_TRANSFORM_SCREEN : 
 			g_RenderStateMgr.SetTransform(D3DTS_PROJECTION, reinterpret_cast<const D3DMATRIX*>(&mIdentity)); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.set_projection_matrix(mIdentity.m);
+#endif // LTJS_WIP_OGL
+
 			break; 
 
 		default:
@@ -486,24 +548,57 @@ void CD3DDrawPrim::SetTransformMode(LPDIRECT3DDEVICE9 pDevice)
 
 void CD3DDrawPrim::SetColorOp(LPDIRECT3DDEVICE9 pDevice)
 {
-	switch (m_ColorOp) 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+	auto& stage = ogl_renderer.get_stage(0);
+#endif // LTJS_WIP_OGL
+
+	switch (m_ColorOp)
 	{
-	case DRAWPRIM_NOCOLOROP : 
-		pDevice->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_SELECTARG2); 
-		pDevice->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG2); 
+	case DRAWPRIM_NOCOLOROP:
+		pDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG2);
+		pDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG2);
+
+#ifdef LTJS_WIP_OGL
+		stage.set_color_op(ltjs::OglRenderer::d3dtop_selectarg2);
+		stage.set_alpha_op(ltjs::OglRenderer::d3dtop_selectarg2);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_MODULATE	: 
-		pDevice->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_MODULATE); 
-		pDevice->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_MODULATE); 
+
+	case DRAWPRIM_MODULATE:
+		pDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
+		pDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_MODULATE);
+
+#ifdef LTJS_WIP_OGL
+		stage.set_color_op(ltjs::OglRenderer::d3dtop_modulate);
+		stage.set_alpha_op(ltjs::OglRenderer::d3dtop_modulate);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_ADD		: 
-		pDevice->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_ADD); 
-		pDevice->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_ADD); 
+
+	case DRAWPRIM_ADD:
+		pDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_ADD);
+		pDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_ADD);
+
+#ifdef LTJS_WIP_OGL
+		stage.set_color_op(ltjs::OglRenderer::d3dtop_add);
+		stage.set_alpha_op(ltjs::OglRenderer::d3dtop_add);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_DECAL		: 
-		pDevice->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_SELECTARG1); 
-		pDevice->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_SELECTARG1); 
+
+	case DRAWPRIM_DECAL:
+		pDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_SELECTARG1);
+		pDevice->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_SELECTARG1);
+
+#ifdef LTJS_WIP_OGL
+		stage.set_color_op(ltjs::OglRenderer::d3dtop_selectarg1);
+		stage.set_alpha_op(ltjs::OglRenderer::d3dtop_selectarg1);
+#endif // LTJS_WIP_OGL
+
 		break;
+
 	default:
 		assert(false);
 		break;
@@ -512,61 +607,150 @@ void CD3DDrawPrim::SetColorOp(LPDIRECT3DDEVICE9 pDevice)
 
 void CD3DDrawPrim::SetBlendMode(LPDIRECT3DDEVICE9 pDevice)
 {
-	switch (m_BlendMode) 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
+	switch (m_BlendMode)
 	{
-	case DRAWPRIM_NOBLEND	: 
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,false); 
+	case DRAWPRIM_NOBLEND:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, false);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(false);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_ADD	: 
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_ONE); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ONE); 
+
+	case DRAWPRIM_BLEND_ADD:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_one, ltjs::OglRenderer::d3dblend_one);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_SATURATE :
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_INVDESTCOLOR); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ONE); 
+
+	case DRAWPRIM_BLEND_SATURATE:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_INVDESTCOLOR);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_invdestcolor, ltjs::OglRenderer::d3dblend_one);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_MOD_SRCALPHA	: 
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCALPHA); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCALPHA); 
+
+	case DRAWPRIM_BLEND_MOD_SRCALPHA:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_srcalpha, ltjs::OglRenderer::d3dblend_invsrcalpha);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_MOD_SRCCOLOR	: 
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCCOLOR); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVSRCCOLOR); 
+
+	case DRAWPRIM_BLEND_MOD_SRCCOLOR:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_srccolor, ltjs::OglRenderer::d3dblend_invsrccolor);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_MOD_DSTCOLOR	: 
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_DESTCOLOR); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_INVDESTCOLOR); 
+
+	case DRAWPRIM_BLEND_MOD_DSTCOLOR:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVDESTCOLOR);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_destcolor, ltjs::OglRenderer::d3dblend_invdestcolor);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_MUL_SRCALPHA_ONE :
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCALPHA); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ONE); 
+
+	case DRAWPRIM_BLEND_MUL_SRCALPHA_ONE:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_srcalpha, ltjs::OglRenderer::d3dblend_one);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_MUL_SRCALPHA :
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCALPHA); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ZERO); 
+
+	case DRAWPRIM_BLEND_MUL_SRCALPHA:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_srcalpha, ltjs::OglRenderer::d3dblend_zero);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_MUL_SRCCOL_DSTCOL	: 
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCCOLOR); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_DESTCOLOR); 
+
+	case DRAWPRIM_BLEND_MUL_SRCCOL_DSTCOL:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_DESTCOLOR);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_srccolor, ltjs::OglRenderer::d3dblend_destcolor);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_MUL_SRCCOL_ONE	: 
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_SRCCOLOR); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ONE); 
+
+	case DRAWPRIM_BLEND_MUL_SRCCOL_ONE:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCCOLOR);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ONE);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_srccolor, ltjs::OglRenderer::d3dblend_one);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_BLEND_MUL_DSTCOL_ZERO	: 
-		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE,true); 
-		pDevice->SetRenderState(D3DRS_SRCBLEND,D3DBLEND_DESTCOLOR); 
-		pDevice->SetRenderState(D3DRS_DESTBLEND,D3DBLEND_ZERO); 
-		break; 
+
+	case DRAWPRIM_BLEND_MUL_DSTCOL_ZERO:
+		pDevice->SetRenderState(D3DRS_ALPHABLENDENABLE, true);
+		pDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_DESTCOLOR);
+		pDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_ZERO);
+
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_blending_enabled(true);
+		ogl_renderer.set_blending_factors(ltjs::OglRenderer::d3dblend_destcolor, ltjs::OglRenderer::d3dblend_zero);
+#endif // LTJS_WIP_OGL
+
+		break;
+
 	default:
 		assert(false);
 		break;
@@ -575,86 +759,206 @@ void CD3DDrawPrim::SetBlendMode(LPDIRECT3DDEVICE9 pDevice)
 
 void CD3DDrawPrim::SetZBufferMode(LPDIRECT3DDEVICE9 pDevice)
 {
-	switch (m_eZBufferMode) 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
+	switch (m_eZBufferMode)
 	{
-	case DRAWPRIM_ZRW :
-		pDevice->SetRenderState(D3DRS_ZENABLE,true);
-		pDevice->SetRenderState(D3DRS_ZWRITEENABLE,true); 
+	case DRAWPRIM_ZRW:
+		pDevice->SetRenderState(D3DRS_ZENABLE, true);
+		pDevice->SetRenderState(D3DRS_ZWRITEENABLE, true);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_depth_enabled(true);
+		ogl_renderer.set_is_depth_writable(true);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_ZRO :
-		pDevice->SetRenderState(D3DRS_ZENABLE,true);
-		pDevice->SetRenderState(D3DRS_ZWRITEENABLE,false); 
+
+	case DRAWPRIM_ZRO:
+		pDevice->SetRenderState(D3DRS_ZENABLE, true);
+		pDevice->SetRenderState(D3DRS_ZWRITEENABLE, false);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_depth_enabled(true);
+		ogl_renderer.set_is_depth_writable(false);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_NOZ :
-		pDevice->SetRenderState(D3DRS_ZENABLE,false);
-		pDevice->SetRenderState(D3DRS_ZWRITEENABLE,false); 
-		break; 
+
+	case DRAWPRIM_NOZ:
+		pDevice->SetRenderState(D3DRS_ZENABLE, false);
+		pDevice->SetRenderState(D3DRS_ZWRITEENABLE, false);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_depth_enabled(false);
+		ogl_renderer.set_is_depth_writable(false);
+#endif // LTJS_WIP_OGL
+
+		break;
+
 	default:
 		assert(false);
 		break;
 	}
-
 }
 
 void CD3DDrawPrim::SetTestMode(LPDIRECT3DDEVICE9 pDevice)
 {
-	switch (m_eTestMode) 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
+	switch (m_eTestMode)
 	{
-	case DRAWPRIM_NOALPHATEST :
-		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE,false); 
+	case DRAWPRIM_NOALPHATEST:
+		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, false);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_alpha_test_enabled(false);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_ALPHATEST_LESS :
-		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE,true);
-		pDevice->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_LESS); 
+
+	case DRAWPRIM_ALPHATEST_LESS:
+		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, true);
+		pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_LESS);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_alpha_test_enabled(true);
+		ogl_renderer.set_alpha_test_func(ltjs::OglRenderer::d3dcmp_less);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_ALPHATEST_LESSEQUAL :
-		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE,true);
-		pDevice->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_LESSEQUAL); 
+
+	case DRAWPRIM_ALPHATEST_LESSEQUAL:
+		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, true);
+		pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_LESSEQUAL);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_alpha_test_enabled(true);
+		ogl_renderer.set_alpha_test_func(ltjs::OglRenderer::d3dcmp_lessequal);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_ALPHATEST_GREATER :
-		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE,true);
-		pDevice->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATER); 
+
+	case DRAWPRIM_ALPHATEST_GREATER:
+		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, true);
+		pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATER);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_alpha_test_enabled(true);
+		ogl_renderer.set_alpha_test_func(ltjs::OglRenderer::d3dcmp_greater);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_ALPHATEST_GREATEREQUAL :
-		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE,true);
-		pDevice->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_GREATEREQUAL); 
+
+	case DRAWPRIM_ALPHATEST_GREATEREQUAL:
+		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, true);
+		pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_GREATEREQUAL);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_alpha_test_enabled(true);
+		ogl_renderer.set_alpha_test_func(ltjs::OglRenderer::d3dcmp_greaterequal);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_ALPHATEST_EQUAL :
-		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE,true);
-		pDevice->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_EQUAL); 
+
+	case DRAWPRIM_ALPHATEST_EQUAL:
+		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, true);
+		pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_EQUAL);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_alpha_test_enabled(true);
+		ogl_renderer.set_alpha_test_func(ltjs::OglRenderer::d3dcmp_equal);
+#endif // LTJS_WIP_OGL
+
 		break;
-	case DRAWPRIM_ALPHATEST_NOTEQUAL :
-		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE,true);
-		pDevice->SetRenderState(D3DRS_ALPHAFUNC,D3DCMP_NOTEQUAL); 
-		break; 
+
+	case DRAWPRIM_ALPHATEST_NOTEQUAL:
+		pDevice->SetRenderState(D3DRS_ALPHATESTENABLE, true);
+		pDevice->SetRenderState(D3DRS_ALPHAFUNC, D3DCMP_NOTEQUAL);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_is_alpha_test_enabled(true);
+		ogl_renderer.set_alpha_test_func(ltjs::OglRenderer::d3dcmp_notequal);
+#endif // LTJS_WIP_OGL
+
+		break;
+
 	default:
 		assert(false);
 		break;
 	}
-
 }
 
 void CD3DDrawPrim::SetFillMode(LPDIRECT3DDEVICE9 pDevice)
 {
-	switch (m_eFillMode) 
-	{
-	case DRAWPRIM_WIRE : pDevice->SetRenderState(D3DRS_FILLMODE,D3DFILL_WIREFRAME); break;
-	case DRAWPRIM_FILL : pDevice->SetRenderState(D3DRS_FILLMODE,D3DFILL_SOLID); break; 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
-	default: 
+	switch (m_eFillMode)
+	{
+	case DRAWPRIM_WIRE:
+		pDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_WIREFRAME);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_fill_mode(ltjs::OglRenderer::d3dfill_wireframe);
+#endif // LTJS_WIP_OGL
+
+		break;
+
+	case DRAWPRIM_FILL:
+		pDevice->SetRenderState(D3DRS_FILLMODE, D3DFILL_SOLID);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_fill_mode(ltjs::OglRenderer::d3dfill_solid);
+#endif // LTJS_WIP_OGL
+
+		break;
+
+	default:
 		assert(false);
 		break;
-	} 
-
+	}
 }
 
 void CD3DDrawPrim::SetCullMode(LPDIRECT3DDEVICE9 pDevice)
 {
-	switch (m_eCullMode) 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
+	switch (m_eCullMode)
 	{
-	case DRAWPRIM_CULL_NONE : pDevice->SetRenderState(D3DRS_CULLMODE,D3DCULL_NONE); break;
-	case DRAWPRIM_CULL_CCW	: pDevice->SetRenderState(D3DRS_CULLMODE,D3DCULL_CCW); break;
-	case DRAWPRIM_CULL_CW	: pDevice->SetRenderState(D3DRS_CULLMODE,D3DCULL_CW); break; 
+	case DRAWPRIM_CULL_NONE:
+		pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_cull_mode(ltjs::OglRenderer::d3dcull_none);
+#endif // LTJS_WIP_OGL
+
+		break;
+
+	case DRAWPRIM_CULL_CCW:
+		pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_CCW);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_cull_mode(ltjs::OglRenderer::d3dcull_ccw);
+#endif // LTJS_WIP_OGL
+
+		break;
+
+	case DRAWPRIM_CULL_CW:
+		pDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_CW);
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_cull_mode(ltjs::OglRenderer::d3dcull_cw);
+#endif // LTJS_WIP_OGL
+
+		break;
 
 	default:
 		assert(false);
@@ -670,7 +974,6 @@ void CD3DDrawPrim::SetFogEnable(LPDIRECT3DDEVICE9 pDevice)
 // Set the render states (and save the old ones)...
 void CD3DDrawPrim::PushRenderStates(LPDIRECT3DDEVICE9 pDevice)
 {
-
 	//saves the current D3D state into the member variables
 	SaveStates(pDevice);
 
@@ -708,6 +1011,20 @@ void CD3DDrawPrim::PushRenderStates(LPDIRECT3DDEVICE9 pDevice)
 	DX::XMStoreFloat4x4(&mIdentity, DX::XMMatrixIdentity());
 
 	g_RenderStateMgr.SetTransform(D3DTS_WORLDMATRIX(0), reinterpret_cast<const D3DMATRIX*>(&mIdentity));
+
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+	auto& stage = ogl_renderer.get_stage(0);
+
+	stage.set_color_arg1(ltjs::OglRenderer::d3dta_texture);
+	stage.set_color_arg2(ltjs::OglRenderer::d3dta_current);
+
+	stage.set_alpha_arg1(ltjs::OglRenderer::d3dta_texture);
+	stage.set_alpha_arg2(ltjs::OglRenderer::d3dta_current);
+
+	ogl_renderer.set_world_matrix(0, mIdentity.m);
+#endif // LTJS_WIP_OGL
 }
 
 // Reset the old renderstates...
@@ -729,6 +1046,7 @@ void CD3DDrawPrim::PopRenderStates(LPDIRECT3DDEVICE9 pDevice)
 	pDevice->SetTransform(D3DTS_VIEW,&m_PrevTransView);
 	pDevice->SetTransform(D3DTS_PROJECTION,&m_PrevTransProj); 
 
+	// FIXME Already set above. Which one is correct?
 	pDevice->SetTextureStageState(0,D3DTSS_COLOROP,D3DTOP_MODULATE); 
 	pDevice->SetTextureStageState(0,D3DTSS_ALPHAOP,D3DTOP_MODULATE);
 	pDevice->SetTextureStageState(0,D3DTSS_COLORARG1,D3DTA_TEXTURE);
@@ -736,9 +1054,44 @@ void CD3DDrawPrim::PopRenderStates(LPDIRECT3DDEVICE9 pDevice)
 	pDevice->SetTextureStageState(0,D3DTSS_ALPHAARG1,D3DTA_TEXTURE);
 	pDevice->SetTextureStageState(0,D3DTSS_ALPHAARG2,D3DTA_DIFFUSE); 
 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+
+	ogl_renderer.set_is_blending_enabled(m_PrevAlphaBlendEnable != 0);
+	ogl_renderer.set_blending_factors(m_PrevSrcBlend, m_PrevDstBlend);
+
+	ogl_renderer.set_is_depth_enabled(m_PrevZEnable != 0);
+	ogl_renderer.set_is_depth_writable(m_PrevZWriteEnable != 0);
+
+	ogl_renderer.set_is_alpha_test_enabled(m_PrevAlphaTestEnable != 0);
+	ogl_renderer.set_alpha_test_func(m_PrevAlphaTestFunc);
+
+	ogl_renderer.set_fill_mode(m_PrevFillMode);
+	ogl_renderer.set_is_clipping(m_PrevClipMode != 0);
+	ogl_renderer.set_cull_mode(m_PrevCullMode);
+
+	// FIXME Fog
+
+	ogl_renderer.set_view_matrix(m_PrevTransView.m);
+	ogl_renderer.set_projection_matrix(m_PrevTransProj.m);
+
+	auto& stage = ogl_renderer.get_stage(0);
+
+	stage.set_color_op(ltjs::OglRenderer::d3dtop_modulate);
+	stage.set_alpha_op(ltjs::OglRenderer::d3dtop_modulate);
+	stage.set_color_arg1(ltjs::OglRenderer::d3dta_texture);
+	stage.set_color_arg2(ltjs::OglRenderer::d3dta_diffuse);
+	stage.set_alpha_arg1(ltjs::OglRenderer::d3dta_texture);
+	stage.set_alpha_arg2(ltjs::OglRenderer::d3dta_diffuse);
+#endif // LTJS_WIP_OGL
+
 	if (m_bResetViewport) 
 	{ 
 		PD3DDEVICE->SetViewport(&m_PrevViewport); 
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.set_viewport(reinterpret_cast<const ltjs::OglRenderer::Viewport&>(m_PrevViewport));
+#endif // LTJS_WIP_OGL
 	}
 
 	SetTexture((HTEXTURE)0);
@@ -793,6 +1146,12 @@ void CD3DDrawPrim::SaveViewport( void )
 void CD3DDrawPrim::RestoreViewport( void )
 {
 	PD3DDEVICE->SetViewport( &m_SavedViewport );
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+
+	ogl_renderer.set_viewport(reinterpret_cast<const ltjs::OglRenderer::Viewport&>(m_SavedViewport));
+#endif // LTJS_WIP_OGL
 }
 
 
@@ -801,6 +1160,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT3 *pPrim, uint32 nCount) {
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 
@@ -813,6 +1176,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT3 *pPrim, uint32 nCount) {
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nCount, pPrim, sizeof(LT_VERTGT)));
 		if (hRes != D3D_OK) 
 			return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_trianglelist,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+			nCount,
+			pPrim
+		);
+#endif // LTJS_WIP_OGL
 	}
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -849,7 +1221,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT3 *pPrim, uint32 nCount) {
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
 			if (hRes != D3D_OK) 
-				return LT_ERROR; 
+				return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglelist,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
 	} }
 
 	return LT_OK;
@@ -859,6 +1240,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT3 *pPrim, uint32 nCount) {
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -893,6 +1278,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT3 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertBufGT, sizeof(LT_VERTGT)));
 			if (hRes != D3D_OK) 
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglelist,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount,
+				m_VertBufGT
+		);
+#endif // LTJS_WIP_OGL
 	} }
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -930,6 +1324,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT3 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
 			if (hRes != D3D_OK) 
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglelist,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
 	} }
 
 	return LT_OK;
@@ -939,6 +1342,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG3 *pPrim, uint32 nCount) {
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -950,6 +1357,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG3 *pPrim, uint32 nCount) {
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nCount, pPrim, sizeof(LT_VERTG)));
 		if (hRes != D3D_OK) 
 			return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_trianglelist,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+			nCount,
+			pPrim
+		);
+#endif // LTJS_WIP_OGL
 	}
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -984,6 +1400,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG3 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS)));
 			if (hRes != D3D_OK) 
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglelist,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				nCount,
+				pPrim
+			);
+#endif // LTJS_WIP_OGL
 	} }
 
 	return LT_OK;
@@ -993,6 +1418,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF3 *pPrim, uint32 nCount) {
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1024,6 +1453,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF3 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertBufG, sizeof(LT_VERTG))); 
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglelist,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount,
+				m_VertBufG
+			);
+#endif // LTJS_WIP_OGL
 	} }
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1058,6 +1496,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF3 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes,pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS))); 
 			if (hRes != D3D_OK)
 				return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglelist,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount,
+				m_VertTransBuf
+			);
+#endif // LTJS_WIP_OGL
 	} }
 	
 	return LT_OK;
@@ -1068,6 +1515,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1085,6 +1536,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
 		}
 		if (hRes != D3D_OK)
 			return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_trianglefan,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+			2,
+			pPrimPtr
+		);
+#endif // LTJS_WIP_OGL
 	}
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1142,6 +1602,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
 				{
 					return LT_ERROR;
 				}
+
+#ifdef LTJS_WIP_OGL
+				ogl_renderer.draw(
+					ltjs::OglRenderer::d3dpt_trianglefan,
+					ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+					nDrawCount,
+					m_VertTransBufT
+				);
+#endif // LTJS_WIP_OGL
 		} }
 		else {
   			LT_POLYGT4* pPrimPtr = pPrim;
@@ -1154,6 +1623,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
   			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
 			if (hRes != D3D_OK) 
 				return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				2,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr; } }
 
 		 }
@@ -1168,6 +1647,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
 		if (hRes != D3D_OK) return LT_ERROR;
@@ -1181,6 +1664,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, *ppPrimPtr, sizeof(LT_VERTGT)));
 			if (hRes != D3D_OK)
 				return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				2,
+				*ppPrimPtr
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++ppPrimPtr; }
 		 }
 	else {	// Use Transform and Lit verts...
@@ -1240,6 +1733,15 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
 				EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
 				if (hRes != D3D_OK)
 					return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+				ogl_renderer.draw(
+					ltjs::OglRenderer::d3dpt_trianglefan,
+					ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+					nDrawCount,
+					m_VertTransBufT
+				);
+#endif // LTJS_WIP_OGL
 		} }
 		else {
   			LT_POLYGT4** pPrimPtr = ppPrim;
@@ -1253,6 +1755,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
   			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				2,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr; } }
 
 		}
@@ -1265,6 +1777,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT4 *pPrim, uint32 nCount) {
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1282,6 +1798,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT4 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertBufGT, sizeof(LT_VERTGT)));
 			if (hRes != D3D_OK)
 				return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				2,
+				m_VertBufGT
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr; }
 		 }
 	else {	// Use Transform and Lit verts...
@@ -1300,6 +1826,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT4 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				2,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr; }
 		}
 
@@ -1310,6 +1846,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG4 *pPrim, uint32 nCount) {
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1324,6 +1864,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG4 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, pPrimPtr, sizeof(LT_VERTG)));
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+				2,
+				pPrimPtr
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr; }
 		}
 	else {	// Use Transform and Lit verts...
@@ -1340,6 +1890,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG4 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS)));
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				2,
+				m_VertTransBuf
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr; }
 		}
 
@@ -1350,6 +1910,10 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF4 *pPrim, uint32 nCount) {
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1366,6 +1930,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF4 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertBufG, sizeof(LT_VERTG)));
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+				2,
+				m_VertBufG
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr; }
 		}
 	else {	// Use Transform and Lit verts...
@@ -1383,6 +1957,16 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF4 *pPrim, uint32 nCount) {
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS)));
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				2,
+				m_VertTransBuf
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr; }
 		}
 
@@ -1396,6 +1980,10 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEGT *pPrim, uint32 nCount)
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
 		if (hRes != D3D_OK) return LT_ERROR;
@@ -1406,6 +1994,15 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEGT *pPrim, uint32 nCount)
 		EFFECT_SHADER_MACRO(hRes,pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nCount, pPrim, sizeof(LT_VERTGT)));
 		if (hRes != D3D_OK)
 			return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_linelist,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+			nCount,
+			pPrim
+		);
+#endif // LTJS_WIP_OGL
 	}
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1437,6 +2034,15 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEGT *pPrim, uint32 nCount)
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
 			if (hRes != D3D_OK)
 				return LT_ERROR;
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_linelist,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
 	} }
 
 	return LT_OK;
