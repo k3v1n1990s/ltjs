@@ -663,7 +663,9 @@ void d3d_SwapBuffers(uint flags)
 	ClearDirtyRects();
 
 #ifdef LTJS_WIP_OGL
+#if 0
 	ogl_test_draw();
+#endif
 	ogl_swap_buffers();
 #endif // LTJS_WIP_OGL
 }

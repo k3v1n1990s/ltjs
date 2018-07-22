@@ -582,8 +582,8 @@ void ogl_set_test_data()
 	ogl_renderer.set_cull_mode(ltjs::OglRenderer::d3dcull_none);
 	ogl_renderer.set_fill_mode(ltjs::OglRenderer::d3dfill_solid);
 
-	auto stage = ogl_renderer.get_stage(0);
-	stage->set_color_op(ltjs::OglRenderer::d3dtop_disable);
+	auto& stage = ogl_renderer.get_stage(0);
+	stage.set_color_op(ltjs::OglRenderer::d3dtop_disable);
 }
 
 bool ogl_initialize_internal(
@@ -618,7 +618,9 @@ bool ogl_initialize_internal(
 
 	ogl_test_vao_ = ogl_renderer.add_vertex_array_object();
 
+#if 0
 	ogl_set_test_data();
+#endif
 
 	assert(ogl_is_succeed());
 
