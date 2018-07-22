@@ -876,7 +876,7 @@ public:
 		const float (&texture_matrix)[4][4]);
 
 
-	SamplerPtr get_sampler(
+	Sampler& get_sampler(
 		const int index);
 
 
@@ -1083,7 +1083,7 @@ private:
 	// Sampler.
 	//
 
-	virtual SamplerPtr do_get_sampler(
+	virtual Sampler& do_get_sampler(
 		const int index) = 0;
 
 

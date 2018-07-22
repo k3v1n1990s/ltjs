@@ -1992,10 +1992,11 @@ private:
 		are_texture_matrices_modified_.set(index);
 	}
 
-	SamplerPtr do_get_sampler(
+	Sampler& do_get_sampler(
 		const int index) override
 	{
-		return &samplers_[index];
+		assert(index >= 0 && index < max_stages);
+		return samplers_[index];
 	}
 
 	VertexArrayObjectPtr do_add_vertex_array_object() override
@@ -8136,7 +8137,7 @@ void OglRenderer::set_texture_matrix(
 	do_set_texture_matrix(index, reinterpret_cast<const float*>(texture_matrix));
 }
 
-OglRenderer::SamplerPtr OglRenderer::get_sampler(
+OglRenderer::Sampler& OglRenderer::get_sampler(
 	const int index)
 {
 	return do_get_sampler(index);
