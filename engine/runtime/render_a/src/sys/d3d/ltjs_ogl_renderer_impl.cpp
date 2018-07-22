@@ -2116,6 +2116,7 @@ private:
 
 		if (ui_vao_it == ui_vao_end_it)
 		{
+			assert(!"Unsupported flexible vertex format.");
 			return;
 		}
 
@@ -2125,6 +2126,7 @@ private:
 
 		if (!vao)
 		{
+			assert(!"No vertex array object.");
 			return;
 		}
 
