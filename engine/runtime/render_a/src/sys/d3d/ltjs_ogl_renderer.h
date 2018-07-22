@@ -227,10 +227,13 @@ public:
 
 	struct Viewport
 	{
-		int x_;
-		int y_;
-		int width_;
-		int height_;
+		static constexpr auto class_size = 24;
+
+
+		std::uint32_t x_;
+		std::uint32_t y_;
+		std::uint32_t width_;
+		std::uint32_t height_;
 
 		float depth_min_z_;
 		float depth_max_z_;

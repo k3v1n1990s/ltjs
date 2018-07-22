@@ -7808,6 +7808,7 @@ OglRenderer::Viewport::Viewport()
 	depth_min_z_{},
 	depth_max_z_{}
 {
+	static_assert(class_size == static_cast<int>(sizeof(Viewport)), "Class size mismatch.");
 }
 
 //
