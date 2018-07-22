@@ -2072,22 +2072,22 @@ private:
 		assert(size_before > size_after);
 	}
 
-	StagePtr do_get_stage(
+	Stage& do_get_stage(
 		const int stage_index) override
 	{
 		if (!is_initialized_)
 		{
 			assert(!"Invalid state.");
-			return nullptr;
+			throw "Invalid state.";
 		}
 
 		if (stage_index < 0 || stage_index >= max_stages)
 		{
 			assert(!"Stage index out of range.");
-			return nullptr;
+			throw "Stage index out of range.";
 		}
 
-		return &stages_[stage_index];
+		return stages_[stage_index];
 	}
 
 	void do_draw(
@@ -8161,7 +8161,7 @@ void OglRenderer::remove_texture(
 	do_remove_texture(texture);
 }
 
-OglRenderer::StagePtr OglRenderer::get_stage(
+OglRenderer::Stage& OglRenderer::get_stage(
 	const int stage_index)
 {
 	return do_get_stage(stage_index);

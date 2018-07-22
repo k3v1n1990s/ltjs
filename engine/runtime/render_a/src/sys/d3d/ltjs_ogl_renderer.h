@@ -890,7 +890,7 @@ public:
 	void remove_texture(
 		TexturePtr texture);
 
-	StagePtr get_stage(
+	Stage& get_stage(
 		const int stage_index);
 
 
@@ -1102,7 +1102,7 @@ private:
 	virtual void do_remove_texture(
 		TexturePtr texture) = 0;
 
-	virtual StagePtr do_get_stage(
+	virtual Stage& do_get_stage(
 		const int stage_index) = 0;
 
 
