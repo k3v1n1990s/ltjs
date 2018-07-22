@@ -1174,8 +1174,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT3 *pPrim, uint32 nCount) {
 		if (hRes != D3D_OK) return LT_ERROR;
 
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nCount, pPrim, sizeof(LT_VERTGT)));
-		if (hRes != D3D_OK) 
-			return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 		ogl_renderer.draw(
@@ -1185,6 +1183,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT3 *pPrim, uint32 nCount) {
 			pPrim
 		);
 #endif // LTJS_WIP_OGL
+
+		if (hRes != D3D_OK) 
+			return LT_ERROR; 
 	}
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1220,8 +1221,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT3 *pPrim, uint32 nCount) {
 				--nCount; nDstBufSize -= 3; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
-			if (hRes != D3D_OK) 
-				return LT_ERROR;
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1231,6 +1230,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT3 *pPrim, uint32 nCount) {
 				m_VertTransBufT
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK) 
+				return LT_ERROR;
 	} }
 
 	return LT_OK;
@@ -1276,8 +1278,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT3 *pPrim, uint32 nCount) {
 				--nCount; nDstBufSize -= 3; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertBufGT, sizeof(LT_VERTGT)));
-			if (hRes != D3D_OK) 
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1287,6 +1287,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT3 *pPrim, uint32 nCount) {
 				m_VertBufGT
 		);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK) 
+				return LT_ERROR; 
 	} }
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1322,8 +1325,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT3 *pPrim, uint32 nCount) {
 				--nCount; nDstBufSize -= 3; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
-			if (hRes != D3D_OK) 
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1333,6 +1334,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT3 *pPrim, uint32 nCount) {
 				m_VertTransBufT
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK) 
+				return LT_ERROR; 
 	} }
 
 	return LT_OK;
@@ -1355,8 +1359,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG3 *pPrim, uint32 nCount) {
 		if (hRes != D3D_OK) return LT_ERROR;
 
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nCount, pPrim, sizeof(LT_VERTG)));
-		if (hRes != D3D_OK) 
-			return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 		ogl_renderer.draw(
@@ -1366,6 +1368,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG3 *pPrim, uint32 nCount) {
 			pPrim
 		);
 #endif // LTJS_WIP_OGL
+
+		if (hRes != D3D_OK) 
+			return LT_ERROR; 
 	}
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1398,8 +1403,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG3 *pPrim, uint32 nCount) {
 				--nCount; nDstBufSize -= 3; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS)));
-			if (hRes != D3D_OK) 
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1409,6 +1412,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG3 *pPrim, uint32 nCount) {
 				pPrim
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK) 
+				return LT_ERROR; 
 	} }
 
 	return LT_OK;
@@ -1451,8 +1457,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF3 *pPrim, uint32 nCount) {
 				--nCount; nDstBufSize -= 3; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertBufG, sizeof(LT_VERTG))); 
-			if (hRes != D3D_OK)
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1462,6 +1466,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF3 *pPrim, uint32 nCount) {
 				m_VertBufG
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR; 
 	} }
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1494,8 +1501,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF3 *pPrim, uint32 nCount) {
 				--nCount; nDstBufSize -= 3; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes,pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS))); 
-			if (hRes != D3D_OK)
-				return LT_ERROR;
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1505,6 +1510,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF3 *pPrim, uint32 nCount) {
 				m_VertTransBuf
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR;
 	} }
 	
 	return LT_OK;
@@ -1532,19 +1540,19 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
 		{	// Note: Not checking return everytime for speed...
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, pPrimPtr, sizeof(LT_VERTGT)));
 
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				2,
+				pPrimPtr
+			);
+#endif // LTJS_WIP_OGL
+
 			--nCount; ++pPrimPtr;
 		}
 		if (hRes != D3D_OK)
 			return LT_ERROR;
-
-#ifdef LTJS_WIP_OGL
-		ogl_renderer.draw(
-			ltjs::OglRenderer::d3dpt_trianglefan,
-			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
-			2,
-			pPrimPtr
-		);
-#endif // LTJS_WIP_OGL
 	}
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -1598,10 +1606,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
 
 					--nCount; nDstBufSize -= 6; nDrawCount += 2; ++pSrcPtr; }
 				EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
-				if (hRes != D3D_OK)
-				{
-					return LT_ERROR;
-				}
 
 #ifdef LTJS_WIP_OGL
 				ogl_renderer.draw(
@@ -1611,6 +1615,11 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
 					m_VertTransBufT
 				);
 #endif // LTJS_WIP_OGL
+
+				if (hRes != D3D_OK)
+				{
+					return LT_ERROR;
+				}
 		} }
 		else {
   			LT_POLYGT4* pPrimPtr = pPrim;
@@ -1621,8 +1630,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
   					m_VertTransBufT[i].u	= pPrimPtr->verts[i].u; m_VertTransBufT[i].v = pPrimPtr->verts[i].v; }
 
   			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
-			if (hRes != D3D_OK) 
-				return LT_ERROR;
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1632,6 +1639,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 *pPrim, uint32 nCount) {
 				m_VertTransBufT
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK) 
+				return LT_ERROR;
 
 			--nCount; ++pPrimPtr; } }
 
@@ -1662,8 +1672,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
 		while (nCount) 
 		{	// Note: Not checking return everytime for speed...
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, *ppPrimPtr, sizeof(LT_VERTGT)));
-			if (hRes != D3D_OK)
-				return LT_ERROR;
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1673,6 +1681,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
 				*ppPrimPtr
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR;
 
 			--nCount; ++ppPrimPtr; }
 		 }
@@ -1731,8 +1742,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
 
 					--nCount; nDstBufSize -= 6; nDrawCount += 2; ++pPtrArray; }
 				EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
-				if (hRes != D3D_OK)
-					return LT_ERROR;
 
 #ifdef LTJS_WIP_OGL
 				ogl_renderer.draw(
@@ -1742,6 +1751,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
 					m_VertTransBufT
 				);
 #endif // LTJS_WIP_OGL
+
+				if (hRes != D3D_OK)
+					return LT_ERROR;
 		} }
 		else {
   			LT_POLYGT4** pPrimPtr = ppPrim;
@@ -1753,8 +1765,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
   					m_VertTransBufT[i].u	= (*pPrimPtr)->verts[i].u; m_VertTransBufT[i].v = (*pPrimPtr)->verts[i].v; }
 
   			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
-			if (hRes != D3D_OK)
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1764,6 +1774,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYGT4 **ppPrim, uint32 nCount) {
 				m_VertTransBufT
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR; 
 
 			--nCount; ++pPrimPtr; } }
 
@@ -1796,8 +1809,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT4 *pPrim, uint32 nCount) {
 				m_VertBufGT[i].rgba = pPrimPtr->rgba;
 				m_VertBufGT[i].u	= pPrimPtr->verts[i].u; m_VertBufGT[i].v = pPrimPtr->verts[i].v; }
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertBufGT, sizeof(LT_VERTGT)));
-			if (hRes != D3D_OK)
-				return LT_ERROR;
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1807,6 +1818,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT4 *pPrim, uint32 nCount) {
 				m_VertBufGT
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR;
 
 			--nCount; ++pPrimPtr; }
 		 }
@@ -1824,8 +1838,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT4 *pPrim, uint32 nCount) {
 				m_VertTransBufT[i].rgba = RGBA_MAKE(pPrimPtr->rgba.r,pPrimPtr->rgba.g,pPrimPtr->rgba.b,pPrimPtr->rgba.a);
 				m_VertTransBufT[i].u	= pPrimPtr->verts[i].u; m_VertTransBufT[i].v = pPrimPtr->verts[i].v; }
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX)));
-			if (hRes != D3D_OK)
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1835,6 +1847,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYFT4 *pPrim, uint32 nCount) {
 				m_VertTransBufT
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR; 
 
 			--nCount; ++pPrimPtr; }
 		}
@@ -1862,8 +1877,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG4 *pPrim, uint32 nCount) {
 		while (nCount) 
 		{	// Note: Not checking return everytime for speed...
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, pPrimPtr, sizeof(LT_VERTG)));
-			if (hRes != D3D_OK)
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1873,6 +1886,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG4 *pPrim, uint32 nCount) {
 				pPrimPtr
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR; 
 
 			--nCount; ++pPrimPtr; }
 		}
@@ -1888,8 +1904,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG4 *pPrim, uint32 nCount) {
 				m_VertTransBuf[i].x	= pPrimPtr->verts[i].x; m_VertTransBuf[i].y = pPrimPtr->verts[i].y; m_VertTransBuf[i].z = pPrimPtr->verts[i].z; m_VertTransBuf[i].rhw = 1.0f;
 				m_VertTransBuf[i].rgba = RGBA_MAKE(pPrimPtr->verts[i].rgba.r,pPrimPtr->verts[i].rgba.g,pPrimPtr->verts[i].rgba.b,pPrimPtr->verts[i].rgba.a); }
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS)));
-			if (hRes != D3D_OK)
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1899,6 +1913,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYG4 *pPrim, uint32 nCount) {
 				m_VertTransBuf
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR; 
 
 			--nCount; ++pPrimPtr; }
 		}
@@ -1928,8 +1945,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF4 *pPrim, uint32 nCount) {
 				m_VertBufG[i].x	= pPrimPtr->verts[i].x; m_VertBufG[i].y = pPrimPtr->verts[i].y; m_VertBufG[i].z = pPrimPtr->verts[i].z;
 				m_VertBufG[i].rgba = pPrimPtr->rgba; }
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertBufG, sizeof(LT_VERTG)));
-			if (hRes != D3D_OK)
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1939,6 +1954,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF4 *pPrim, uint32 nCount) {
 				m_VertBufG
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR; 
 
 			--nCount; ++pPrimPtr; }
 		}
@@ -1955,8 +1973,6 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF4 *pPrim, uint32 nCount) {
 				m_VertTransBuf[i].x	= pPrimPtr->verts[i].x; m_VertTransBuf[i].y = pPrimPtr->verts[i].y; m_VertTransBuf[i].z = pPrimPtr->verts[i].z; m_VertTransBuf[i].rhw = 1.0f;
 				m_VertTransBuf[i].rgba = RGBA_MAKE(pPrimPtr->rgba.r,pPrimPtr->rgba.g,pPrimPtr->rgba.b,pPrimPtr->rgba.a); }
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, 2, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS)));
-			if (hRes != D3D_OK)
-				return LT_ERROR; 
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -1966,6 +1982,9 @@ LTRESULT CD3DDrawPrim::DrawPrim(LT_POLYF4 *pPrim, uint32 nCount) {
 				m_VertTransBuf
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR; 
 
 			--nCount; ++pPrimPtr; }
 		}
@@ -1992,8 +2011,6 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEGT *pPrim, uint32 nCount)
 		if (hRes != D3D_OK) return LT_ERROR;
 
 		EFFECT_SHADER_MACRO(hRes,pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nCount, pPrim, sizeof(LT_VERTGT)));
-		if (hRes != D3D_OK)
-			return LT_ERROR;
 
 #ifdef LTJS_WIP_OGL
 		ogl_renderer.draw(
@@ -2003,6 +2020,9 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEGT *pPrim, uint32 nCount)
 			pPrim
 		);
 #endif // LTJS_WIP_OGL
+
+		if (hRes != D3D_OK)
+			return LT_ERROR;
 	}
 	else {	// Use Transform and Lit verts...
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -2032,8 +2052,6 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEGT *pPrim, uint32 nCount)
 				--nCount; nDstBufSize -= 2; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
-			if (hRes != D3D_OK)
-				return LT_ERROR;
 
 #ifdef LTJS_WIP_OGL
 			ogl_renderer.draw(
@@ -2043,6 +2061,9 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEGT *pPrim, uint32 nCount)
 				m_VertTransBufT
 			);
 #endif // LTJS_WIP_OGL
+
+			if (hRes != D3D_OK)
+				return LT_ERROR;
 	} }
 
 	return LT_OK;
@@ -2050,6 +2071,10 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEGT *pPrim, uint32 nCount)
 
 LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEFT *pPrim, uint32 nCount)
 {
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
@@ -2080,6 +2105,16 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEFT *pPrim, uint32 nCount)
 				--nCount; nDstBufSize -= 2; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nDrawCount, m_VertBufGT, sizeof(LT_VERTGT))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_linelist,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount,
+				m_VertBufGT
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR;
 	} }
@@ -2111,6 +2146,16 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEFT *pPrim, uint32 nCount)
 				--nCount; nDstBufSize -= 2; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nDrawCount, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_linelist,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR;
 	} }
@@ -2124,6 +2169,10 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEG *pPrim, uint32 nCount)
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
 		if (hRes != D3D_OK) return LT_ERROR;
@@ -2132,6 +2181,16 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEG *pPrim, uint32 nCount)
 		if (hRes != D3D_OK) return LT_ERROR;
 
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nCount, pPrim, sizeof(LT_VERTG)));
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_linelist,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+			nCount,
+			pPrim
+		);
+#endif // LTJS_WIP_OGL
+
 		if (hRes != D3D_OK)
 			return LT_ERROR;
 	}
@@ -2161,6 +2220,16 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEG *pPrim, uint32 nCount)
 				--nCount; nDstBufSize -= 2; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nDrawCount, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_linelist,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount,
+				m_VertTransBuf
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR;
 	} }
@@ -2173,6 +2242,10 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEF *pPrim, uint32 nCount)
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -2198,6 +2271,16 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEF *pPrim, uint32 nCount)
 				--nCount; nDstBufSize -= 2; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nDrawCount, m_VertBufG, sizeof(LT_VERTG))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_linelist,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount,
+				m_VertBufG
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR;
 	} }
@@ -2227,6 +2310,16 @@ LTRESULT CD3DDrawPrim::DrawPrim (LT_LINEF *pPrim, uint32 nCount)
 				--nCount; nDstBufSize -= 2; ++nDrawCount; ++pSrcPtr; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_LINELIST, nDrawCount, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_linelist,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount,
+				m_VertTransBuf
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR;
 	} }
@@ -2333,6 +2426,10 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTGT *pVerts, uint32 nCount) {
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
 		if (hRes != D3D_OK) return LT_ERROR;
@@ -2341,6 +2438,16 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTGT *pVerts, uint32 nCount) {
 		if (hRes != D3D_OK) return LT_ERROR;
 
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, nCount-2, pVerts, sizeof(LT_VERTGT)));
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_trianglefan,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+			nCount - 2,
+			pVerts
+		);
+#endif // LTJS_WIP_OGL
+
 		if (hRes != D3D_OK)
 			return LT_ERROR;
 	}
@@ -2371,6 +2478,16 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTGT *pVerts, uint32 nCount) {
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, nDrawCount-2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount - 2,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2383,6 +2500,10 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTFT *pVerts, uint32 nCount, LT_VERTRGBA
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -2411,6 +2532,16 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTFT *pVerts, uint32 nCount, LT_VERTRGBA
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, nDrawCount-2, m_VertBufGT, sizeof(LT_VERTGT))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount - 2,
+				m_VertBufGT
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2442,6 +2573,16 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTFT *pVerts, uint32 nCount, LT_VERTRGBA
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, nDrawCount-2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount - 2,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2455,6 +2596,10 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTG *pVerts, uint32 nCount) {
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
 		if (hRes != D3D_OK) return LT_ERROR;
@@ -2463,6 +2608,16 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTG *pVerts, uint32 nCount) {
 		if (hRes != D3D_OK) return LT_ERROR;
 
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, nCount-2, pVerts, sizeof(LT_VERTG)));
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_trianglefan,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+			nCount - 2,
+			pVerts
+		);
+#endif // LTJS_WIP_OGL
+
 		if (hRes != D3D_OK)
 			return LT_ERROR;
 	}
@@ -2491,6 +2646,16 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTG *pVerts, uint32 nCount) {
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, nDrawCount-2, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS))); 
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_trianglefan,
+			ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+			nDrawCount - 2,
+			m_VertTransBuf
+		);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2503,6 +2668,10 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTF *pVerts, uint32 nCount, LT_VERTRGBA 
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -2529,6 +2698,16 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTF *pVerts, uint32 nCount, LT_VERTRGBA 
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, nDrawCount-2, m_VertBufG, sizeof(LT_VERTG))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount - 2,
+				m_VertBufG
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2558,6 +2737,16 @@ LTRESULT CD3DDrawPrim::DrawPrimFan(LT_VERTF *pVerts, uint32 nCount, LT_VERTRGBA 
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLEFAN, nDrawCount-2, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglefan,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount - 2,
+				m_VertTransBuf
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2572,6 +2761,10 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTGT *pVerts, uint32 nCount) {
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
 		if (hRes != D3D_OK) return LT_ERROR;
@@ -2580,6 +2773,16 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTGT *pVerts, uint32 nCount) {
 		if (hRes != D3D_OK) return LT_ERROR;
 
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nCount-2, pVerts, sizeof(LT_VERTGT)));
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_trianglestrip,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+			nCount - 2,
+			pVerts
+		);
+#endif // LTJS_WIP_OGL
+
 		if (hRes != D3D_OK)
 			return LT_ERROR;
 	}
@@ -2603,6 +2806,16 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTGT *pVerts, uint32 nCount) {
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nDrawCount-2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglestrip,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount - 2,
+				m_VertTransBufT
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2615,6 +2828,10 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTFT *pVerts, uint32 nCount, LT_VERTRG
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -2635,7 +2852,17 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTFT *pVerts, uint32 nCount, LT_VERTRG
 				++pDstPtr; ++pSrcPtr;
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
-			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nDrawCount-2, m_VertBufGT, sizeof(LT_VERTGT))); 
+			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nDrawCount-2, m_VertBufGT, sizeof(LT_VERTGT)));
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglestrip,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount - 2,
+				m_VertBufGT
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2660,6 +2887,16 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTFT *pVerts, uint32 nCount, LT_VERTRG
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nDrawCount-2, m_VertTransBufT, sizeof(DRAWPRIM_D3DTRANS_TEX))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglestrip,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse | ltjs::OglRenderer::d3dfvf_tex1,
+				nDrawCount - 2,
+				m_VertBufGT
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2673,6 +2910,10 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTG *pVerts, uint32 nCount) {
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
 
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
+
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
 		if (hRes != D3D_OK) return LT_ERROR;
@@ -2681,6 +2922,16 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTG *pVerts, uint32 nCount) {
 		if (hRes != D3D_OK) return LT_ERROR;
 
 		EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nCount-2, pVerts, sizeof(LT_VERTG)));
+
+#ifdef LTJS_WIP_OGL
+		ogl_renderer.draw(
+			ltjs::OglRenderer::d3dpt_trianglestrip,
+			ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+			nCount - 2,
+			pVerts
+		);
+#endif // LTJS_WIP_OGL
+
 		if (hRes != D3D_OK)
 			return LT_ERROR;
 	}
@@ -2703,6 +2954,16 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTG *pVerts, uint32 nCount) {
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nDrawCount-2, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglestrip,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount - 2,
+				m_VertTransBuf
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2715,6 +2976,10 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTF *pVerts, uint32 nCount, LT_VERTRGB
 	LPDIRECT3DDEVICE9 pDevice = r_GetRenderStruct()->GetD3DDevice();
 	if (!pDevice) return LT_ERROR;
 	CAutoDrawPrimBlock AutoDPBlock(this);
+
+#ifdef LTJS_WIP_OGL
+	auto& ogl_renderer = ltjs::OglRenderer::get_instance();
+#endif // LTJS_WIP_OGL
 
 	if (m_eTransType != DRAWPRIM_TRANSFORM_SCREEN) {
 		HRESULT hRes = pDevice->SetVertexShader(NULL);
@@ -2735,6 +3000,16 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTF *pVerts, uint32 nCount, LT_VERTRGB
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nDrawCount-2, m_VertBufG, sizeof(LT_VERTG))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglestrip,
+				ltjs::OglRenderer::d3dfvf_xyz | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount - 2,
+				m_VertBufG
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
@@ -2758,6 +3033,16 @@ LTRESULT CD3DDrawPrim::DrawPrimStrip(LT_VERTF *pVerts, uint32 nCount, LT_VERTRGB
 				--nCount; --nDstBufSize; ++nDrawCount; }
 
 			EFFECT_SHADER_MACRO(hRes, pDevice->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, nDrawCount-2, m_VertTransBuf, sizeof(DRAWPRIM_D3DTRANS))); 
+
+#ifdef LTJS_WIP_OGL
+			ogl_renderer.draw(
+				ltjs::OglRenderer::d3dpt_trianglestrip,
+				ltjs::OglRenderer::d3dfvf_xyzrhw | ltjs::OglRenderer::d3dfvf_diffuse,
+				nDrawCount - 2,
+				m_VertTransBuf
+			);
+#endif // LTJS_WIP_OGL
+
 			if (hRes != D3D_OK)
 				return LT_ERROR; 
 
