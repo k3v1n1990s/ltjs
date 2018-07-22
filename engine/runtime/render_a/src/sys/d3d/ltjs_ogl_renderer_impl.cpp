@@ -1471,10 +1471,10 @@ private:
 			viewport.y_ < 0 ||
 			viewport.width_ <= 0 ||
 			viewport.height_ <= 0 ||
-			viewport.x_ >= max_viewport_size_[0] ||
-			viewport.y_ >= max_viewport_size_[1] ||
-			viewport.width_ >= max_viewport_size_[0] ||
-			viewport.height_ >= max_viewport_size_[1])
+			viewport.x_ >= static_cast<std::uint32_t>(max_viewport_size_[0]) ||
+			viewport.y_ >= static_cast<std::uint32_t>(max_viewport_size_[1]) ||
+			viewport.width_ >= static_cast<std::uint32_t>(max_viewport_size_[0]) ||
+			viewport.height_ >= static_cast<std::uint32_t>(max_viewport_size_[1]))
 		{
 			return;
 		}
@@ -8046,6 +8046,20 @@ void OglRenderer::set_world_matrix(
 	do_set_world_matrix(index, world_matrix_ptr);
 }
 
+void OglRenderer::set_world_matrix(
+	const int index,
+	const float (&world_matrix)[16])
+{
+	do_set_world_matrix(index, world_matrix);
+}
+
+void OglRenderer::set_world_matrix(
+	const int index,
+	const float (&world_matrix)[4][4])
+{
+	do_set_world_matrix(index, reinterpret_cast<const float*>(world_matrix));
+}
+
 const float* OglRenderer::get_view_matrix() const
 {
 	return do_get_view_matrix();
@@ -8055,6 +8069,18 @@ void OglRenderer::set_view_matrix(
 	const float* const view_matrix_ptr)
 {
 	do_set_view_matrix(view_matrix_ptr);
+}
+
+void OglRenderer::set_view_matrix(
+	const float (&view_matrix)[16])
+{
+	do_set_view_matrix(view_matrix);
+}
+
+void OglRenderer::set_view_matrix(
+	const float (&view_matrix)[4][4])
+{
+	do_set_view_matrix(reinterpret_cast<const float*>(view_matrix));
 }
 
 const float* OglRenderer::get_projection_matrix() const
@@ -8068,6 +8094,18 @@ void OglRenderer::set_projection_matrix(
 	do_set_projection_matrix(projection_matrix_ptr);
 }
 
+void OglRenderer::set_projection_matrix(
+	const float (&projection_matrix)[16])
+{
+	do_set_projection_matrix(projection_matrix);
+}
+
+void OglRenderer::set_projection_matrix(
+	const float (&projection_matrix)[4][4])
+{
+	do_set_projection_matrix(reinterpret_cast<const float*>(projection_matrix));
+}
+
 const float* OglRenderer::get_texture_matrix(
 	const int index) const
 {
@@ -8079,6 +8117,20 @@ void OglRenderer::set_texture_matrix(
 	const float* const texture_matrix_ptr)
 {
 	do_set_texture_matrix(index, texture_matrix_ptr);
+}
+
+void OglRenderer::set_texture_matrix(
+	const int index,
+	const float (&texture_matrix)[16])
+{
+	do_set_texture_matrix(index, texture_matrix);
+}
+
+void OglRenderer::set_texture_matrix(
+	const int index,
+	const float (&texture_matrix)[4][4])
+{
+	do_set_texture_matrix(index, reinterpret_cast<const float*>(texture_matrix));
 }
 
 OglRenderer::SamplerPtr OglRenderer::get_sampler(

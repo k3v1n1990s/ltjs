@@ -826,17 +826,37 @@ public:
 		const int index,
 		const float* const world_matrix_ptr);
 
+	void set_world_matrix(
+		const int index,
+		const float (&world_matrix)[16]);
+
+	void set_world_matrix(
+		const int index,
+		const float (&world_matrix)[4][4]);
+
 
 	const float* get_view_matrix() const;
 
 	void set_view_matrix(
 		const float* const view_matrix_ptr);
 
+	void set_view_matrix(
+		const float (&view_matrix)[16]);
+
+	void set_view_matrix(
+		const float (&view_matrix)[4][4]);
+
 
 	const float* get_projection_matrix() const;
 
 	void set_projection_matrix(
 		const float* const projection_matrix_ptr);
+
+	void set_projection_matrix(
+		const float (&projection_matrix)[16]);
+
+	void set_projection_matrix(
+		const float (&projection_matrix)[4][4]);
 
 
 	const float* get_texture_matrix(
@@ -845,6 +865,14 @@ public:
 	void set_texture_matrix(
 		const int index,
 		const float* const texture_matrix_ptr);
+
+	void set_texture_matrix(
+		const int index,
+		const float (&texture_matrix)[16]);
+
+	void set_texture_matrix(
+		const int index,
+		const float (&texture_matrix)[4][4]);
 
 
 	SamplerPtr get_sampler(
